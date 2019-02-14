@@ -1,0 +1,15 @@
+# logging output
+logs/
+
+# intellij classfile output
+out/
+
+# aion-javaapi generated config
+config/
+
+# gradle
+.gradle
+build/
+
+idea/
+test_data/SmallChainDB/

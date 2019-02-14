@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--Resources-->
+<!--=========-->
+<!--https://stackify.com/logging-logback/-->
+<!--https://examples.javacodegeeks.com/enterprise-java/logback/logback-rollingfileappender-example/-->
+<!--https://blog.takipi.com/how-to-instantly-improve-your-java-logging-with-7-logback-tweaks/-->
+<!--https://logback.qos.ch/manual/appenders.html-->
+<configuration debug="true" scan="true" scanPeriod="60 seconds">
+    <property name="LOG_BASE" value="logs" />
+    <property name="LOG_ARCHIVE" value="${LOG_BASE}/archive" />
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_email" level="error" class="ch.qos.logback.classic.net.SMTPAppender">
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">      
+          <level>ERROR</level>
+          <onmismatch>DENY</onmismatch>
+          <onmatch>ACCEPT</onmatch>
+        </filter>
+        <smtpHost>smtp.gmail.com</smtpHost>
+        <smtpPort>587</smtpPort>
+        <STARTTLS>true</STARTTLS>
+        <asynchronousSending>false</asynchronousSending>
+        <username>explorer.aion@gmail.com</username>
+        <password>PLAT4life</password>
+        <to>ali@nuco.io</to>
+        <from>explorer.aion@gmail.com</from>
+        <subject>%.-30msg</subject>
+        <layout>
+            <pattern>%d %-5level [%thread]: %msg%n</pattern>
+        </layout>
+    </appender>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d %-5level [%thread]: %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="appenderasync_console" level="info" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <maxFlushTime>30000</maxFlushTime>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="appender_console" />
+    </appender>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_BASE}/general.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${LOG_ARCHIVE}/general/general.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>10</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>100MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d %-5level [%thread]: %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="appenderasync_file" level="debug" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <maxFlushTime>30000</maxFlushTime>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="appender_file" />
+    </appender>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_analytics" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_BASE}/analytics.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${LOG_ARCHIVE}/analytics/analytics.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>15</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>250MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%date{"yyyy-MM-dd'T'HH:mm:ss.SSS"},%msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="appenderasync_analytics" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <maxFlushTime>30000</maxFlushTime>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="appender_analytics" />
+    </appender>
+
+    <logger name="logger_analytics" level="debug" additivity="false">
+        <appender-ref ref="appenderasync_analytics"/>
+    </logger>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <logger name="logger_general" level="debug" additivity="false">
+        <appender-ref ref="appenderasync_file"/>
+        <appender-ref ref="appenderasync_console"/>
+        <!--all error-level logs trigger email-->
+        <!--appender-ref ref="appender_email"/-->
+    </logger>
+</configuration>
