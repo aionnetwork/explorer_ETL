@@ -11,11 +11,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class DbConnectionPool {
-
-    private DbConnectionPool(){
-        throw new UnsupportedOperationException("Cannot create an instance of DbConnectionPool");
-    }
-
     private static  HikariDataSource datasource;
     private static HikariConfig configHK = new HikariConfig();
 
@@ -27,26 +22,33 @@ public class DbConnectionPool {
 
     // JDBC Driver Name & Database URL
     static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
-    private static String jdbcDbUrl = "";
+    private static String JDBC_DB_URL = "";
 
     // JDBC Database Credentials
-    private static String jdbcUser;
-    private static String jdbcPass;
+    private static String JDBC_USER;
+    private static String JDBC_PASS;
+    private static Connection connection;
+    private static Connection writeConnection;
+
+
+
+
+
 
     static {
 
         Config config = Config.getInstance();
-        jdbcDbUrl = "jdbc:mysql://" + config.getSqlIp() + "/" + config.getSqlDbName() +
+        JDBC_DB_URL = "jdbc:mysql://" + config.getSqlIp() + "/" + config.getSqlDbName() +
                 "?user=" + config.getSqlUsername() +
                 "&password=" + config.getSqlPassword() +
                 "&rewriteBatchedStatements=true&useSSL=false";
-        jdbcUser = config.getSqlUsername();
-        jdbcPass = config.getSqlPassword();
+        JDBC_USER = config.getSqlUsername();
+        JDBC_PASS = config.getSqlPassword();
 
 
-        configHK.setJdbcUrl(jdbcDbUrl);
-        configHK.setUsername(jdbcUser);
-        configHK.setPassword(jdbcPass);
+        configHK.setJdbcUrl(JDBC_DB_URL);
+        configHK.setUsername(JDBC_USER);
+        configHK.setPassword(JDBC_PASS);
         configHK.setAutoCommit(false);
         configHK.setLeakDetectionThreshold(10_000);
         configHK.setConnectionTestQuery("SELECT 1");
@@ -76,6 +78,14 @@ public class DbConnectionPool {
         return datasource.getConnection();
 
 
+    }
+
+    public static Connection getWriteConnection() throws SQLException {
+
+        if(writeConnection==null || writeConnection.isClosed())
+            writeConnection = datasource.getConnection();
+
+        return writeConnection;
     }
 
     private static HikariPool getPool(final HikariDataSource ds) {

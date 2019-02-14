@@ -7,18 +7,20 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.aion.api.IUtils;
 import org.aion.api.impl.internal.ApiUtils;
-import org.aion.api.type.CompileResponse;
 import org.aion.api.type.ContractAbiEntry;
 import org.aion.api.type.ContractAbiIOParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,52 +38,38 @@ import static org.aion.api.impl.Contract.*;
  */
 public class ABIDefinitions {
 
+
+    public static final String ATS_CONTRACT = "ATS";
+    public static final String ERC_20_CONTRACT = "ERC20";
+    public static final String TRS_CONTRACT = "TRS";
+    public static final String BRIDGE_EVENTS= "BridgeEvents";
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
-    public final String atstokenabi;
 
     static {
         try {
-            Instance = new ABIDefinitions();
+            instance = new ABIDefinitions();
         } catch (InitializationException e) {
             System.out.println("Failed to read the abi");
             System.exit(-1);
         }
     }
 
-    public final String erc20Tokenabi;
 
-    public final List<ContractAbiEntry> atstokenabientries;
-
-
-    private static ABIDefinitions Instance;
-    private final List<ContractAbiEntry> erc20Tokenabientries;
+    private static ABIDefinitions instance;
 
 
-    private final Map<String, List<ContractAbiEntry>> contractABIEntryMap;
-    private final Map<String, String> contractJSONABIMap;
+
+    private Map<String, List<ContractAbiEntry>> contractABIEntryMap;
+    private Map<String, String> contractJSONABIMap;
 
 
     public ABIDefinitions() throws InitializationException {
-        String atsTokenSrc;
-        String erc20TokenSrc;
 
         try {
             AionService service = AionService.getInstance();
             service.reconnect();
             contractABIEntryMap = readAllABIs(service);
             contractJSONABIMap = readALLJSONABIs(service);
-
-             atsTokenSrc = new String(Files.readAllBytes(Paths.get("contracts/ATS.sol")));
-             erc20TokenSrc = new String(Files.readAllBytes(Paths.get("contracts/ERC20.sol")));
-
-            CompileResponse ats = service.compileResponse(atsTokenSrc, "ATS");
-            CompileResponse erc20 = service.compileResponse(erc20TokenSrc, "ERC20");
-            atstokenabi = ats.getAbiDefString();
-            atstokenabientries = Collections.unmodifiableList(ats.getAbiDefinition());
-
-            erc20Tokenabi = erc20.getAbiDefString();
-            erc20Tokenabientries = Collections.unmodifiableList(erc20.getAbiDefinition());
-
 
         }
         catch (Exception e){
@@ -94,7 +82,7 @@ public class ABIDefinitions {
 
     public static ABIDefinitions getInstance() {
 
-        return Instance;
+        return instance;
     }
 
     private static Map<String,String> listABIFiles(){
@@ -178,7 +166,7 @@ public class ABIDefinitions {
 
 
             } catch (NoSuchFieldException | IllegalAccessException e) {
-                e.printStackTrace();
+                GENERAL.debug("",e);
             }
 
 
@@ -225,17 +213,23 @@ public class ABIDefinitions {
         Map<String, String> solFiles = getSOLEntryStream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Map<String, List<ContractAbiEntry>> entriesMap = new HashMap<>();
+        Map<String, List<ContractAbiEntry>> entriesMap = new ConcurrentHashMap<>();
 
-        for(var entrySet : jsonAbi.entrySet()){
+        for(var entry : jsonAbi.entrySet()){
 
-            entriesMap.put(entrySet.getKey(), generateABIFromJson((entrySet.getValue())));
+            entriesMap.put(entry.getKey(),
+                    Collections.unmodifiableList(
+                            new CopyOnWriteArrayList<>(generateABIFromJson(entry.getValue()))
+                    ));
 
         }
 
-        for(var entrySet : solFiles.entrySet()){
+        for(var entry : solFiles.entrySet()){
 
-            entriesMap.put(entrySet.getKey(), Collections.unmodifiableList(service.compileResponse(entrySet.getValue(), entrySet.getKey()).getAbiDefinition()));
+            entriesMap.put(entry.getKey(),
+                    Collections.unmodifiableList(
+                            new CopyOnWriteArrayList<>(service.compileResponse(entry.getValue(), entry.getKey()).getAbiDefinition())
+                    ));
 
         }
 
@@ -248,7 +242,7 @@ public class ABIDefinitions {
 
     public static Map<String,String> readALLJSONABIs(AionService service){
         Map<String, String> jsonAbi  = getJSONEntryStream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
 
         Map<String, String> solFiles = getSOLEntryStream()
                 .map(e -> {
@@ -258,12 +252,13 @@ public class ABIDefinitions {
                     } catch (AionApiException e1) {
                         return Optional.<Map.Entry<String, String>>empty();
                     }
+
                 })
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toConcurrentMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        HashMap<String,String> map = new HashMap<>();
+        Map<String,String> map = new ConcurrentHashMap<>();
         map.putAll(jsonAbi);
         map.putAll(solFiles);
         return Collections.unmodifiableMap(map);
@@ -281,8 +276,8 @@ public class ABIDefinitions {
                         entry.setValue(new String(Files.readAllBytes(Paths.get(entry.getValue()))));
                         src = Optional.of(entry);
                     } catch (Exception e) {
+                        GENERAL.debug("",e);
 
-                        e.printStackTrace();
                     }
 
                     return src;
@@ -301,9 +296,11 @@ public class ABIDefinitions {
                     try {
                         entry.setValue(new String(Files.readAllBytes(Paths.get(entry.getValue()))));
                         return Optional.of(entry);
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         return Optional.<Map.Entry<String, String>>empty();
                     }
+
+
                 })
                 .filter(Optional::isPresent)
                 .map(Optional::get);
@@ -361,4 +358,8 @@ public class ABIDefinitions {
         return dParams;
     }
 
+    public void update(AionService service) throws AionApiException {
+        contractABIEntryMap = readAllABIs(service);
+        contractJSONABIMap = readALLJSONABIs(service);
+    }
 }

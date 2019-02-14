@@ -4,6 +4,7 @@ import aion.dashboard.db.DbQuery;
 import aion.dashboard.domainobjects.Block;
 import aion.dashboard.domainobjects.ParserState;
 import aion.dashboard.domainobjects.Transaction;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -78,13 +79,10 @@ public class WriteThread extends Thread {
 
         connection = conn;
 
-        updateBlockMap = connection.prepareStatement(DbQuery.INSERT_BLOCK_MAP);
-        updateTransactionMap = connection.prepareStatement(DbQuery.INSERT_TRANSACTION_MAP);
+        updateBlocks = connection.prepareStatement(DbQuery.InsertBlock);
+        updateTransactions = connection.prepareStatement(DbQuery.TransactionInsert);
 
-        updateBlocks = connection.prepareStatement(DbQuery.INSERT_BLOCK);
-        updateTransactions = connection.prepareStatement(DbQuery.TRANSACTION_INSERT);
-
-        updateParser = connection.prepareStatement(DbQuery.UPDATE_PARSER_STATE);
+        updateParser = connection.prepareStatement(DbQuery.UpdateParserState);
 
         connection.setAutoCommit(false);
 

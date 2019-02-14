@@ -13,7 +13,6 @@ public interface GraphingService {
 
     Graphing getLastRecord(long blockNumber) throws SQLException;
 
-
     long countActiveAddresses(long blockNumber) throws SQLException;
 
     long checkIntegrity(long blockNumber) throws SQLException;

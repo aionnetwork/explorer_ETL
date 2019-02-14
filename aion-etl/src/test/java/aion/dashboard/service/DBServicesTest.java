@@ -25,12 +25,12 @@ public class DBServicesTest {
     void tokenBalanceTest() throws SQLException {
 
         try (Connection con = DbConnectionPool.getConnection()) {
-            con.createStatement().execute("Truncate table token_balance");
+            con.createStatement().execute("Truncate table token_holders");
 
-            TokenBalanceService service = TokenBalanceServiceImpl.getInstance();
-            TokenBalance.TokenBalanceBuilder builder = new TokenBalance.TokenBalanceBuilder();
-            TokenBalance balance = builder
-                    .setBalance(BigDecimal.ONE)
+            TokenHoldersService service = TokenHoldersServiceImpl.getInstance();
+            TokenHolders.TokenBalanceBuilder builder = new TokenHolders.TokenBalanceBuilder();
+            TokenHolders balance = builder
+                    .setScaledBalance(BigDecimal.ONE)
                     .setBlockNumber(1)
                     .setContractAddress("0000001")
                     .setHolderAddress(Address.ZERO_ADDRESS().toString())
@@ -40,11 +40,11 @@ public class DBServicesTest {
 
             // con.createStatement().execute("Truncate table balance");
 
-            List<TokenBalance> tokenBalances = Collections.nCopies(10, balance);
-            service.save(tokenBalances);
+            List<TokenHolders> tokenHolders = Collections.nCopies(10, balance);
+            service.save(tokenHolders);
 
 
-            List<TokenBalance> res = service.getTokensByBlockNumber(1);
+            List<TokenHolders> res = service.getTokensByBlockNumber(1);
 
             assertFalse(res.isEmpty());
             assertTrue(res.stream().allMatch(tokenBalance -> tokenBalance.equals(balance)));
@@ -55,29 +55,29 @@ public class DBServicesTest {
 
     void transferTest() throws SQLException {
         try (Connection con = DbConnectionPool.getConnection()) {
-            con.createStatement().execute("truncate table transfer");
-            Transfer.TransferBuilder builder = new Transfer.TransferBuilder();
-            TransferService service = TransferServiceImpl.getInstance();
+            con.createStatement().execute("truncate table token_transfers");
+            TokenTransfers.TransferBuilder builder = new TokenTransfers.TransferBuilder();
+            TokenTransfersService service = TokenTransfersServiceImpl.getInstance();
             builder.setBlockNumber(1L)
                     .setContractAddress(Address.ZERO_ADDRESS().toString())
                     .setFromAddress(String.valueOf(1000001))
                     .setOperator(String.valueOf(1000001))
                     .setToAddress(String.valueOf(20000002))
-                    .setTokenValue(BigDecimal.ONE)
+                    .setScaledTokenValue(BigDecimal.ONE)
                     .setTransactionTimestamp(System.currentTimeMillis())
-                    .setTransactionId(0);
+                    .setTransactionHash("");
 
-            Transfer transfer = builder.build();
-
-
-            assertTrue(service.save(transfer));
+            TokenTransfers tokenTransfers = builder.build();
 
 
-            List<Transfer> transfers = Collections.nCopies(10, transfer);
+            assertTrue(service.save(tokenTransfers));
+
+
+            List<TokenTransfers> tknTxfsList = Collections.nCopies(10, tokenTransfers);
 
 
 
-            assertTrue(service.save(transfers));
+            assertTrue(service.save(tknTxfsList));
 
 
         }
@@ -108,7 +108,7 @@ public class DBServicesTest {
                     .setTimestamp(System.currentTimeMillis())
                     .setParameterList(paramList.toString())
                     .setInputList(inputList.toString())
-                    .setTransactionID(1L);
+                    .setTransactionHash(ByteUtil.toHexString(HashUtil.h256(RandomStringUtils.random(48).getBytes())));
 
             Event event = builder.build();
 
@@ -187,9 +187,6 @@ public class DBServicesTest {
 
             List<Graphing> blocksMined = new ArrayList<>();
             Graphing.GraphingBuilder builder = new Graphing.GraphingBuilder()
-                    .setDate(5)
-                    .setMonth(5)
-                    .setYear(2018)
                     .setTimestamp(System.currentTimeMillis())
                     .setGraphType(Graphing.GraphType.BLOCKS_MINED)
                     .setDetail("");

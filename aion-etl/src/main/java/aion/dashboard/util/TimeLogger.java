@@ -13,16 +13,16 @@ import java.time.Duration;
  */
 public class TimeLogger {
 
-    private static final boolean PERFORMANCE_FLAG = Config.getInstance().performanceFlag();//A flag indicating whether time analytics should be enabled
+    private static final boolean flag = Config.getInstance().performanceFlag();//A flag indicating whether time analytics should be enabled
     private Stopwatch stopwatch;
-    private static final Logger AnalyticsLogger = LoggerFactory.getLogger("logger_analytics");
-    private String classname;
+    Logger AnalyticsLogger = LoggerFactory.getLogger("logger_analytics");
+    String classname = "";
 
     /**
      *
      */
     public TimeLogger(String classname){
-        if (PERFORMANCE_FLAG)
+        if (flag)
             stopwatch = Stopwatch.createUnstarted();
 
         this.classname = classname;
@@ -40,7 +40,7 @@ public class TimeLogger {
      * Starts the time
      */
     public void start(){
-        if (PERFORMANCE_FLAG) {
+        if (flag) {
             stopwatch.reset();
             stopwatch.start();
         }
@@ -51,7 +51,7 @@ public class TimeLogger {
      * Stops the internally running timer
      */
     public void stop(){
-        if (PERFORMANCE_FLAG && stopwatch.isRunning()) stopwatch.stop();
+        if (flag && stopwatch.isRunning()) stopwatch.stop();
     }
 
 
@@ -60,9 +60,9 @@ public class TimeLogger {
      * @param message the message is expected to be a formatted string
      */
     public void logTime(String message){
-        if (PERFORMANCE_FLAG) {
+        if (flag) {
             stop();
-            AnalyticsLogger.debug("Time Logger {}: {} {}s {}ns", classname, message, stopwatch.elapsed().toSeconds(), stopwatch.elapsed().toNanosPart());
+            AnalyticsLogger.debug("Time Logger "+ classname+": "+message, stopwatch.elapsed().toSeconds()+"s " + stopwatch.elapsed().toNanosPart() + "ns");
         }
 
     }
@@ -76,7 +76,7 @@ public class TimeLogger {
      * @throws IllegalStateException
      */
     public Duration elapsed()throws IllegalStateException{
-        if (!PERFORMANCE_FLAG) throw new IllegalStateException("Time logger is disabled");
+        if (!flag) throw new IllegalStateException("Time logger is disabled");
         return stopwatch.elapsed();
     }
 

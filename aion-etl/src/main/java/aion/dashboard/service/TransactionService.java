@@ -15,15 +15,11 @@ public interface TransactionService {
 
     List<Long> integrityCheck(long startNum) throws SQLException;
 
-    List<Long> getTransactionIndexByBlockNum(long startNum) throws SQLException;
-
+    List<String> getTransactionHashByBlockNum(long startNum) throws SQLException;
 
     List<Transaction> getTransactionByBlockNumber(long blockNumber) throws SQLException;
 
     Transaction getTransactionByContractAddress(String contractAddress) throws SQLException;
 
-    long getTransactionId(String txHash) throws SQLException;
-
-
-    PreparedStatement[] prepare(Connection con, List<Transaction> transactions) throws SQLException;
+    PreparedStatement prepare(Connection con, List<Transaction> transactions) throws SQLException;
 }

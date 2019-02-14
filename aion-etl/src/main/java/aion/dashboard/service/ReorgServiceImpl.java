@@ -2,10 +2,10 @@ package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.config.Config;
-import aion.dashboard.domainobject.Balance;
+import aion.dashboard.domainobject.Account;
 import aion.dashboard.domainobject.Block;
 import aion.dashboard.domainobject.Token;
-import aion.dashboard.domainobject.TokenBalance;
+import aion.dashboard.domainobject.TokenHolders;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.ReorganizationLimitExceededException;
 import aion.dashboard.task.GraphingTask;
@@ -23,29 +23,27 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static aion.dashboard.util.Utils.fromWei;
-
 
 /**
  * Used to perform a reorg of the block chain
  */
 public class ReorgServiceImpl implements ReorgService {
 
-    public static final TimeLogger TIME_LOGGER = new TimeLogger(ReorgService.class.getName());
+    private static final TimeLogger TIME_LOGGER = new TimeLogger(ReorgService.class.getName());
 
-    static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
+    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
-    private TokenBalanceService tokenBalanceService;
+    private TokenHoldersService tokenHoldersService;
     private ParserStateService stateService;
     private AionService borrowedAionService;
-    private BalanceService balanceService;
+    private AccountService accountService;
     private BlockService blockService;
     private long reorgLimit;
 
     public ReorgServiceImpl(AionService aionService, ParserStateService stateService) {
-        balanceService = BalanceServiceImpl.getInstance();
+        accountService = AccountServiceImpl.getInstance();
         blockService = BlockServiceImpl.getInstance();
-        tokenBalanceService = TokenBalanceServiceImpl.getInstance();
+        tokenHoldersService = TokenHoldersServiceImpl.getInstance();
         this.borrowedAionService = aionService;
         this.stateService = stateService;
 
@@ -66,7 +64,7 @@ public class ReorgServiceImpl implements ReorgService {
         long requestedReorgSize = dbPointer - consistentBlockPointer;
 
         if (requestedReorgSize == 0){
-            GENERAL.debug("Reorg OK. ETL consistent at {}", consistentBlockPointer);
+            GENERAL.trace("Reorg OK. ETL consistent at {}", consistentBlockPointer);
             return false;
         } else if (requestedReorgSize < 0) {
             GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
@@ -74,9 +72,9 @@ public class ReorgServiceImpl implements ReorgService {
         } else if (requestedReorgSize > reorgLimit) {
             GENERAL.debug("Reorg: Requested reorg greater than limit: {}", requestedReorgSize);
             throw new ReorganizationLimitExceededException();
-        } else {
-            return performReorg(consistentBlockPointer);
         }
+
+        return performReorg(consistentBlockPointer);
     }
 
     /**
@@ -124,38 +122,35 @@ public class ReorgServiceImpl implements ReorgService {
      * @throws SQLException
      * @throws AionApiException
      */
-    private boolean performReorg(long consistentBlock) throws SQLException, AionApiException {
+    public boolean performReorg(long consistentBlock) throws SQLException, AionApiException {
 
         GENERAL.debug("Starting Reorg...");
 
         GraphingTask task = GraphingTask.getInstance();
 
-        task.getFuture().cancel(true);
+        if (!Objects.isNull(task.getFuture()))
+            task.getFuture().cancel(true);
 
 
         TIME_LOGGER.start();
-        //Update the balances and token balances that must remain in the DB
-        List<Balance> balances = balanceService.getByBlockNumber(consistentBlock);
-        List<TokenBalance> tokenBalances = tokenBalanceService.getTokensByBlockNumber(consistentBlock);
+        //Update the accounts and token accounts that must remain in the DB
+        List<Account> accounts = accountService.getByBlockNumber(consistentBlock);
+        List<TokenHolders> tokenHolders = tokenHoldersService.getTokensByBlockNumber(consistentBlock);
 
-        balances = getBalanceDetails(balances, TransactionServiceImpl.getInstance().getTransactionIndexByBlockNum(consistentBlock));
-        tokenBalances = getTokenBalances(tokenBalances);
+        accounts = getAccountDetails(accounts);
+        tokenHolders = getTokenBalances(tokenHolders);
 
         try {
-            blockService.deleteFromAndUpdate(consistentBlock, tokenBalances, balances);
+            blockService.deleteFromAndUpdate(consistentBlock, tokenHolders, accounts);
         }
         catch (SQLException exception){
             GENERAL.debug("Threw an exception while performing reorg: ", exception);
             throw exception;
         }
 
-
-
-
-        if (task.getFuture().isCancelled())
-            task.scheduleNow();//Reschedule the graphing service
-
-
+        if(task.getFuture().isCancelled()){
+            task.scheduleNow();
+        }
 
         TIME_LOGGER.logTime("performReorg() completed in: {}");
         GENERAL.debug("Completed Reorg.");
@@ -163,8 +158,8 @@ public class ReorgServiceImpl implements ReorgService {
         return true;
     }
 
-    private List<TokenBalance> getTokenBalances(List<TokenBalance> tokenBalances) throws SQLException, AionApiException {
-        Set<String> tokensContractAddr = tokenBalances.stream().map(TokenBalance::getContractAddress).collect(Collectors.toSet());
+    private List<TokenHolders> getTokenBalances(List<TokenHolders> tokenHolders) throws SQLException, AionApiException {
+        Set<String> tokensContractAddr = tokenHolders.stream().map(TokenHolders::getContractAddress).collect(Collectors.toSet());
         Map<String, IContract> contracts = new HashMap<>();
         Map<String, Token> tokenMap = new HashMap<>();
 
@@ -174,23 +169,21 @@ public class ReorgServiceImpl implements ReorgService {
             tokenMap.put(contractAddr, token);
             contracts.put(contractAddr, borrowedAionService.getContract(Address.wrap(token.getCreatorAddress()),
                     Address.wrap(token.getContractAddress()),
-                    ABIDefinitions.getInstance().atstokenabi));
+                    ABIDefinitions.getInstance().getJSONString(ABIDefinitions.ATS_CONTRACT)));
         }
 
-        List<TokenBalance> res = new ArrayList<>();
+        List<TokenHolders> res = new ArrayList<>();
 
-        for (var tknBalance: tokenBalances){
+        for (var tknBalance: tokenHolders){
             try {
                 borrowedAionService.reconnect();
                 BigDecimal balance = BigDecimal.valueOf((long) borrowedAionService
-                        .callContractFunction(contracts.get(tknBalance.getContractAddress()),
-                                "balanceOf",
-                                IAddress.copyFrom(tknBalance.getHolderAddress())).get(0))
-                        .divide(tokenMap.get(tknBalance.getContractAddress()).getGranularity(), MathContext.DECIMAL128);
+                        .callContractFunction(contracts.get(tknBalance.getContractAddress()), "balanceOf", IAddress.copyFrom(tknBalance.getHolderAddress())).get(0))
+                        .divide(new BigDecimal(tokenMap.get(tknBalance.getContractAddress()).getGranularity()), MathContext.DECIMAL128);
 
-                res.add(new TokenBalance.TokenBalanceBuilder()
+                res.add(new TokenHolders.TokenBalanceBuilder()
                         .setBlockNumber(borrowedAionService.getBlockNumber())
-                        .setBalance(balance)
+                        .setScaledBalance(balance)
                         .setHolderAddress(tknBalance.getHolderAddress())
                         .setContractAddress(tknBalance.getContractAddress())
                         .build());
@@ -201,29 +194,24 @@ public class ReorgServiceImpl implements ReorgService {
         }
 
         return res.stream()
-                .filter(tknBalance -> tknBalance.getBalance().compareTo(BigDecimal.ZERO) != 0)//Remove all holders that have an empty balance
+                .filter(tknBalance -> tknBalance.getScaledBalance().compareTo(BigDecimal.ZERO) != 0)//Remove all holders that have an empty balance
                 .collect(Collectors.toList());
 
     }
 
-    private List<Balance> getBalanceDetails(final List<Balance> balances, final List<Long> txIndices) throws AionApiException {
-        List<Balance> res = new ArrayList<>();
+    private List<Account> getAccountDetails(final List<Account> accounts) throws AionApiException {
+        List<Account> res = new ArrayList<>();
 
-        //filter out all accounts who's transaction indices no longer exist
-        List<Balance> balanceAlias = balances
-                .parallelStream()
-                .filter(e -> !txIndices.contains(e.getTransactionId()) )
-                .collect(Collectors.toList());
 
-        Balance.BalanceBuilder balanceBuilder= new Balance.BalanceBuilder();
-        for (var bal: balanceAlias) {//get updated balances for these accounts
-            balanceBuilder.address(bal.getAddress())
+        Account.AccountBuilder accountBuilder = new Account.AccountBuilder();
+        for (var bal: accounts) {//get updated accounts for these accounts
+            accountBuilder.address(bal.getAddress())
                     .contract(bal.getContract())
                     .lastBlockNumber(borrowedAionService.getBlockNumber())
-                    .balance(fromWei(borrowedAionService.getBalance(bal.getAddress())))
-                    .transactionId(bal.getTransactionId())
-                    .nonce(borrowedAionService.getNonce(bal.getAddress()));
-            res.add(balanceBuilder.build());
+                    .balance(new BigDecimal(borrowedAionService.getBalance(bal.getAddress())))
+                    .transactionHash(bal.getTransactionHash())
+                    .nonce(borrowedAionService.getNonce(bal.getAddress()).toString(16));
+            res.add(accountBuilder.build());
         }
 
         return res;

@@ -45,17 +45,22 @@ public class MockAionApi implements IAionAPI {
     }
 
     @Override
-    public ApiMsg connect(String s, int i) {
+    public ApiMsg connect(String s, boolean b, String s1) {
         return new ApiMsg(0, true, ApiMsg.cast.BOOLEAN);
     }
 
     @Override
-    public ApiMsg connect(String s, boolean b, int i) {
+    public ApiMsg connect(String s, int i, String s1) {
         return new ApiMsg(0, true, ApiMsg.cast.BOOLEAN);
     }
 
     @Override
-    public ApiMsg connect(String s, boolean b, int i, int i1) {
+    public ApiMsg connect(String s, boolean b, int i, String s1) {
+        return new ApiMsg(0, true, ApiMsg.cast.BOOLEAN);
+    }
+
+    @Override
+    public ApiMsg connect(String s, boolean b, int i, int i1, String s1) {
         return new ApiMsg(0, true, ApiMsg.cast.BOOLEAN);
     }
 

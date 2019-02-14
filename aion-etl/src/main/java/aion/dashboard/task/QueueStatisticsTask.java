@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 public class QueueStatisticsTask implements Runnable {
 
-    private static final Logger ANALYTICS_LOGGER = LoggerFactory.getLogger("logger_analytics");
+    private Logger ANALYTICS_LOGGER = LoggerFactory.getLogger("logger_analytics");
     private BlockchainReaderThread readerThread;
     public QueueStatisticsTask(BlockchainReaderThread readerThread){
         this.readerThread = readerThread;

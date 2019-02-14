@@ -8,24 +8,24 @@ import java.util.Optional;
 /**
  * Encapsulates the data extracted from a contract event
  */
-public final class ContractEvent {
+final public class ContractEvent {
 
-    private final String signatureHash;
-    private final String eventName;
-    private final List<Object> inputs;
+    private final String SignatureHash;
+    private final String EventName;
+    private final List<Object> Inputs;
     private final List<Class> classType;//TODO do we need this?
-    private final List<String> types;
-    private final String contractAddress;
+    private final List<String> Types;
+    private final String Address;
     private final List<String> names;
 
     private ContractEvent(String signatureHash, String eventName, List<Object> inputs, List<Class> classType, List<String> types, List<String> names, String address) {
-        this.signatureHash = signatureHash;
-        this.eventName = eventName;
-        this.inputs = inputs;
+        SignatureHash = signatureHash;
+        EventName = eventName;
+        Inputs = inputs;
         this.classType = classType;
-        this.types = types;
+        Types = types;
         this.names = names;
-        this.contractAddress = address;
+        Address = address;
     }
 
     public static ContractEventBuilder builder() {
@@ -36,27 +36,22 @@ public final class ContractEvent {
      * Returns the input at the specified index if available, otherwise it returns an empty optional
      *
      * @param index The index of the input within the parameter list
-     * @param <T>
+     * @param <Any>
      * @return
      */
-    public <T> Optional<T> getInput(int index, Class<T> type) {
+    public <Any> Optional<Any> getInput(int index, Class<Any> type) {
         try {
 
-            if (index < inputs.size() && inputs.get(index).getClass().equals(type)) {
-                return Optional.of(type.cast(inputs.get(index)));
+            if (index < Inputs.size() && Inputs.get(index).getClass().equals(type)) {
+                return Optional.of(type.cast(Inputs.get(index)));
             }
-            else if(index< inputs.size() && inputs.get(index) instanceof byte[] && type.equals(String.class) ) {
-                return (Optional<T>) Optional.of(ByteUtil.toHexString((byte[]) inputs.get(index)));
+            else if(index<Inputs.size() && Inputs.get(index) instanceof byte[] && type.equals(String.class) ) {
+                return (Optional<Any>) Optional.of(ByteUtil.toHexString((byte[]) Inputs.get(index)));
             }
-            else {
-                return Optional.empty();
-            }
-
         } catch (Exception e) {
-
-            return Optional.empty();
-
         }
+
+        return Optional.empty();
 
     }
 
@@ -65,13 +60,13 @@ public final class ContractEvent {
      *
      * @param eventName
      * @param type
-     * @param <T>
+     * @param <Any>
      * @return
      */
-    public <T> Optional<T> getInput(String eventName, Class<T> type) {
+    public <Any> Optional<Any> getInput(String eventName, Class<Any> type) {
 
-
-        for (int index = 0; index < inputs.size(); index++) {
+        int index = 0;
+        for (; index < Inputs.size(); index++) {
             if (names.get(index).equals(eventName)) {
                 return getInput(index, type);
             }
@@ -92,15 +87,15 @@ public final class ContractEvent {
     }
 
     public String getSignatureHash() {
-        return signatureHash;
+        return SignatureHash;
     }
 
     public String getEventName() {
-        return eventName;
+        return EventName;
     }
 
     public List<Object> getInputs() {
-        return inputs;
+        return Inputs;
     }
 
     public List<Class> getClassType() {
@@ -108,28 +103,24 @@ public final class ContractEvent {
     }
 
     public List<String> getTypes() {
-        return types;
+        return Types;
     }
 
     public List<String> getNames() {
         return names;
     }
 
-    /**
-     *
-     * @return The contract address of the contract that fired this event
-     */
     public String getAddress() {
-        return contractAddress;
+        return Address;
     }
 
     public static final class ContractEventBuilder {
 
-        private String signatureHash;
-        private String eventName;
-        private List<Object> inputs;
-        private List<Class> classType;
-        private List<String> typeName;
+        private String SignatureHash;
+        private String EventName;
+        private List<Object> Inputs;
+        private List<Class> ClassType;
+        private List<String> TypeName;
         private List<String> names;
         private String address;
 
@@ -140,44 +131,44 @@ public final class ContractEvent {
 
 
         public ContractEvent build() {
-            if (inputs.size() != classType.size() && inputs.size() != names.size() || typeName.size() != inputs.size()) {
+            if (Inputs.size() != ClassType.size() && Inputs.size() != names.size() || TypeName.size() != Inputs.size()) {
                 throw new IllegalStateException(
                         String.format("Can't build class if list sizes differ:" +
                                         "%ninputs: %d" +
                                         "%nclassType: %d" +
                                         "%nnames: %d" +
                                         "%ntypeNames: %d",
-                                inputs.size(),
-                                classType.size(),
+                                Inputs.size(),
+                                ClassType.size(),
                                 names.size(),
-                                typeName.size()));
+                                TypeName.size()));
             }
 
-            return new ContractEvent(signatureHash, eventName, inputs, classType, typeName, names, address);
+            return new ContractEvent(SignatureHash, EventName, Inputs, ClassType, TypeName, names, address);
         }
 
         public ContractEventBuilder setEventName(String eventName) {
-            this.eventName = eventName;
+            EventName = eventName;
             return this;
         }
 
         public ContractEventBuilder setSignatureHash(String signatureHash) {
-            this.signatureHash = signatureHash;
+            SignatureHash = signatureHash;
             return this;
         }
 
         public ContractEventBuilder setInputs(List<Object> inputs) {
-            this.inputs = inputs;
+            Inputs = inputs;
             return this;
         }
 
         public ContractEventBuilder setClassType(List<Class> classType) {
-            this.classType = classType;
+            ClassType = classType;
             return this;
         }
 
         public ContractEventBuilder setTypeName(List<String> typeName) {
-            this.typeName = typeName;
+            TypeName = typeName;
             return this;
         }
 

@@ -25,18 +25,16 @@ public class PerformanceTest {
                     "truncate table graphing;",
                     "truncate table balance;",
                     "truncate table block;",
-                    "truncate table block_map;",
                     "truncate table contract;",
                     "truncate table event;",
                     "truncate table token;",
-                    "truncate table token_balance;",
+                    "truncate table token_holders;",
+                    "truncate table token_transfers;",
                     "truncate table transaction;",
-                    "truncate table transaction_map;",
-                    "truncate table transfer;",
-                    "update parser_state set block_number =-1, transaction_id=-1 where id =1 ;",
-                    "update parser_state set block_number =-1, transaction_id=-1 where id =2 ;",
-                    "update parser_state set block_number =0, transaction_id=-1 where id =3 ;",
-                    "update parser_state set block_number = 0, transaction_id =0 where id=4;"
+                    "update parser_state set blockNumber = -1 where id = 1 ;",
+                    "update parser_state set blockNumber = -1 where id = 2 ;",
+                    "update parser_state set blockNumber = 0 where id = 3 ;",
+                    "update parser_state set blockNumber = 0 where id = 4;"
             };
 
             for (var s: arr){

@@ -10,19 +10,13 @@ public class Graphing {
 
 
     private BigDecimal value;
-    private int date;
-    private int year;
-    private int month;
     private long timestamp;
     private long blockNumber;
     private String detail;
 
-    private Graphing(BigDecimal value, Integer date, Integer year, Integer month, GraphType graphType, Long timestamp, Long blockNumber, String detail) {
+    private Graphing(BigDecimal value, GraphType graphType, Long timestamp, Long blockNumber, String detail) {
 
         this.value = value;
-        this.date = date;
-        this.year = year;
-        this.month = month;
         this.graphType = graphType;
         this.timestamp = timestamp;
         this.blockNumber = blockNumber;
@@ -38,21 +32,9 @@ public class Graphing {
         return value;
     }
 
-    public int getDate() {
-        return date;
-    }
-
-    public int getYear() {
-        return year;
-    }
-
-    public int getMonth() {
-        return month;
-    }
-
     @Override
     public int hashCode() {
-        return Objects.hash(value, date, year, month, graphType);
+        return Objects.hash(value, graphType);
     }
 
     public long getTimestamp() {
@@ -70,9 +52,6 @@ public class Graphing {
         if (o == null || getClass() != o.getClass()) return false;
         Graphing graphing1 = (Graphing) o;
         return Objects.equals(value, graphing1.value) &&
-                Objects.equals(date, graphing1.date) &&
-                Objects.equals(year, graphing1.year) &&
-                Objects.equals(month, graphing1.month) &&
                 Objects.equals(graphType, graphing1.graphType) &&
                 Objects.equals(timestamp, graphing1.timestamp) &&
                 Objects.equals(blockNumber, graphing1.blockNumber);
@@ -116,32 +95,14 @@ public class Graphing {
 
     public static class GraphingBuilder {
         private BigDecimal value;
-        private Integer date;
-        private Integer year;
-        private Integer month;
         private GraphType graphType;
         private Long timestamp;
         private Long blockNumber;
         private String detail = "";
-
+        
 
         public GraphingBuilder setValue(BigDecimal value) {
             this.value = value;
-            return this;
-        }
-
-        public GraphingBuilder setDate(Integer date) {
-            this.date = date;
-            return this;
-        }
-
-        public GraphingBuilder setYear(Integer year) {
-            this.year = year;
-            return this;
-        }
-
-        public GraphingBuilder setMonth(Integer month) {
-            this.month = month;
             return this;
         }
 
@@ -160,13 +121,13 @@ public class Graphing {
             return this;
         }
 
-        public Graphing build() {
-            return new Graphing(value, date, year, month, graphType, timestamp, blockNumber, detail);
-        }
-
         public GraphingBuilder setDetail(String detail) {
             this.detail = detail;
             return this;
+        }
+
+        public Graphing build() {
+            return new Graphing(value, graphType, timestamp, blockNumber, detail);
         }
     }
 }

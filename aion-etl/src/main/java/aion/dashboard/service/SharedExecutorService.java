@@ -34,13 +34,13 @@ public class SharedExecutorService {
     }
 
     public void close() {
-        try {
+        try{
             isClosed = true;
             executorService.shutdown();
             executorService.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
-        } finally {
+        }
+        catch (Exception ignored){}
+        finally {
             executorService.shutdownNow();
         }
     }

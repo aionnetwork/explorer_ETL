@@ -3,9 +3,7 @@ package aion.dashboard.task;
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.email.EmailService;
-import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.DbServiceException;
-import aion.dashboard.exception.GraphingException;
 import aion.dashboard.service.*;
 import aion.dashboard.util.TimeLogger;
 import org.aion.api.type.BlockDetails;
@@ -23,30 +21,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class GraphingTask implements Runnable {
-    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
+    private static Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private static final TimeLogger TIME_LOGGER = new TimeLogger("");
     private GraphingService graphingService = GraphingServiceImpl.getInstance();
     private AionService service;
-    private ParserStateService parserStateService;
-    private static final ZoneId UTCZoneID = ZoneId.of("UTC");
+    private ParserStateService parser_stateService;
+    private final static ZoneId UTCZoneID = ZoneId.of("UTC");
     // consider moving these to the config in a future release
-    private static final int INITIAL_DELAY = 5;
-    private  static final int DELAY_AT_END_OF_HOUR = 2;
+    private final static int InitialDelay = 5;
+    private final static int DelayAtEndOfHour = 2;
 
 
 
-    private static final GraphingTask INSTANCE = new GraphingTask(AionService.getInstance());
+    private static GraphingTask Instance = new GraphingTask(AionService.getInstance());
     private volatile ScheduledFuture future;
 
 
     private GraphingTask(AionService service){
         this.service = service;
-        this.parserStateService = ParserStateServiceImpl.getInstance();
+        this.parser_stateService = ParserStateServiceImpl.getInstance();
 
     }
 
     public static GraphingTask getInstance() {
-        return INSTANCE;
+        return Instance;
     }
 
     public ScheduledFuture getFuture() {
@@ -59,44 +57,72 @@ public class GraphingTask implements Runnable {
 
         GENERAL.info("Starting Graphing Task");
         TIME_LOGGER.start();
-        boolean interrupted = false;
 
         try {
             service.reconnect();
 
-            long endNumberDB = parserStateService.readDBState().getBlockNumber().longValue();// get the current height of the DB to know how many records can be computed
+            long endNumberDB = parser_stateService.readDBState().getBlockNumber().longValue();// get the current height of the DB to know how many records can be computed
 
 
 
-            long startNumber = parserStateService.readGraphingState().getBlockNumber().longValue() + 1;
+            long startNumber = parser_stateService.readGraphingState().getBlockNumber().longValue() + 1;
             long range = endNumberDB - startNumber > 1000 ? 1000 : endNumberDB - startNumber;// get the range of values to be extracted from the kernel
 
 
 
-            while (range>0) {
+            while (range>0 && !Thread.currentThread().isInterrupted()) {
 
-                if(Thread.currentThread().isInterrupted()){
-                    Thread.currentThread().interrupt();
-                    interrupted = true;
-                    break;
+                List<BlockDetails> detailsList = service.getBlockDetailsByRange(startNumber, startNumber + range - 1);
+                ZonedDateTime blockTIme = Instant.ofEpochMilli(detailsList.get(0).getTimestamp() * 1000).atZone(UTCZoneID);
+                int startHour = blockTIme.getHour();
+
+                if (generatedThisHour(blockTIme)) break;
+
+                List<BlockDetails> listToCompute = detailsList.parallelStream().filter(e -> {
+
+                    ZonedDateTime dateTime = Instant.ofEpochMilli(e.getTimestamp() *1000).atZone(UTCZoneID);
+
+                    return startHour == dateTime.getHour();//Get all the blocks that occurred within this hour
+                }).collect(Collectors.toList());
+
+
+                int initialSize = detailsList.size();
+                int addedValues = 0;
+
+
+                long lastBlock = -1;
+                while (initialSize+addedValues == listToCompute.size() && lastBlock !=service.getBlockNumber()){// to handle hours with more than a thousand blocks
+                    List<BlockDetails> additionalElements = service.
+                            getBlockDetailsByRange(addedValues+startNumber + range,
+                                    addedValues+startNumber + range + 199);
+
+                    addedValues += additionalElements.size();
+                    listToCompute.addAll(
+                            additionalElements.parallelStream().filter(e -> {
+
+                                ZonedDateTime dateTime = Instant.ofEpochMilli(e.getTimestamp() *1000).atZone(UTCZoneID);
+
+                                return startHour == dateTime.getHour();//Get all the blocks that occurred within this hour
+                            }).collect(Collectors.toList())
+                    );
+                    lastBlock = additionalElements.get(additionalElements.size() -1).getNumber();
                 }
+                if(listToCompute.size() == initialSize + addedValues) {
+                    GENERAL.debug("Tried to extract list larger than the kernel's Database");
 
-                List<BlockDetails> listToCompute = extractBlocksInRange(startNumber, range);
-                long lastBlock;
-                if (listToCompute.isEmpty()) {
-                    break;
-                }// IGNORE LINTING RULE
-                //  if the list is empty that means that no blocks need to be computed
-                //  therefore breakout of the loop
+                    break;// This check makes sure that we never update the graphing information if the Kernel is not up to date
+                    //because of all the care done in the scheduling this is probably an indication that the kernel is unable to update
+                }
 
 
                 lastBlock=listToCompute.get(listToCompute.size() -1).getNumber();
 
 
-                if (lastBlock > parserStateService.readDBState().getBlockNumber().longValue()){
-                    GENERAL.debug("Failed sanity check");
+                if (lastBlock > parser_stateService.readDBState().getBlockNumber().longValue()){
+                    GENERAL.debug("Kernel's last block is greater that the DB.");
 
-                    throw new GraphingException("Failed Sanity check. Last block is greater than the DB parser state.");//sanity check this should never happen
+                    break;
+                    //throw new GraphingException("Failed Sanity check. Last block is greater than the DB parser state.");//sanity check this should never happen
                 }
 
 
@@ -109,7 +135,7 @@ public class GraphingTask implements Runnable {
 
 
 
-                endNumberDB = parserStateService.readDBState().getBlockNumber().longValue();
+                endNumberDB = parser_stateService.readDBState().getBlockNumber().longValue();
 
                 startNumber = listToCompute.get(listToCompute.size() - 1).getNumber() + 1;
                 range = endNumberDB - startNumber > 1000 ? 1000 : endNumberDB - startNumber;
@@ -120,7 +146,7 @@ public class GraphingTask implements Runnable {
             GENERAL.debug("Caught exception in graphing task: ", e);
             EmailService
                     .getInstance()
-                    .send("Graphing service", String.format("Failed to update statistics at: %s %n Threw exception: %s %n Shutting down the graph task.", ZonedDateTime.now().format(DateTimeFormatter.RFC_1123_DATE_TIME), e.toString()));
+                    .send("Graphing service", String.format("Failed to update statistics at: %s %n Threw exception: %s \n Shutting down the graph task.", ZonedDateTime.now().format(DateTimeFormatter.RFC_1123_DATE_TIME), e.toString()));
             GENERAL.error("Shutting down graphing task");
             return;
         }
@@ -135,61 +161,15 @@ public class GraphingTask implements Runnable {
         GENERAL.info("Statistics up to date.");
         TIME_LOGGER.logTime("Computed statistics in {}");
 
-        if (!interrupted)
-            scheduleNext();
-    }
 
-    private List<BlockDetails> extractBlocksInRange(long startNumber, long range) throws AionApiException {
-        List<BlockDetails> detailsList = service.getBlockDetailsByRange(startNumber, startNumber + range - 1);
-        ZonedDateTime blockTIme = Instant.ofEpochMilli(detailsList.get(0).getTimestamp() * 1000).atZone(UTCZoneID);
-        int startHour = blockTIme.getHour();
-
-        if (generatedThisHour(blockTIme)) return Collections.emptyList();
-
-        List<BlockDetails> listToCompute = detailsList.parallelStream().filter(e -> {
-
-            ZonedDateTime dateTime = Instant.ofEpochMilli(e.getTimestamp() *1000).atZone(UTCZoneID);
-
-            return startHour == dateTime.getHour();//Get all the blocks that occurred within this hour
-        }).collect(Collectors.toList());
-
-
-        int initialSize = detailsList.size();
-        int addedValues = 0;
-
-
-        long lastBlock = -1;
-        while (initialSize+addedValues == listToCompute.size() && lastBlock !=service.getBlockNumber()){// to handle hours with more than a thousand blocks
-            List<BlockDetails> additionalElements = service.
-                    getBlockDetailsByRange(addedValues+startNumber + range,
-                            addedValues+startNumber + range + 199);
-
-            addedValues += additionalElements.size();
-            listToCompute.addAll(
-                    additionalElements.parallelStream().filter(e -> {
-
-                        ZonedDateTime dateTime = Instant.ofEpochMilli(e.getTimestamp() *1000).atZone(UTCZoneID);
-
-                        return startHour == dateTime.getHour();//Get all the blocks that occurred within this hour
-                    }).collect(Collectors.toList())
-            );
-            lastBlock = additionalElements.get(additionalElements.size() -1).getNumber();
-        }
-        if(listToCompute.size() == initialSize + addedValues) {
-            GENERAL.debug("Tried to extract list larger than the kernel's Database");
-
-            return Collections.emptyList();
-            //because of all the care done in the scheduling this is probably an indication that the kernel is unable to update
-        }
-        return listToCompute;
+        scheduleNext();
     }
 
 
     private List<Graphing> compute(List<BlockDetails> blockDetails) throws SQLException {
-        if (blockDetails.isEmpty()) return Collections.emptyList();
         GENERAL.debug("Computing Statistics for blocks in range({}, {})", blockDetails.get(0).getNumber(),
                 blockDetails.get(blockDetails.size() - 1).getNumber());
-        final BigDecimal blocksMined = BigDecimal.valueOf(blockDetails.size());
+        final BigDecimal BlocksMined = BigDecimal.valueOf(blockDetails.size());
         final BigDecimal averageDifficulty = blockDetails.parallelStream()
                 .map(b -> new BigDecimal(b.getDifficulty()))//Get the difficulty of each block
                 .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
@@ -209,7 +189,7 @@ public class GraphingTask implements Runnable {
 
         final BigDecimal averageHashPower = new BigDecimal(blockDetails.get(blockDetails.size() -1).getDifficulty())
                 .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
-        final BigDecimal activeaddressescount = BigDecimal.valueOf(graphingService.countActiveAddresses(
+        final BigDecimal ActiveAddressesCount = BigDecimal.valueOf(graphingService.countActiveAddresses(
                 blockDetails.get(blockDetails.size() - 1).getNumber()));
 
 
@@ -244,7 +224,7 @@ public class GraphingTask implements Runnable {
 
 
 
-        long timeStamp = blockDetails.get(blockDetails.size() - 1).getTimestamp() * 1000;
+        long timeStamp = blockDetails.get(blockDetails.size() - 1).getTimestamp();
 
 
 
@@ -255,10 +235,7 @@ public class GraphingTask implements Runnable {
         Graphing.GraphingBuilder builder = new Graphing.GraphingBuilder();
         //Build the graphing object with the defaults
         builder.setBlockNumber(blockDetails.get(blockDetails.size() - 1).getNumber())
-                .setTimestamp(timeStamp)
-                .setYear(dateTime.getYear())
-                .setDate(dateTime.getDayOfMonth())
-                .setMonth(dateTime.getMonthValue());
+                .setTimestamp(timeStamp);
 
         for (int i = topMinerPair.size()-1; i>=0 && i>=topMinerPair.size() -25; i --){// Get the top 25 Since this is sorted in ascending order start from the tail of the list
             ret.add(
@@ -274,8 +251,8 @@ public class GraphingTask implements Runnable {
         ret.add(builder.setValue(averageBlockTime).setGraphType(Graphing.GraphType.BLOCK_TIME).setDetail("").build());
         ret.add(builder.setValue(averageDifficulty).setGraphType(Graphing.GraphType.DIFFICULTY).setDetail("").build());
         ret.add(builder.setValue(averageHashPower).setGraphType(Graphing.GraphType.HASH_POWER).setDetail("").build());
-        ret.add(builder.setValue(activeaddressescount).setGraphType(Graphing.GraphType.ACTIVE_ADDRESS_GROWTH).setDetail("").build());
-        ret.add(builder.setValue(blocksMined).setGraphType(Graphing.GraphType.BLOCKS_MINED).setDetail("").build());
+        ret.add(builder.setValue(ActiveAddressesCount).setGraphType(Graphing.GraphType.ACTIVE_ADDRESS_GROWTH).setDetail("").build());
+        ret.add(builder.setValue(BlocksMined).setGraphType(Graphing.GraphType.BLOCKS_MINED).setDetail("").build());
 
         return ret;
     }
@@ -286,11 +263,11 @@ public class GraphingTask implements Runnable {
         ZoneId currentZone = ZoneId.systemDefault();
         ZonedDateTime zonedNow = ZonedDateTime.of(localNow, currentZone);
 
-        ZonedDateTime zonedFirstExecution = zonedNow.withSecond(0).plusHours(1).withMinute(DELAY_AT_END_OF_HOUR);
+        ZonedDateTime ZonedFirstExecution = zonedNow.withSecond(0).plusHours(1).withMinute(DelayAtEndOfHour);
 
-        GENERAL.debug("Next execution scheduled at {}", zonedFirstExecution);
+        GENERAL.debug("Next execution scheduled at {}", ZonedFirstExecution.toString());
 
-        Duration duration = Duration.between(zonedNow, zonedFirstExecution);
+        Duration duration = Duration.between(zonedNow, ZonedFirstExecution);
         long delay = duration.getSeconds();//get the next hour in which this task should run
 
         future = SchedulerService.getInstance().addRunOnce(this, delay, TimeUnit.SECONDS);//run the graphing service 2 minutes after the hour to allow for additional blocks to be imported
@@ -300,7 +277,7 @@ public class GraphingTask implements Runnable {
 
     public void scheduleNow(){
         ZonedDateTime timeNow = ZonedDateTime.now(UTCZoneID);
-        ZonedDateTime timeNextHour = ZonedDateTime.now(UTCZoneID).plusHours(1).withMinute(DELAY_AT_END_OF_HOUR).withSecond(0);
+        ZonedDateTime timeNextHour = ZonedDateTime.now(UTCZoneID).plusHours(1).withMinute(DelayAtEndOfHour).withSecond(0);
         Duration diff = Duration.between(timeNow, timeNextHour);
 
 
@@ -308,9 +285,9 @@ public class GraphingTask implements Runnable {
             scheduleNext();// If the time to the next hour is less than 10 minutes schedule in the next hour
         } else {
             //Schedule the service to run in the background now
-            GENERAL.debug("Next execution of Graphing Task scheduled at {}", timeNow.plusMinutes(INITIAL_DELAY));
+            GENERAL.debug("Next execution of Graphing Task scheduled at {}", timeNow.plusMinutes(InitialDelay).toString());
 
-            future = SchedulerService.getInstance().addRunOnce(this, INITIAL_DELAY, TimeUnit.MINUTES);
+            future = SchedulerService.getInstance().addRunOnce(this, InitialDelay, TimeUnit.MINUTES);
         }
     }
 
