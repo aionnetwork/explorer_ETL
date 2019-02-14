@@ -11,5 +11,5 @@ config/
 .gradle
 build/
 
-idea/
+.idea/
 test_data/SmallChainDB/
