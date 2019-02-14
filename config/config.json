@@ -1,0 +1,48 @@
+{
+	"hostname":"Staging1",
+	"sql" : {
+		"ip": "127.0.0.1",
+		"dbName": "aionv4",
+		"username": "admin",
+		"password": "password"
+	},
+	"email": {
+		"username": "",
+		"password":"",
+
+		"recipients": [],
+		"enableReports":false,
+		"timeOut":60
+	},
+    "test" : {
+		"largeLimit": 10000,
+		"smallLimit": 50
+    },
+	"meter" : {
+		"key_app": "************************************",
+		"key_api": "************************************",
+		"status": "enable"
+	},
+	"serviceIntegrityChecks":{
+		"sortedCheck" : true,
+		"requestedRangeSizeCheck": true,
+		"expectedRangeCheck": true
+	},
+	"blockchainReader":{
+		"errorDelay": 200,
+		"pollDelay": 500,
+		"queueSize": 5
+	},
+
+	"api": [],
+
+	"delayPollingMain": 3500,
+	"delayIntegrityCheck": 11000,
+
+	"blockQueryRange": 1000,
+	"blockReorgLimit": 500,
+
+	"transactionBatchSize": 10000,
+
+	"performanceFlag": true
+}
