@@ -41,14 +41,14 @@ public class BlockchainReaderThread extends Thread{
     private final AtomicLong queuePointer = new AtomicLong();
     private final AtomicBoolean shouldReorg = new AtomicBoolean(false);
     private BlockParser blockParser;
-    private ParserStateService parserStateService = ParserStateServiceImpl.getInstance();
+    private ParserStateService parserStateService;
     private int numReconnectAionService;
     private RollingBlockMean rollingBlockMean;
-
-
+    private static final String THREAD_NAME= "BlockchainReaderThread";
 
     public BlockchainReaderThread(){
-        super("BlockchainReaderThread");
+        super(THREAD_NAME);
+
 
 
         batchQueue = new ArrayBlockingQueue<>((int) config.getQueueSize());
@@ -57,6 +57,21 @@ public class BlockchainReaderThread extends Thread{
         shouldReorg.set(false);
         blockParser = null;
         keepRunning = true;
+        parserStateService = ParserStateServiceImpl.getInstance();
+    }
+
+
+    public BlockchainReaderThread(ParserStateService service){
+        super(THREAD_NAME);
+
+
+        batchQueue = new ArrayBlockingQueue<>((int) config.getQueueSize());
+
+        aionService = AionService.getInstance();
+        shouldReorg.set(false);
+        blockParser = null;
+        keepRunning = true;
+        parserStateService = service;
     }
 
     @Override
@@ -97,7 +112,7 @@ public class BlockchainReaderThread extends Thread{
 
 
                 while (!Thread.interrupted() && keepRunning) {
-                    setName("BlockchainReaderThread");
+                    setName(THREAD_NAME);
 
 
                     if(!Utils.trySleep(POLL_DELAY))

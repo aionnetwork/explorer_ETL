@@ -57,7 +57,7 @@ public class DBThread extends Thread {
     }
 
 
-    public DBThread(BlockchainReaderThread readerThread, WriteTaskImpl writeTask){
+    public DBThread(BlockchainReaderThread readerThread, WriteTask writeTask){
         super("DB Thread");
         Config config = Config.getInstance();
         this.readerThread = readerThread;
