@@ -158,7 +158,10 @@ public class BlockchainReaderThread extends Thread{
 
         long requestedRange = 1+requestPtr - queuePointer.get();
 
-        List<BlockDetails> blockDetails = aionService.getBlockDetailsByRange(queuePointer.get(), requestPtr);
+
+        List<BlockDetails> blockDetails = config.isTest() ?
+                aionService.getBlockDetailsByRange(queuePointer.get(), Math.min(requestPtr, config.getMaxHeight())):
+                aionService.getBlockDetailsByRange(queuePointer.get(), requestPtr);
 
         // Perform checks to see if the values coming back from the DB are valid
         if (config.isExpectedRangeCheck() && !checkExpectedRange(blockDetails, queuePointer.get(), requestPtr))
