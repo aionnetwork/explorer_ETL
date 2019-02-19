@@ -9,6 +9,8 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -122,8 +124,32 @@ public class Utils {
         return truncate(str, STR_MAX_LENGTH);
     }
 
-    public static String truncate(String str, int length){
+    public static String truncate(String str, int length) {
         if (str.length() <= length) return str;
         else return str.substring(0, length);
+    }
+    /**
+     * Spin wait while waiting for the result of some operation
+     * @param tSupplier the operation to perform
+     * @param resultPredicate the predicate used to compute whether the operation completed
+     * @param <T> the result type
+     * @return The expected resulut
+     * @throws InterruptedException If the thread is interrupted while waiting the response
+     */
+    public static <T> T awaitResult(Supplier<T> tSupplier, Predicate<T> resultPredicate) throws InterruptedException {
+        T res;
+        boolean firstRun = true;
+        do {
+            if (firstRun){
+                firstRun = false;
+            }
+            else {
+                Thread.sleep(50);
+            }
+
+            res = tSupplier.get();
+        } while (resultPredicate.negate().test(res));
+        return res;
+
     }
 }
