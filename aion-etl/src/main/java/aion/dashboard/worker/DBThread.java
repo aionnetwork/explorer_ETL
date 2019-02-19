@@ -12,6 +12,7 @@ import aion.dashboard.service.ParserStateService;
 import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.ReorgService;
 import aion.dashboard.service.ReorgServiceImpl;
+import aion.dashboard.task.WriteTaskImpl;
 import aion.dashboard.task.WriteTask;
 import aion.dashboard.util.TimeLogger;
 import aion.dashboard.util.Utils;
@@ -34,6 +35,7 @@ public class DBThread extends Thread {
     private AionService aionService;
 
     private int numReconnectAionService;
+    private final WriteTask writeTask;
 
     private ReorgService reorgService;
 
@@ -50,21 +52,32 @@ public class DBThread extends Thread {
 
         ParserStateService parserService = ParserStateServiceImpl.getInstance();
         reorgService = new ReorgServiceImpl(aionService, parserService);
-
-
-
-
-
-
         keepRunning = true;
-
-
-
+        writeTask = WriteTaskImpl.getInstance();
     }
+
+
+    public DBThread(BlockchainReaderThread readerThread, WriteTaskImpl writeTask){
+        super("DB Thread");
+        Config config = Config.getInstance();
+        this.readerThread = readerThread;
+        aionService = AionService.getInstance();
+
+
+        pollDelay = config.getReaderPollDelay();
+        errDelay = config.getReaderErrPollDelay();
+        emailService = EmailService.getInstance();
+
+        ParserStateService parserService = ParserStateServiceImpl.getInstance();
+        reorgService = new ReorgServiceImpl(aionService, parserService);
+        keepRunning = true;
+        this.writeTask = writeTask;
+    }
+
+
 
     @Override
     public void run(){
-        WriteTask writeTask = WriteTask.getInstance();
 
 
         waitForInit();
