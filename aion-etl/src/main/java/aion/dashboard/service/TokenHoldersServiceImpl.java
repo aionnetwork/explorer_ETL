@@ -86,7 +86,7 @@ public class TokenHoldersServiceImpl implements TokenHoldersService {
                 try (ResultSet rs = ps.executeQuery()) {
                     TokenHolders.TokenBalanceBuilder builder = new TokenHolders.TokenBalanceBuilder();
                     while (rs.next()) {
-                        builder.setScaledBalance(rs.getBigDecimal("balance"));
+                        builder.setScaledBalance(rs.getBigDecimal("scaled_balance"));
                         builder.setBlockNumber(rs.getLong("block_number"));
                         builder.setContractAddress(rs.getString("contract_addr"));
                         builder.setHolderAddress(rs.getString("holder_addr"));

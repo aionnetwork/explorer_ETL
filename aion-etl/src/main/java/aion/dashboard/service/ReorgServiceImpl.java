@@ -11,6 +11,7 @@ import aion.dashboard.exception.ReorganizationLimitExceededException;
 import aion.dashboard.task.GraphingTask;
 import aion.dashboard.util.ABIDefinitions;
 import aion.dashboard.util.TimeLogger;
+import aion.dashboard.util.Utils;
 import org.aion.api.IContract;
 import org.aion.api.sol.IAddress;
 import org.aion.base.type.Address;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.sql.SQLException;
 import java.util.*;
@@ -177,13 +179,16 @@ public class ReorgServiceImpl implements ReorgService {
         for (var tknBalance: tokenHolders){
             try {
                 borrowedAionService.reconnect();
-                BigDecimal balance = BigDecimal.valueOf((long) borrowedAionService
+                BigDecimal balance = new BigDecimal( (BigInteger) borrowedAionService
                         .callContractFunction(contracts.get(tknBalance.getContractAddress()), "balanceOf", IAddress.copyFrom(tknBalance.getHolderAddress())).get(0))
                         .divide(new BigDecimal(tokenMap.get(tknBalance.getContractAddress()).getGranularity()), MathContext.DECIMAL128);
 
                 res.add(new TokenHolders.TokenBalanceBuilder()
                         .setBlockNumber(borrowedAionService.getBlockNumber())
-                        .setScaledBalance(balance)
+                        .setRawBalance(balance.toPlainString())
+                        .setScaledBalance(balance.scaleByPowerOfTen(-1 * tokenMap.get(tknBalance.getContractAddress()).getTokenDecimal()))
+                        .setTokenGranularity(tokenMap.get(tknBalance.getContractAddress()).getGranularity())
+                        .setTokenDecimal(tokenMap.get(tknBalance.getContractAddress()).getTokenDecimal())
                         .setHolderAddress(tknBalance.getHolderAddress())
                         .setContractAddress(tknBalance.getContractAddress())
                         .build());
