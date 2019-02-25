@@ -194,8 +194,12 @@ public class DBThread extends Thread {
     private boolean checkReorg() throws DbServiceException, AionApiException, SQLException, ReorganizationLimitExceededException {
 
 
-        boolean shouldReset = reorgService.reorg();// Do reorg and return boolean indicating whether a reset should occur
-
+        boolean shouldReset;// Do reorg and return boolean indicating whether a reset should occur
+        try {
+            shouldReset = reorgService.reorg();
+        } catch (AionApiException e){
+            shouldReset = true;
+        }
 
         //noinspection ConstantConditions
         if (shouldReset) {
