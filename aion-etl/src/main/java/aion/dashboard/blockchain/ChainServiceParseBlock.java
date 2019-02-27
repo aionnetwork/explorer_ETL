@@ -37,6 +37,7 @@ import java.util.Optional;
 
 import static aion.dashboard.util.ContractEvents.decodeEventLog;
 import static aion.dashboard.util.Utils.fromWei;
+import static aion.dashboard.util.Utils.truncate;
 
 /**
  * This service serves to transform the blocks extracted from the blockchain
@@ -558,12 +559,12 @@ public class ChainServiceParseBlock {
             tokenBuilder.contractAddress(contractAddress)
                     .creatorAddress(contract.getContractCreatorAddr())
                     .transactionHash(contract.getContractTxHash())
-                    .name((String) borrowedService
+                    .name(truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "name")
-                            .get(0))
-                    .symbol((String) borrowedService
+                            .get(0)))
+                    .symbol(truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "symbol")
-                            .get(0))
+                            .get(0)))
                     .granularity(BigDecimal.valueOf((long) borrowedService
                             .callContractFunction(contractFromAbi, "granularity")
                             .get(0)))
@@ -580,7 +581,7 @@ public class ChainServiceParseBlock {
             GENERAL.debug("Threw an exception in get token: ", e);
             throw e;
         }
-        catch (IllegalStateException ignored){
+        catch (RuntimeException ignored){
 
         }
 

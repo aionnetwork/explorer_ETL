@@ -34,4 +34,15 @@ public class Utils {
         }
         return true;
     }
+
+    private static final int STR_MAX_LENGTH=65535;
+
+    public static String truncate(String str){
+        return truncate(str, STR_MAX_LENGTH);
+    }
+
+    public static String truncate(String str, int length){
+        if (str.length() <= length) return str;
+        else return str.substring(0, length);
+    }
 }
