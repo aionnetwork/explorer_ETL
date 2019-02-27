@@ -561,10 +561,10 @@ public class ChainServiceParseBlock {
                     .transactionHash(contract.getContractTxHash())
                     .name(truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "name")
-                            .get(0)))
+                            .get(0), aion.dashboard.util.Utils.NAME_MAX_LENGTH))
                     .symbol(truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "symbol")
-                            .get(0)))
+                            .get(0), aion.dashboard.util.Utils.SYMBOLS_MAX_LENGTH))
                     .granularity(BigDecimal.valueOf((long) borrowedService
                             .callContractFunction(contractFromAbi, "granularity")
                             .get(0)))
