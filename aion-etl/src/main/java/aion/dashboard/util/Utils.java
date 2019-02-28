@@ -118,10 +118,11 @@ public class Utils {
         }
     }
 
-    private static final int STR_MAX_LENGTH=65535;
+    public static final int NAME_MAX_LENGTH =45;
+    public static final int SYMBOLS_MAX_LENGTH=45;
 
     public static String truncate(String str){
-        return truncate(str, STR_MAX_LENGTH);
+        return truncate(str, NAME_MAX_LENGTH);
     }
 
     public static String truncate(String str, int length) {

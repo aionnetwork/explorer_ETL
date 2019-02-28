@@ -602,10 +602,10 @@ public class BlockParser {
                     .transactionHash(contract.getContractTxHash())
                     .name(tokenDB == null ? truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "name")
-                            .get(0)) : tokenDB.getTokenName() )
+                            .get(0), NAME_MAX_LENGTH) : tokenDB.getTokenName() )
                     .symbol(tokenDB == null ? truncate((String) borrowedService
                             .callContractFunction(contractFromAbi, "symbol")
-                            .get(0)) : tokenDB.getSymbol())
+                            .get(0), SYMBOLS_MAX_LENGTH) : tokenDB.getSymbol())
                     .granularity(granularity)
                     .totalSupply((BigInteger) borrowedService
                             .callContractFunction(contractFromAbi, "totalSupply")
