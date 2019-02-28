@@ -622,7 +622,7 @@ public class BlockParser {
             GENERAL.debug("Threw an exception in get token: ", e);
             throw e;
         }
-        catch (IllegalStateException ignored){
+        catch (RuntimeException ignored){
             //
         }
 
