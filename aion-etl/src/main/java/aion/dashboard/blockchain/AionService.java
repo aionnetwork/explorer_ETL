@@ -48,8 +48,17 @@ public class AionService implements AutoCloseable{
 		if (isConnected())
 			return; // everything's good
 
-		ApiMsg apiMsg = new ApiMsg();
 		// try to re-connect starting from index 0 in connection list
+		while(!Thread.currentThread().isInterrupted()) {
+			if (attemptReconnect()) return;
+		}
+		GENERAL.error("Api Connection Error: Failed to establish connection to any known Aion client.");
+		throw new AionApiException();
+
+	}
+
+	private boolean attemptReconnect() {
+		ApiMsg apiMsg = new ApiMsg();
 		for (int i = 0; i < connections.size(); i++) {
 			String url = connections.get(i);
 			synchronized (MUTEX) {
@@ -61,13 +70,10 @@ public class AionService implements AutoCloseable{
 				GENERAL.debug("Api Connected to endpoint [{}]", url);
 				connectionIndex = i;
 
-				return;
+				return true;
 			}
 		}
-
-		GENERAL.error("Api Connection Error: Failed to establish connection to any known Aion client.");
-		throw new AionApiException();
-
+		return false;
 	}
 
 	public boolean isConnected() {
