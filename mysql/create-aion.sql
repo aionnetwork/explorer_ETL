@@ -63,7 +63,7 @@ CREATE TABLE `transaction` (
 	`transaction_timestamp` BIGINT,
 	`value` DECIMAL(64,18),
 	`transaction_log` TEXT,
-	`data` TEXT,
+	`data` MEDIUMTEXT,
 	`nonce` TINYTEXT,
 	`tx_error` TEXT,
 	`contract_addr` VARCHAR(64),
