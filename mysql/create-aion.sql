@@ -114,8 +114,8 @@ PRIMARY KEY(`address`)
 CREATE TABLE `token` (
 	`contract_addr` VARCHAR(64) NOT NULL,
 	`transaction_hash` VARCHAR(64) NOT NULL,
-	`name` VARCHAR(65535) DEFAULT NULL,
-	`symbol` VARCHAR(65535) DEFAULT NULL,
+	`name` VARCHAR(45) DEFAULT NULL,
+	`symbol` VARCHAR(45) DEFAULT NULL,
 	`creator_address` VARCHAR(64) NOT NULL,
 	`total_supply` DECIMAL(39,0) NOT NULL,
 	`liquid_supply` DECIMAL(39,0) NOT NULL,
