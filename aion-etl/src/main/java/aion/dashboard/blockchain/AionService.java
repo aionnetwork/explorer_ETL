@@ -13,6 +13,11 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
@@ -62,7 +67,7 @@ public class AionService implements AutoCloseable{
 		for (int i = 0; i < connections.size(); i++) {
 			String url = connections.get(i);
 			synchronized (MUTEX) {
-				apiMsg.set(api.connect(url));
+				apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
 			}
 			if (apiMsg.isError()) {
 				GENERAL.debug("Api Connection Failed. Endpoint: [{}]. Error: [{}] {}", url, apiMsg.getErrorCode(), apiMsg.getErrString());
@@ -94,7 +99,7 @@ public class AionService implements AutoCloseable{
 				String url = connections.get(i);
 
 				synchronized (MUTEX){
-					apiMsg.set(api.connect(url));
+					apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
 				}
 
 				if (apiMsg.isError())
@@ -118,9 +123,8 @@ public class AionService implements AutoCloseable{
 		ApiMsg apiMsg;
 		try {
 			GENERAL.debug("Calling getBlockDetailsByRange({},{}) size: [{}]", start, end, end - start + 1);
-			synchronized (MUTEX) {
-				apiMsg = api.getAdmin().getBlockDetailsByRange(start, end);
-			}
+			apiMsg = doApiRequest(iAionApi -> iAionApi.getAdmin().getBlockDetailsByRange(start, end), api);
+
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
 			} else {
@@ -141,9 +145,8 @@ public class AionService implements AutoCloseable{
 		String result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getChain().getBlockByNumber(blockNumber));
-			}
+			apiMsg.set(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
 			} else {
@@ -166,9 +169,8 @@ public class AionService implements AutoCloseable{
 		long result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getChain().blockNumber());
-			}
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().blockNumber(), api));
+
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
 			} else {
@@ -198,7 +200,8 @@ public class AionService implements AutoCloseable{
 		IContract result;
 		try {
 			synchronized (MUTEX){
-				result = api.getContractController().getContractAt(from, contractAddr, abi);
+				result = api.getContractController().getContractAt(from, contractAddr, abi);//no need for an
+				// async call this is basically just the construction of the contract object
 			}
 
 			if (result == null) throw new AionApiException("Contract not found at address");
@@ -227,36 +230,37 @@ public class AionService implements AutoCloseable{
 	public List<Object> callContractFunction(IContract contract, String functionName, ISolidityArg... args) throws AionApiException {
 
 
-        ContractResponse response;
-		ApiMsg apiMsg;
 		try {
-			synchronized (MUTEX) {
-				contract.newFunction(functionName);
 
-				for (var arg : args) contract.setParam(arg); // set all the arguments associated with the contract
+			ApiMsg apiMsg = (doApiRequest(contractObj -> {
+				contractObj.newFunction(functionName);
 
-				contract.setTxNrgLimit(NRG_LIMIT_TX_MAX);
-				contract.setTxNrgPrice(NRG_PRICE_MIN);//Get the recommended NRG price from the connected kernel
-				contract.build();
+				for (var arg : args) contractObj.setParam(arg); // set all the arguments associated with the contract
 
+				contractObj.setTxNrgLimit(NRG_LIMIT_TX_MAX);
+				contractObj.setTxNrgPrice(NRG_PRICE_MIN);//Get the recommended NRG price from the connected kernel
+				contractObj.build();
+				return contractObj.call();
+			}, contract));
 
-				apiMsg = (contract.call());
-				if (apiMsg.isError())
-					throw new AionApiException(formatError(apiMsg));
-				else response = apiMsg.getObject();
-			}
-			if (response.isStatusError() || response.isTxError()) {
-				String error;
-				if (response.isTxError()) {
-					error = response.getError();
-				} else {
-					error = response.statusToString();
+			if (apiMsg.isError())
+				throw new AionApiException(formatError(apiMsg));
+			else {
+				ContractResponse response = apiMsg.getObject();
+
+				if (response.isStatusError() || response.isTxError()) {
+					String error;
+					if (response.isTxError()) {
+						error = response.getError();
+					} else {
+						error = response.statusToString();
+					}
+
+					throw new AionApiException(formatError(apiMsg) + "\nTransaction error: " + error);
+
 				}
-
-				throw new AionApiException(formatError(apiMsg) + "\nTransaction error: " + error);
-
+				return response.getData();
 			}
-
 		} catch (AionApiException e) {
 			GENERAL.debug("AionApi: threw Exception in callContractFunction() ", e);
 			throw  e;
@@ -264,7 +268,6 @@ public class AionService implements AutoCloseable{
 			throw new AionApiException(formatRuntimeException(e));
 		}
 
-		return response.getData();
 	}
 
 
@@ -287,9 +290,8 @@ public class AionService implements AutoCloseable{
 		BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getChain().getBalance(Address.wrap(address)));
-			}
+			apiMsg.set(doApiRequest(iAionAPI -> iAionAPI.getChain().getBalance(Address.wrap(address)), api));
+
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
 			} else {
@@ -311,9 +313,9 @@ public class AionService implements AutoCloseable{
         BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getChain().getNonce(Address.wrap(address)));
-			}
+
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getNonce(Address.wrap(address)), api));
+
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
 			} else {
@@ -346,9 +348,8 @@ public class AionService implements AutoCloseable{
 		ApiMsg apiMsg = new ApiMsg();
 
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getTx().compile(src));
-			}
+
+			apiMsg.set(doApiRequest(aionAPI -> aionAPI.getTx().compile(src), api));
 
 			if (apiMsg.isError())
 				throw new AionApiException(formatError(apiMsg));
@@ -376,6 +377,25 @@ public class AionService implements AutoCloseable{
 	}
 
 	private String formatError(ApiMsg apiMsg){
-    	return "AionApi: ERR_CODE[" + apiMsg.getErrorCode() + "]: " + apiMsg.getErrString();
+    	var startStr = "AionApi: ERR_CODE[" +apiMsg.getErrorCode()+"]: ";
+    	if (apiMsg.getErrorCode()==-404)return startStr + "Api request timed out";// custom error message
+    	else return startStr + apiMsg.getErrString();
+	}
+
+
+	private ExecutorService requestExecutor = Executors.newSingleThreadExecutor();
+
+	private <T> ApiMsg doApiRequest(Function<T, ApiMsg> request, T resource){
+    	return CompletableFuture
+				.supplyAsync(()-> {
+					synchronized (MUTEX) {
+						return request.apply(resource);
+					}
+				}, requestExecutor)
+				.orTimeout(Config.getInstance().getApiTimeOut(), TimeUnit.MILLISECONDS)
+				.exceptionally(th -> {
+					GENERAL.debug("API request failed: ", th);
+					return new ApiMsg(-404);
+				}).join();
 	}
 }

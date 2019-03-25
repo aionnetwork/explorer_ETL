@@ -71,7 +71,7 @@ public class Config {
     private boolean isTest;
     private long maxHeight;
 
-
+    private long apiTimeOut;
 
     private Level GeneralLevel;
     private List<String> apiConnections = new ArrayList<>();
@@ -122,7 +122,7 @@ public class Config {
             BlockWindowCountSize = rollingMeanConfig.optInt("blockWindowCountSize", 32);// the count of blocks to include
             BlockWindowStableSize = rollingMeanConfig.optInt("blockWindowTimeSize", 60);// in minutes
 
-
+            apiTimeOut = json.optInt("apiTimeOut", 50000);
             JSONObject test = json.getJSONObject("test");
             testLargeLimit = test.getLong("largeLimit");
             testSmallLimit = test.getLong("smallLimit");
@@ -348,5 +348,9 @@ public class Config {
 
     public long getMaxHeight() {
         return maxHeight;
+    }
+
+    public long getApiTimeOut() {
+        return apiTimeOut;
     }
 }

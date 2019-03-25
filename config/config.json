@@ -50,6 +50,7 @@
 
   "transactionBatchSize": 10000,
 
-  "performanceFlag": true
+  "performanceFlag": true,
+  "apiTimeOut":50000
 
 }
