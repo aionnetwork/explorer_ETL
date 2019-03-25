@@ -13,10 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
@@ -40,6 +37,7 @@ public class AionService implements AutoCloseable{
 
 	AionService() {
 
+		requestExecutor = Executors.newSingleThreadExecutor();
 
 		Config config = Config.getInstance();
 		connections = config.getApiConnections();
@@ -66,9 +64,8 @@ public class AionService implements AutoCloseable{
 		ApiMsg apiMsg = new ApiMsg();
 		for (int i = 0; i < connections.size(); i++) {
 			String url = connections.get(i);
-			synchronized (MUTEX) {
-				apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
-			}
+			apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
+
 			if (apiMsg.isError()) {
 				GENERAL.debug("Api Connection Failed. Endpoint: [{}]. Error: [{}] {}", url, apiMsg.getErrorCode(), apiMsg.getErrString());
 			} else if (api.isConnected()) {
@@ -98,9 +95,8 @@ public class AionService implements AutoCloseable{
 			for (int i = 0; i< connections.size();i++) {
 				String url = connections.get(i);
 
-				synchronized (MUTEX){
-					apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
-				}
+
+				apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
 
 				if (apiMsg.isError())
 					GENERAL.debug("Api Connection Failed at node {} falling back. Endpoint [{}]. Error: [{}] {}", i + 1, url, apiMsg.getErrorCode(), apiMsg.getErrString());
@@ -378,24 +374,36 @@ public class AionService implements AutoCloseable{
 
 	private String formatError(ApiMsg apiMsg){
     	var startStr = "AionApi: ERR_CODE[" +apiMsg.getErrorCode()+"]: ";
-    	if (apiMsg.getErrorCode()==-404)return startStr + "Api request timed out";// custom error message
+    	if (apiMsg.getErrorCode()==-404)return startStr + "Api request timed out.";// custom error message
+		else if (apiMsg.getErrorCode()==405) return startStr + "Api request failed with a runtime error.";
     	else return startStr + apiMsg.getErrString();
 	}
 
 
-	private ExecutorService requestExecutor = Executors.newSingleThreadExecutor();
+	private ExecutorService requestExecutor;
 
 	private <T> ApiMsg doApiRequest(Function<T, ApiMsg> request, T resource){
-    	return CompletableFuture
+		Future<ApiMsg> res = CompletableFuture
 				.supplyAsync(()-> {
 					synchronized (MUTEX) {
 						return request.apply(resource);
 					}
-				}, requestExecutor)
-				.orTimeout(Config.getInstance().getApiTimeOut(), TimeUnit.MILLISECONDS)
-				.exceptionally(th -> {
-					GENERAL.debug("API request failed: ", th);
-					return new ApiMsg(-404);
-				}).join();
+				}, requestExecutor);
+		try {
+
+			return res.get(Config.getInstance().getApiTimeOut(), TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return new ApiMsg(-1);
+		} catch (ExecutionException e) {
+			return new ApiMsg(-405);
+		} catch (TimeoutException e) {
+			return new ApiMsg(-404);
+		}
+		finally {
+			if (!res.isDone())
+				res.cancel(true);
+			api.destroyApi();
+		}
 	}
 }
