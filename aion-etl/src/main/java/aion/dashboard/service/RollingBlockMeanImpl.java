@@ -314,7 +314,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     @Override
     public List<ParserState> getStates() {
-        var builder = new ParserState.parserStateBuilder();
+        var builder = new ParserState.ParserStateBuilder();
 
         return List.of(
                 builder.id(ParserStateServiceImpl.BLOCK_MEAN_ID).blockNumber(BigInteger.valueOf(getStartOfBlockWindow())).build(),

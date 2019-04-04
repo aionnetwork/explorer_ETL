@@ -74,7 +74,7 @@ public class GraphingServiceImpl implements GraphingService {
         try (Connection con = DbConnectionPool.getConnection()) {
             try (PreparedStatement ps = con.prepareStatement(DbQuery.GraphingInsert);
                  PreparedStatement parserStatement = ParserStateServiceImpl.getInstance().prepare( con,
-                    List.of(new ParserState.parserStateBuilder()
+                    List.of(new ParserState.ParserStateBuilder()
                             .blockNumber(BigInteger.valueOf(graphings.get(graphings.size() -1).getBlockNumber()))
                             .id(ParserStateServiceImpl.GRAPHING_ID)
                             .build()))

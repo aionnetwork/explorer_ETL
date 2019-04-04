@@ -60,7 +60,7 @@ public class ParserStateServiceImpl implements ParserStateService {
 
     @Override
     public boolean updateHeadBlockChain(BigInteger blkNum) {
-        return update(new ParserState.parserStateBuilder()
+        return update(new ParserState.ParserStateBuilder()
                 .id(BLKCHAIN_ID)
                 .blockNumber(blkNum)
                 .build());
@@ -68,7 +68,7 @@ public class ParserStateServiceImpl implements ParserStateService {
 
     @Override
     public boolean updateHeadDataBase(BigInteger blkNum, BigInteger txNum) {
-        return update(new ParserState.parserStateBuilder()
+        return update(new ParserState.ParserStateBuilder()
                 .id(DB_ID)
                 .blockNumber(blkNum)
                 .build());
@@ -76,7 +76,7 @@ public class ParserStateServiceImpl implements ParserStateService {
 
     @Override
     public boolean updateHeadIntegrity(BigInteger blkNum) {
-        return update(new ParserState.parserStateBuilder()
+        return update(new ParserState.ParserStateBuilder()
                 .id(INTEGRITY_ID)
                 .blockNumber(blkNum)
                 .build());
@@ -84,7 +84,7 @@ public class ParserStateServiceImpl implements ParserStateService {
 
     @Override
     public boolean updateGraphingState(BigInteger blkNum) {
-        return update(new ParserState.parserStateBuilder()
+        return update(new ParserState.ParserStateBuilder()
                 .id(GRAPHING_ID)
                 .blockNumber(blkNum)
                 .build());
@@ -92,7 +92,7 @@ public class ParserStateServiceImpl implements ParserStateService {
 
     @Override
     public boolean updateBlockMeanState(BigInteger blkNum) {
-        return update(new ParserState.parserStateBuilder()
+        return update(new ParserState.ParserStateBuilder()
                 .id(BLOCK_MEAN_ID)
                 .blockNumber(blkNum)
                 .build());
@@ -154,7 +154,7 @@ public class ParserStateServiceImpl implements ParserStateService {
              var ps = con.prepareStatement(DbQuery.GetParserState);
              var resultSet = ps.executeQuery()){
 
-            ParserState.parserStateBuilder builder = new ParserState.parserStateBuilder();
+            ParserState.ParserStateBuilder builder = new ParserState.ParserStateBuilder();
             while (resultSet.next()) {
                 builder
                         .id(resultSet.getLong(1))

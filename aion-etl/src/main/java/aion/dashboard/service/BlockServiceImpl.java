@@ -244,7 +244,7 @@ public class BlockServiceImpl implements BlockService {
 
 
                 //---Parser State----
-                ParserState.parserStateBuilder builder = new ParserState.parserStateBuilder();
+                ParserState.ParserStateBuilder builder = new ParserState.ParserStateBuilder();
                 List<ParserState> statesToUpdate = new ArrayList<>();
 
 

@@ -145,7 +145,7 @@ public class BlockParser {
 
 
 
-        ParserState dbState = new ParserState.parserStateBuilder()
+        ParserState dbState = new ParserState.ParserStateBuilder()
                 .id(ParserStateServiceImpl.DB_ID)
                 .blockNumber(BigInteger.valueOf(requestPtr))
                 .build();

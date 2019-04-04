@@ -172,7 +172,7 @@ public class DBThread extends Thread {
         do {
            try {
                //Set the new parser state for the kernel at this height
-               return new ParserState.parserStateBuilder().id(ParserStateServiceImpl.BLKCHAIN_ID)
+               return new ParserState.ParserStateBuilder().id(ParserStateServiceImpl.BLKCHAIN_ID)
                        .blockNumber(BigInteger.valueOf(aionService.getBlockNumber()))
                        .build();
            }

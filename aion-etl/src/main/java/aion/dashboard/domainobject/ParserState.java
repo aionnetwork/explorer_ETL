@@ -35,19 +35,19 @@ public class                                                                    
         return Objects.hash(getId(), getBlockNumber());
     }
 
-    public static class parserStateBuilder {
+    public static class ParserStateBuilder {
 
         private long id;
         private BigInteger blockNumber;
 
 
 
-        public parserStateBuilder id(long id) {
+        public ParserStateBuilder id(long id) {
             this.id = id;
             return this;
         }
 
-        public parserStateBuilder blockNumber(BigInteger blockNumber) {
+        public ParserStateBuilder blockNumber(BigInteger blockNumber) {
             this.blockNumber = blockNumber;
             return this;
         }
