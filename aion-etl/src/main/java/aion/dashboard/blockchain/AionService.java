@@ -375,7 +375,7 @@ public class AionService implements AutoCloseable{
 	private String formatError(ApiMsg apiMsg){
     	var startStr = "AionApi: ERR_CODE[" +apiMsg.getErrorCode()+"]: ";
     	if (apiMsg.getErrorCode()==-404)return startStr + "Api request timed out.";// custom error message
-		else if (apiMsg.getErrorCode()==405) return startStr + "Api request failed with a runtime error.";
+		else if (apiMsg.getErrorCode()==-405) return startStr + "Api request failed with a runtime error.";
     	else return startStr + apiMsg.getErrString();
 	}
 
@@ -401,9 +401,10 @@ public class AionService implements AutoCloseable{
 			return new ApiMsg(-404);
 		}
 		finally {
-			if (!res.isDone())
+			if (!res.isDone()) {
 				res.cancel(true);
-			api.destroyApi();
+				api.destroyApi();
+			}
 		}
 	}
 }
