@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 
 public class EventServiceImpl implements EventService {
@@ -18,7 +17,7 @@ public class EventServiceImpl implements EventService {
 
 
     private EventServiceImpl() {
-        if (Instance != null) {// IGNORE linting here because this check is used to enforce the singleton
+        if (Instance != null) {
             throw new IllegalStateException();
         }
     }
@@ -30,16 +29,19 @@ public class EventServiceImpl implements EventService {
     @Override
     public boolean save(Event event) {
 
-        return save(Collections.singletonList(event));
-    }
+        try (Connection con = DbConnectionPool.getConnection()) {
 
-    @Override
-    public boolean save(List<Event> events) {
-        try (Connection con = DbConnectionPool.getConnection();
-             PreparedStatement ps = prepare(con, events)) {
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.EventInsert)) {
+                ps.setString(1, event.getName());
+                ps.setString(2, event.getParameterList());
+                ps.setString(3, event.getInputList());
+                ps.setString(4, event.getTransactionHash());
+                ps.setLong(5, event.getBlockNumber());
+                ps.setString(6, event.getContractAddr());
+                ps.setLong(7, event.getTimestamp());
 
-            try  {
-                ps.executeBatch();
+                ps.execute();
+
                 con.commit();
 
 
@@ -58,14 +60,50 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public boolean save(List<Event> events) {
+        try (Connection con = DbConnectionPool.getConnection()) {
+
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.EventInsert)) {
+                for (var event : events) {
+                    ps.setString(1, event.getName());
+                    ps.setString(2, event.getParameterList());
+                    ps.setString(3, event.getInputList());
+                    ps.setString(4, event.getTransactionHash());
+                    ps.setLong(5, event.getBlockNumber());
+                    ps.setString(6, event.getContractAddr());
+                    ps.setLong(7, event.getTimestamp());
+
+                    ps.execute();
+
+                }
+                con.commit();
+
+
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+
+
+        } catch (SQLException e) {
+
+            GENERAL.debug("Threw an exception in event save: ", e);
+            return false;
+        }
+        return true;
+    }
+
+
+
+    @Override
     public PreparedStatement prepare(Connection con, List<Event> events) throws SQLException {
 
-        PreparedStatement ps = con.prepareStatement(DbQuery.EVENT_INSERT);
+        PreparedStatement ps = con.prepareStatement(DbQuery.EventInsert);
         for (var event : events) {
             ps.setString(1, event.getName());
             ps.setString(2, event.getParameterList());
             ps.setString(3, event.getInputList());
-            ps.setLong(4, event.getTransactionId());
+            ps.setString(4, event.getTransactionHash());
             ps.setLong(5, event.getBlockNumber());
             ps.setString(6, event.getContractAddr());
             ps.setLong(7, event.getTimestamp());

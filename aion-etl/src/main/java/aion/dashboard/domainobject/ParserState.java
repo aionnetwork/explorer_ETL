@@ -3,16 +3,14 @@ package aion.dashboard.domainobject;
 import java.math.BigInteger;
 import java.util.Objects;
 
-public class ParserState {
+public class                                                                                                                                                                                                        ParserState {
 
     private long id;
     private BigInteger blockNumber;
-    private BigInteger transactionID;
 
-    public ParserState(long id, BigInteger blockNumber, BigInteger transactionID) {
+    public ParserState(long id, BigInteger blockNumber) {
         this.id = id;
         this.blockNumber = blockNumber;
-        this.transactionID = transactionID;
     }
 
     public long getId() {
@@ -23,30 +21,25 @@ public class ParserState {
         return blockNumber;
     }
 
-    public BigInteger getTransactionID() {
-        return transactionID;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof ParserState)) return false;
         ParserState that = (ParserState) o;
         return getId() == that.getId() &&
-                Objects.equals(getBlockNumber(), that.getBlockNumber()) &&
-                Objects.equals(getTransactionID(), that.getTransactionID());
+                Objects.equals(getBlockNumber(), that.getBlockNumber());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getBlockNumber(), getTransactionID());
+        return Objects.hash(getId(), getBlockNumber());
     }
 
     public static class ParserStateBuilder {
 
         private long id;
         private BigInteger blockNumber;
-        private BigInteger transactionID;
+
 
 
         public ParserStateBuilder id(long id) {
@@ -59,14 +52,9 @@ public class ParserState {
             return this;
         }
 
-        public ParserStateBuilder transactionID(BigInteger transactionID) {
-            this.transactionID = transactionID;
-            return this;
-        }
-
 
         public ParserState build(){
-            return new ParserState(id, blockNumber, transactionID);
+            return new ParserState(id, blockNumber);
         }
     }
 }

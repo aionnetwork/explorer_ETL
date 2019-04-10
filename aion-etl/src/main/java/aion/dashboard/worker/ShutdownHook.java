@@ -1,7 +1,8 @@
 package aion.dashboard.worker;
 
-import aion.dashboard.email.EmailService;
+import aion.dashboard.blockchain.AionService;
 import aion.dashboard.service.SchedulerService;
+import aion.dashboard.service.SharedExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,13 +13,13 @@ import org.slf4j.LoggerFactory;
 public class ShutdownHook extends Thread{
 
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
-    private final BlockchainReaderThread blockchainReaderThread;
+    private final BlockchainReaderThread readerThread;
     private final DBThread dbThread;
     private final IntegrityCheckThread integrityCheckThread;
 
     private ShutdownHook(BlockchainReaderThread readerThread, DBThread dbThread, IntegrityCheckThread integrityCheckThread) {
         super("Shutdown hook");
-        blockchainReaderThread = readerThread;
+        this.readerThread = readerThread;
         this.dbThread = dbThread;
         this.integrityCheckThread = integrityCheckThread;
     }
@@ -30,30 +31,37 @@ public class ShutdownHook extends Thread{
         GENERAL.info("Shutting down ETL");
 
         // Signalling threads that they should end their execution
-        blockchainReaderThread.kill();
+        readerThread.kill();
         dbThread.kill();
         integrityCheckThread.kill();
 
         //closing all singleton services
-        EmailService.getInstance().close();
-        SchedulerService.getInstance().close();
 
+        SchedulerService.getInstance().close();
+        SharedExecutorService.getInstance().close();
 
         try {
             // Pause the shutdown until all threads have ended their execution
             int i =0;
-            boolean threadsAreAlive = blockchainReaderThread.isAlive() || dbThread.isAlive() || integrityCheckThread.isAlive();
+            boolean threadsAreAlive = readerThread.isAlive() || dbThread.isAlive() || integrityCheckThread.isAlive();
             while (i < 10 && threadsAreAlive){
                 Thread.sleep(1000);
-                threadsAreAlive = blockchainReaderThread.isAlive() || dbThread.isAlive() || integrityCheckThread.isAlive();
+                threadsAreAlive = readerThread.isAlive() || dbThread.isAlive() || integrityCheckThread.isAlive();
                 i++;
             }
+
+            if (!threadsAreAlive){
+                readerThread.interrupt();
+                dbThread.interrupt();
+                integrityCheckThread.interrupt();
+            }
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             GENERAL.debug("Exception thrown in shutdown hook", e);
         }
 
-
+        AionService.getInstance().close();
         GENERAL.info("--------------------------------------------------");
         GENERAL.info("ETL shutdown gracefully");
         GENERAL.info("--------------------------------------------------");

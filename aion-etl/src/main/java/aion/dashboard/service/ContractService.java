@@ -15,6 +15,7 @@ public interface ContractService {
 
 
 
+
     /**
      * Returns all the contracts that have the same contract addr
      * Use case called before an insert into the contract table

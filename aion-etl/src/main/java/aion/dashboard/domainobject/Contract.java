@@ -2,6 +2,8 @@ package aion.dashboard.domainobject;
 
 import java.util.Objects;
 
+import static aion.dashboard.util.Utils.getZDT;
+
 public class Contract {
 
 
@@ -11,6 +13,10 @@ public class Contract {
     private String contractTxHash; // the transaction in which the contract was deployed
     private long blockNumber;//The block in which the contract was deployed
     private long timestamp;
+    private int blockYear;
+    private int blockMonth;
+    private int blockDay;
+
 
     private Contract(String contractAddr, String contractName, String contractCreatorAddr, String contractTxHash, long blockNumber, long timestamp) {
         this.contractAddr = contractAddr;
@@ -19,6 +25,10 @@ public class Contract {
         this.contractTxHash = contractTxHash;
         this.blockNumber = blockNumber;
         this.timestamp = timestamp;
+        var zdt = getZDT(timestamp);
+        blockYear  = zdt.getYear();
+        blockMonth = zdt.getMonthValue();
+        blockDay = zdt.getDayOfMonth();
     }
 
     public String getContractAddr() {
@@ -57,6 +67,18 @@ public class Contract {
     @Override
     public int hashCode() {
         return Objects.hash(getContractAddr());
+    }
+
+    public int getBlockYear() {
+        return blockYear;
+    }
+
+    public int getBlockMonth() {
+        return blockMonth;
+    }
+
+    public int getBlockDay() {
+        return blockDay;
     }
 
     public static class ContractBuilder {

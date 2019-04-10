@@ -7,13 +7,15 @@ import aion.dashboard.domainobject.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -34,33 +36,128 @@ public class TransactionServiceImpl implements TransactionService {
     public boolean save(Transaction transaction) {
 
 
-        return save(Collections.singletonList(transaction));
+        Connection con = null;
+        PreparedStatement ps = null;
+
+        try {
+
+            con = DbConnectionPool.getConnection();
+            ps = con.prepareStatement(DbQuery.TransactionInsert);
+
+            LocalDate date = Instant.ofEpochSecond(transaction.getBlockTimestamp())
+                    .atZone(ZoneId.of("UTC"))
+                    .toLocalDate();
+
+            ps.setString(1, transaction.getTransactionHash());
+            ps.setString(2, transaction.getBlockHash());
+            ps.setLong(3, transaction.getBlockNumber());
+            ps.setLong(4, transaction.getBlockTimestamp());
+            ps.setLong(5, transaction.getTransactionIndex());
+            ps.setString(6, transaction.getFromAddr());
+            ps.setString(7, transaction.getToAddr());
+            ps.setLong(8, transaction.getNrgConsumed());
+            ps.setLong(9, transaction.getNrgPrice());
+            ps.setBigDecimal(10, BigDecimal.valueOf(transaction.getTransactionTimestamp()));
+            ps.setBigDecimal(11, transaction.getValue());
+            ps.setDouble(12, transaction.getApproxValue());
+            ps.setString(13, transaction.getTransactionLog());
+            ps.setString(14, transaction.getData());
+            ps.setString(15, transaction.getNonce());
+            ps.setString(16, transaction.getTxError());
+            ps.setString(17, transaction.getContractAddr());
+            ps.setInt(18, transaction.getBlockYear());
+            ps.setInt(19, transaction.getBlockMonth());
+            ps.setInt(20, transaction.getBlockDay());
+            ps.execute();
+
+            con.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            try {
+                Objects.requireNonNull(con).rollback();
+
+
+            } catch (SQLException |NullPointerException e1) {
+                GENERAL.debug("Threw exception while saving in transaction save: ",e);
+
+            }
+            return false;
+
+        }
+        finally {
+            try {
+                Objects.requireNonNull(ps).close();
+                Objects.requireNonNull(con).close();
+            } catch (SQLException |NullPointerException e) {
+                GENERAL.debug("Threw exception while closing resources in transaction save: ",e);
+            }
+        }
+        return true;
     }
 
     @Override
     public boolean save(List<Transaction> transactions) {
+        Connection con = null;
+        PreparedStatement ps = null;
 
-        try(var con=DbConnectionPool.getConnection ()){
+        try{
+            con=DbConnectionPool.getConnection ();
+            ps = con.prepareStatement(DbQuery.TransactionInsert);
 
-            var psArr = prepare(con, transactions);
+            for(Transaction transaction:transactions) {
 
-            try(var ps = psArr[0];
-                var psMap = psArr[1]){
-                ps.executeBatch();
-                psMap.executeBatch();
-                con.commit();
+                ps.setString(1, transaction.getTransactionHash());
+                ps.setString(2, transaction.getBlockHash());
+                ps.setLong(3, transaction.getBlockNumber());
+                ps.setLong(4, transaction.getBlockTimestamp());
+                ps.setLong(5, transaction.getTransactionIndex());
+                ps.setString(6, transaction.getFromAddr());
+                ps.setString(7, transaction.getToAddr());
+                ps.setLong(8, transaction.getNrgConsumed());
+                ps.setLong(9, transaction.getNrgPrice());
+                ps.setBigDecimal(10, BigDecimal.valueOf(transaction.getTransactionTimestamp()));
+                ps.setBigDecimal(11, (transaction.getValue()));
+                ps.setDouble(12, transaction.getApproxValue());
+                ps.setString(13, transaction.getTransactionLog());
+                ps.setString(14, transaction.getData());
+                ps.setString(15, transaction.getNonce());
+                ps.setString(16, transaction.getTxError());
+                ps.setString(17, transaction.getContractAddr());
+                ps.setInt(18, transaction.getBlockYear());
+                ps.setInt(19, transaction.getBlockMonth());
+                ps.setInt(20, transaction.getBlockDay());
+                ps.execute();
             }
-            catch (SQLException e){
-                con.rollback();
-            }
 
-            return true;
+
+
+            con.commit();
+
+
+
+
         } catch (SQLException e) {
             GENERAL.debug("Threw exception while saving in transaction save: ",e);
+            try {
+                Objects.requireNonNull(con).rollback();
+
+
+            } catch (SQLException | NullPointerException e1) {
+                GENERAL.debug("Threw exception while saving in transaction save: ",e1);
+
+            }
             return false;
 
         }
-
+        finally {
+            try {
+                Objects.requireNonNull(ps).close();
+                Objects.requireNonNull(con).close();
+            } catch (SQLException |NullPointerException e) {
+                GENERAL.debug("Threw exception while closing resources in transaction save: ",e);
+            }
+        }
+        return true;
     }
 
     @Override
@@ -70,7 +167,7 @@ public class TransactionServiceImpl implements TransactionService {
         PreparedStatement ps = null;
 
         try(Connection connection = DbConnectionPool.getConnection()){
-            ps = connection.prepareStatement(DbQuery.TRANSACTION_SELECT_BY_ID_COUNT_BLOCK_NUM);
+            ps = connection.prepareStatement(DbQuery.TransactionSelectByBlockNumCountBlockNum);
             ps.setLong(1, startingBlockNumber);
             try (ResultSet rs = ps.executeQuery()){
                 while (rs.next()){
@@ -103,25 +200,20 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<Long> getTransactionIndexByBlockNum(long startNum) throws SQLException {
+    public List<String> getTransactionHashByBlockNum(long startNum) throws SQLException {
 
-        List<Long> result = new ArrayList<>();
+        List<String> result = new ArrayList<>();
 
-        try(Connection con = DbConnectionPool.getConnection();
-            PreparedStatement ps = con.prepareStatement(DbQuery.TRANSACTION_SELECT_ID_BY_BLOCK_NUM)){
-            ps.setLong(1 ,startNum);
+        try(Connection con = DbConnectionPool.getConnection()){
+            try(PreparedStatement ps = con.prepareStatement(DbQuery.TransactionSelectIDByBlockNum)){
+                ps.setLong(1, startNum);
+                try (var res = ps.executeQuery()) {
 
-            try(var res = ps.executeQuery()){
-
-
-                while (res.next()){
-                    result.add(res.getLong(1));
-
+                    while (res.next())
+                        result.add(res.getString(1));
                 }
 
-
             }
-
         }
         return result;
     }
@@ -132,44 +224,36 @@ public class TransactionServiceImpl implements TransactionService {
         List<Transaction> result = new ArrayList<>();
 
         try(Connection con = DbConnectionPool.getConnection()){
-            ResultSet res = null;
-            try(PreparedStatement ps = con.prepareStatement(DbQuery.TRANSACTION_BY_BLOCK_NUM)){
+
+            try(PreparedStatement ps = con.prepareStatement(DbQuery.TransactionByBlockNum)){
                 ps.setLong(1 ,blockNumber);
-                res = ps.executeQuery();
+                try (var res = ps.executeQuery()) {
 
-                while (res.next()){
-                    result.add(new Transaction.TransactionBuilder().
-                            setId(new BigInteger(res.getString("id"))).
-                            setTransactionHash(res.getString("transaction_hash")).
-                            setBlockHash(res.getString("block_hash")).
-                            setBlockNumber(res.getLong("block_number")).
-                            setTransactionIndex(res.getLong("transaction_index")).
-                            setFromAddr(res.getString("from_addr")).
-                            setToAddr(res.getString("to_addr")).
-                            setNrgConsumed(res.getLong("nrg_consumed")).
-                            setNrgPrice(res.getLong("nrg_price")).
-                            setTransactionTimestamp(res.getLong("transaction_timestamp")).
-                            setBlockTimestamp(res.getLong("block_timestamp")).
-                            setValue(res.getString("value")).
-                            setTransactionLog(res.getString("transaction_log")).
-                            setData(res.getString("data")).
-                            setNonce(res.getString("nonce")).
-                            setTxError(res.getString("tx_error")).
-                            setContractAddr(res.getString("contract_addr"))
-                            .build());
+                    while (res.next()) {
+                        result.add(new Transaction.TransactionBuilder()
+                                .setTransactionHash(res.getString("transaction_hash"))
+                                .setBlockHash(res.getString("block_hash"))
+                                .setBlockNumber(res.getLong("block_number"))
+                                .setBlockTimestamp(res.getLong("block_timestamp"))
+                                .setTransactionIndex(res.getLong("transaction_index"))
+                                .setFromAddr(res.getString("from_addr"))
+                                .setToAddr(res.getString("to_addr"))
+                                .setNrgConsumed(res.getLong("nrg_consumed"))
+                                .setNrgPrice(res.getLong("nrg_price"))
+                                .setApproxValue(res.getDouble("approx_value"))
+                                .setTransactionTimestamp(res.getBigDecimal("transaction_timestamp").longValue())
+                                .setValue(res.getBigDecimal("value"))
+                                .setTransactionLog(res.getString("transaction_log"))
+                                .setData(res.getString("data"))
+                                .setNonce(res.getString("nonce"))
+                                .setTxError(res.getString("tx_error"))
+                                .setContractAddr(res.getString("contract_addr"))
+                                .build());
 
+                    }
                 }
 
 
-            }
-            finally {
-                try {
-                    Objects.requireNonNull(res).close();
-                    Objects.requireNonNull(con).close();
-                }
-                catch (Exception ignored){
-
-                }
             }
         }
         return result;
@@ -181,111 +265,72 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction result = null;
 
-        try(Connection con = DbConnectionPool.getConnection()){
-            ResultSet res = null;
-            try(PreparedStatement ps = con.prepareStatement(DbQuery.TRANSACTION_BY_CONTRACT_ADDRESS)){
-                ps.setString(1 ,contractAddress);
-                res = ps.executeQuery();
+        try(Connection con = DbConnectionPool.getConnection();
+            PreparedStatement ps = con.prepareStatement(DbQuery.TransactionByContractAddress)){
+            ps.setString(1 ,contractAddress);
+
+            try(var res = ps.executeQuery()){
+
 
                 while (res.next()){
-                    result =new Transaction.TransactionBuilder().
-                            setId(new BigInteger(res.getString("id"))).
-                            setTransactionHash(res.getString("transaction_hash")).
-                            setBlockHash(res.getString("block_hash")).
-                            setBlockNumber(res.getLong("block_number")).
-                            setTransactionIndex(res.getLong("transaction_index")).
-                            setFromAddr(res.getString("from_addr")).
-                            setToAddr(res.getString("to_addr")).
-                            setNrgConsumed(res.getLong("nrg_consumed")).
-                            setNrgPrice(res.getLong("nrg_price")).
-                            setTransactionTimestamp(res.getLong("transaction_timestamp")).
-                            setBlockTimestamp(res.getLong("block_timestamp")).
-                            setValue(res.getString("value")).
-                            setTransactionLog(res.getString("transaction_log")).
-                            setData(res.getString("data")).
-                            setNonce(res.getString("nonce")).
-                            setTxError(res.getString("tx_error")).
-                            setContractAddr(res.getString("contract_addr"))
+                    result =new Transaction.TransactionBuilder()
+                            .setTransactionHash(res.getString("transaction_hash"))
+                            .setBlockHash(res.getString("block_hash"))
+                            .setBlockNumber(res.getLong("block_number"))
+                            .setBlockTimestamp(res.getLong("block_timestamp"))
+                            .setTransactionIndex(res.getLong("transaction_index"))
+                            .setFromAddr(res.getString("from_addr"))
+                            .setToAddr(res.getString("to_addr"))
+                            .setNrgConsumed(res.getLong("nrg_consumed"))
+                            .setNrgPrice(res.getLong("nrg_price"))
+                            .setTransactionTimestamp(res.getBigDecimal("transaction_timestamp").longValue())
+                            .setValue(res.getBigDecimal("value"))
+                            .setApproxValue(res.getDouble("approx_value"))
+                            .setTransactionLog(res.getString("transaction_log"))
+                            .setData(res.getString("data"))
+                            .setNonce(res.getString("nonce"))
+                            .setTxError(res.getString("tx_error"))
+                            .setContractAddr(res.getString("contract_addr"))
                             .build();
 
                 }
 
 
-            } finally {
-                try {
-                    Objects.requireNonNull(res).close();
-                    Objects.requireNonNull(con).close();
-                } catch (Exception ignored){
-
-                }
             }
         }
         return result;
     }
 
     @Override
-    public long getTransactionId(String txHash) throws SQLException {
-        long result = -1L;
-
-        try (Connection con = DbConnectionPool.getConnection()) {
-            ResultSet res = null;
-            try (PreparedStatement ps = con.prepareStatement(DbQuery.TRANSACTION_MAP_SELECT_ID_BY_HASH)) {
-                ps.setString(1, txHash);
-                res = ps.executeQuery();
-
-                while (res.next()) {
-                    result = res.getLong("id");
-                }
-
-
-            } finally {
-                try {
-                    Objects.requireNonNull(res).close();
-                    Objects.requireNonNull(con).close();
-                } catch (Exception ignored) {
-
-                }
-            }
-        }
-        return result;
-    }
-
-    @Override
-    public PreparedStatement[] prepare(Connection con, List<Transaction> transactions) throws SQLException {
-        PreparedStatement ps = con.prepareStatement(DbQuery.TRANSACTION_INSERT);
-        PreparedStatement psMap = con.prepareStatement(DbQuery.INSERT_TRANSACTION_MAP);
+    public PreparedStatement prepare(Connection con, List<Transaction> transactions) throws SQLException {
+        PreparedStatement ps = con.prepareStatement(DbQuery.TransactionInsert);
 
         for (Transaction transaction : transactions) {
 
-
-            ps.setLong(1, transaction.getId().longValue());
-            ps.setString(2, transaction.getTransactionHash());
-            ps.setString(3, transaction.getBlockHash());
-            ps.setLong(4, transaction.getBlockNumber());
+            ps.setString(1, transaction.getTransactionHash());
+            ps.setString(2, transaction.getBlockHash());
+            ps.setLong(3, transaction.getBlockNumber());
+            ps.setLong(4, transaction.getBlockTimestamp());
             ps.setLong(5, transaction.getTransactionIndex());
             ps.setString(6, transaction.getFromAddr());
             ps.setString(7, transaction.getToAddr());
             ps.setLong(8, transaction.getNrgConsumed());
             ps.setLong(9, transaction.getNrgPrice());
-            ps.setLong(10, transaction.getTransactionTimestamp());
-            ps.setLong(11, transaction.getBlockTimestamp());
-            ps.setString(12, transaction.getValue());
+            ps.setBigDecimal(10, BigDecimal.valueOf(transaction.getTransactionTimestamp()));
+            ps.setBigDecimal(11, (transaction.getValue()));
+            ps.setDouble(12, transaction.getApproxValue());
             ps.setString(13, transaction.getTransactionLog());
             ps.setString(14, transaction.getData());
             ps.setString(15, transaction.getNonce());
             ps.setString(16, transaction.getTxError());
             ps.setString(17, transaction.getContractAddr());
-
-
-            psMap.setString(1, transaction.getTransactionHash());
-            psMap.setLong(2, transaction.getId().longValue());
-
-
+            ps.setInt(18, transaction.getBlockYear());
+            ps.setInt(19, transaction.getBlockMonth());
+            ps.setInt(20, transaction.getBlockDay());
             ps.addBatch();
-            psMap.addBatch();
         }
 
-        return new PreparedStatement[]{ps, psMap};
+        return ps;
 
     }
 }

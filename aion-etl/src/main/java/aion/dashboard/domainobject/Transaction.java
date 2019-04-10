@@ -1,27 +1,43 @@
 package aion.dashboard.domainobject;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
+
+import static aion.dashboard.util.Utils.getZDT;
 
 public class Transaction {
 
-    private BigInteger id;
     private String transactionHash;
     private String blockHash;
     private long blockNumber;
+    private long blockTimestamp;
     private long transactionIndex;
     private String fromAddr;
     private String toAddr;
     private long nrgConsumed;
     private long nrgPrice;
     private long transactionTimestamp;
-    private long blockTimestamp;
-    private String value;
+    private BigDecimal value;
     private String transactionLog;
     private String data;
     private String nonce;
     private String txError;
     private String contractAddr;
+    private int blockYear;
+    private int blockMonth;
+    private int blockDay;
+    private double approxValue;
 
+    public int getBlockYear() {
+        return blockYear;
+    }
+
+    public int getBlockMonth() {
+        return blockMonth;
+    }
+
+    public int getBlockDay() {
+        return blockDay;
+    }
 
     public String getTxError() {
         return txError;
@@ -37,14 +53,6 @@ public class Transaction {
 
     public void setContractAddr(String contractAddr) {
         this.contractAddr = contractAddr;
-    }
-
-    public BigInteger getId() {
-        return id;
-    }
-
-    public void setId(BigInteger id) {
-        this.id = id;
     }
 
     public String getTransactionHash() {
@@ -69,6 +77,18 @@ public class Transaction {
 
     public void setBlockNumber(long blockNumber) {
         this.blockNumber = blockNumber;
+    }
+
+    public long getBlockTimestamp() {
+        return blockTimestamp;
+    }
+
+    public void setBlockTimestamp(long blockTimestamp) {
+        var zdt = getZDT(blockTimestamp);
+        blockYear = zdt.getYear();
+        blockMonth = zdt.getMonthValue();
+        blockDay = zdt.getDayOfMonth();
+        this.blockTimestamp = blockTimestamp;
     }
 
     public long getTransactionIndex() {
@@ -119,19 +139,11 @@ public class Transaction {
         this.transactionTimestamp = transactionTimestamp;
     }
 
-    public long getBlockTimestamp() {
-        return blockTimestamp;
-    }
-
-    public void setBlockTimestamp(long blockTimestamp) {
-        this.blockTimestamp = blockTimestamp;
-    }
-
-    public String getValue() {
+    public BigDecimal getValue() {
         return value;
     }
 
-    public void setValue(String value) {
+    public void setValue(BigDecimal value) {
         this.value = value;
     }
 
@@ -159,31 +171,36 @@ public class Transaction {
         this.nonce = nonce;
     }
 
+    public double getApproxValue() {
+        return approxValue;
+    }
+
+    public Transaction setApproxValue(double approxValue) {
+        this.approxValue = approxValue;
+        return this;
+    }
+
 
     public static class TransactionBuilder {
 
-        BigInteger id;
         String transactionHash;
         String blockHash;
         long blockNumber;
+        long blockTimestamp;
         long transactionIndex;
         String fromAddr;
         String toAddr;
         long nrgConsumed;
         long nrgPrice;
         long transactionTimestamp;
-        long blockTimestamp;
-        String value;
+        BigDecimal value;
         String transactionLog;
         String data;
         String nonce;
         String txError;
         String contractAddr;
+        private double approxValue;
 
-        public TransactionBuilder setId(BigInteger id) {
-            this.id = id;
-            return this;
-        }
 
         public TransactionBuilder setTransactionHash(String transactionHash) {
             this.transactionHash = transactionHash;
@@ -197,6 +214,11 @@ public class Transaction {
 
         public TransactionBuilder setBlockNumber(long blockNumber) {
             this.blockNumber = blockNumber;
+            return this;
+        }
+
+        public TransactionBuilder setBlockTimestamp(long blockTimestamp) {
+            this.blockTimestamp = blockTimestamp;
             return this;
         }
 
@@ -230,12 +252,7 @@ public class Transaction {
             return this;
         }
 
-        public TransactionBuilder setBlockTimestamp(long blockTimestamp) {
-            this.blockTimestamp = blockTimestamp;
-            return this;
-        }
-
-        public TransactionBuilder setValue(String value) {
+        public TransactionBuilder setValue(BigDecimal value) {
             this.value = value;
             return this;
         }
@@ -265,33 +282,37 @@ public class Transaction {
             return this;
         }
 
-
+        
 
         public Transaction build() {
             Transaction tx = new Transaction();
 
-            tx.id = id;
             tx.transactionHash = transactionHash;
             tx.blockHash = blockHash;
             tx.blockNumber = blockNumber;
+            tx.setBlockTimestamp(blockTimestamp);
             tx.transactionIndex = transactionIndex;
             tx.fromAddr = fromAddr;
             tx.toAddr = toAddr;
             tx.nrgConsumed = nrgConsumed;
             tx.nrgPrice = nrgPrice;
             tx.transactionTimestamp = transactionTimestamp;
-            tx.blockTimestamp = blockTimestamp;
             tx.value = value;
             tx.transactionLog = transactionLog;
             tx.data = data;
             tx.nonce = nonce;
             tx.txError = txError;
             tx.contractAddr = contractAddr;
+            tx.approxValue = approxValue;
 
 
             return tx;
         }
 
+        public TransactionBuilder setApproxValue(double approxValue) {
+            this.approxValue = approxValue;
+            return this;
+        }
     }
 
 }

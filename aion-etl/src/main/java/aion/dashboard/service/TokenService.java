@@ -13,6 +13,8 @@ public interface TokenService {
 
     Token getByContractAddr(String contractAddr) throws SQLException;
 
+    void delete(String contractAddr) throws SQLException;
+
     PreparedStatement prepare(Connection con, List<Token> tokens) throws SQLException;
 
 }

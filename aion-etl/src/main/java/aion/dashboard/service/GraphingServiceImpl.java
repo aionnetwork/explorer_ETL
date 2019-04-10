@@ -12,14 +12,15 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
-import java.util.Objects;
 
 public class GraphingServiceImpl implements GraphingService {
 
-    private static GraphingServiceImpl Instance = new GraphingServiceImpl();
-    private static Logger GENERAl = LoggerFactory.getLogger("logger_general");
+    private static final GraphingServiceImpl Instance = new GraphingServiceImpl();
+    private static final Logger GENERAl = LoggerFactory.getLogger("logger_general");
 
 
     private GraphingServiceImpl() {
@@ -32,34 +33,67 @@ public class GraphingServiceImpl implements GraphingService {
 
     @Override
     public boolean save(Graphing graphing) {
+        try (Connection con = DbConnectionPool.getConnection()) {
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.GraphingInsert)) {
 
-        return save(Collections.singletonList(graphing));
+
+                LocalDate date = Instant.ofEpochSecond(graphing.getTimestamp())
+                        .atZone(ZoneId.of("UTC"))
+                        .toLocalDate();
+
+                ps.setBigDecimal(1, graphing.getValue());
+                ps.setString(2, graphing.getGraphType());
+                ps.setLong(3, graphing.getTimestamp());
+                ps.setLong(4, graphing.getBlockNumber());
+                ps.setString(5, graphing.getDetail());
+                ps.setInt(6, date.getYear());
+                ps.setInt(7, date.getMonthValue());
+                ps.setInt(8, date.getDayOfMonth());
+
+                ps.execute();
+
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+
+
+        } catch (SQLException e) {
+            GENERAl.debug("Threw an exception in graphing save: ", e);
+            return false;
+        }
+
+
+        return true;
     }
 
     @Override
-    public boolean save(List<Graphing> graphingList) {
+    public boolean save(List<Graphing> graphings) {
 
-        try (Connection con = DbConnectionPool.getConnection();
-             var parserStatement = ParserStateServiceImpl.getInstance().prepare(
-                con,
-                List.of(new ParserState.ParserStateBuilder()
-                        .blockNumber(BigInteger.valueOf(graphingList.get(graphingList.size() -1).getBlockNumber()))
-                        .transactionID(BigInteger.ONE.negate())
-                        .id(ParserStateServiceImpl.GRAPHING_ID)
-                        .build()));
-             PreparedStatement ps = con.prepareStatement(DbQuery.GRAPHING_INSERT)) {
-            try {
+        try (Connection con = DbConnectionPool.getConnection()) {
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.GraphingInsert);
+                 PreparedStatement parserStatement = ParserStateServiceImpl.getInstance().prepare( con,
+                    List.of(new ParserState.ParserStateBuilder()
+                            .blockNumber(BigInteger.valueOf(graphings.get(graphings.size() -1).getBlockNumber()))
+                            .id(ParserStateServiceImpl.GRAPHING_ID)
+                            .build()))
+            ) {
 
+                for (var graphing : graphings) {
 
-                for (var graphing : graphingList) {
+                    LocalDate date = Instant.ofEpochSecond(graphing.getTimestamp())
+                            .atZone(ZoneId.of("UTC"))
+                            .toLocalDate();
+
                     ps.setBigDecimal(1, graphing.getValue());
                     ps.setString(2, graphing.getGraphType());
                     ps.setLong(3, graphing.getTimestamp());
                     ps.setLong(4, graphing.getBlockNumber());
                     ps.setString(5, graphing.getDetail());
-                    ps.setInt(6, graphing.getYear());
-                    ps.setInt(7, graphing.getMonth());
-                    ps.setInt(8, graphing.getDate());
+                    ps.setInt(6, date.getYear());
+                    ps.setInt(7, date.getMonthValue());
+                    ps.setInt(8, date.getDayOfMonth());
 
                     ps.execute();
                 }
@@ -73,41 +107,35 @@ public class GraphingServiceImpl implements GraphingService {
             }
 
 
-            return true;
         } catch (SQLException e) {
             GENERAl.debug("Threw an exception in graphing save: ", e);
             return false;
         }
+
+        return true;
     }
 
     @Override
     public Graphing getLastRecord(long blockNumber) throws SQLException {
         Graphing graphingObject = null;
         try (Connection connection = DbConnectionPool.getConnection()) {
-            ResultSet rs = null;
-            try (PreparedStatement ps = connection.prepareStatement(DbQuery.GRAPHING_SELECT_LAST_RECORD)) {
+
+            try (PreparedStatement ps = connection.prepareStatement(DbQuery.GraphingSelectLastRecord)) {
                 ps.setLong(1, blockNumber);
-                rs = ps.executeQuery();
+                try (ResultSet rs = ps.executeQuery()) {
 
-                while (rs.next()) {
-                    graphingObject = new Graphing.GraphingBuilder().setBlockNumber(rs.getLong("block_number"))
-                            .setDate(rs.getInt("date"))
-                            .setMonth(rs.getInt("month"))
-                            .setYear(rs.getInt("year"))
-                            .setDetail(rs.getString("detail"))
-                            .setTimestamp(rs.getLong("timestamp"))
-                            .setValue(rs.getBigDecimal("value"))
-                            .setGraphType(Graphing.GraphType.getByType(rs.getString("graph_type")))
-                            .build();
+                    while (rs.next()) {
+                        graphingObject = new Graphing.GraphingBuilder().setBlockNumber(rs.getLong("block_number"))
+                                .setDetail(rs.getString("detail"))
+                                .setTimestamp(rs.getLong("timestamp"))
+                                .setValue(rs.getBigDecimal("value"))
+                                .setGraphType(Graphing.GraphType.getByType(rs.getString("graph_type")))
+                                .build();
+                    }
                 }
 
-            } finally {
-                try {
-                    Objects.requireNonNull(rs).close();
-                } catch (SQLException| NullPointerException ignored) {
-
-                }
             }
+
         } catch (SQLException e) {
             GENERAl.debug("Threw an exception in getLastRecord");
             throw e;
@@ -116,24 +144,26 @@ public class GraphingServiceImpl implements GraphingService {
     }
 
 
-    public long countActiveAddresses(long blockNumber) throws SQLException {
+    public long countActiveAddresses(long blockNumber) throws SQLException{
         long out = -1;
-        long txIndex = BlockServiceImpl.getInstance().getMaxTransactionIdForBlock(blockNumber);
 
-        try (Connection con = DbConnectionPool.getConnection();
-             PreparedStatement ps = con.prepareStatement(DbQuery.COUNT_ACTIVE_ADDRESSES)) {
-
-            ps.setLong(1, txIndex);
-            ps.setLong(2, txIndex);
-            ps.setLong(3, txIndex);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out = rs.getLong("total");
+        try(Connection con = DbConnectionPool.getConnection()){
+            try(PreparedStatement ps = con.prepareStatement(DbQuery.CountActiveAddresses)){
+                ps.setLong(1, blockNumber);
+                ps.setLong(2, blockNumber);
+                ps.setLong(3, blockNumber);
+                try(ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()){
+                        out = rs.getLong("total");
+                    }
                 }
+
             }
-
         }
+        catch (SQLException e){
 
+            throw e;
+        }
 
         return out;
     }
@@ -142,19 +172,27 @@ public class GraphingServiceImpl implements GraphingService {
     public long checkIntegrity(long blockNumber) throws SQLException {
         long inconsistentRecord = -1;
 
-        try(Connection con = DbConnectionPool.getConnection();
-            PreparedStatement ps = con.prepareStatement(DbQuery.FIND_MIN_INCONSISTENT_RECORD)) {
-            ps.setLong(1, blockNumber);
-            try (ResultSet rs = ps.executeQuery()) {
+        try(Connection con = DbConnectionPool.getConnection()){
+            try(PreparedStatement ps = con.prepareStatement(DbQuery.FindMinInconsistentRecord)){
 
-                while (rs.next()) {
-                    inconsistentRecord = rs.getLong(1);
+                ps.setLong(1,blockNumber);
+                try(ResultSet rs = ps.executeQuery()){
+
+                    while (rs.next()){
+                        inconsistentRecord = rs.getLong(1);
+
+                    }
+
+
 
                 }
 
-
             }
+
         }
+
+
+
         return inconsistentRecord;
     }
 

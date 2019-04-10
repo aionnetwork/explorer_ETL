@@ -7,12 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,20 +29,67 @@ public class BlockServiceImpl implements BlockService {
 
     @Override
     public boolean save(Block block) {
-        return save(Collections.singletonList(block));
+
+
+        try (var con = DbConnectionPool.getConnection ()){
+            Block comp=getByBlockNumber(block.getBlockNumber());
+
+
+            if(comp==null ||!comp.equals(block)) {
+                try (var ps = con.prepareStatement(DbQuery.InsertBlock)) {
+
+
+                    ps.setLong(1, block.getBlockNumber());
+                    ps.setString(2, block.getBlockHash());
+                    ps.setString(3, block.getMinerAddress());
+                    ps.setString(4, block.getParentHash());
+                    ps.setString(5, block.getReceiptTxRoot());
+                    ps.setString(6, block.getStateRoot());
+                    ps.setString(7, block.getTxTrieRoot());
+                    ps.setString(8, block.getExtraData());
+                    ps.setString(9, block.getNonce());
+                    ps.setString(10, block.getBloom());
+                    ps.setString(11, block.getSolution());
+                    ps.setLong(12, block.getDifficulty());
+                    ps.setLong(13, block.getTotalDifficulty());
+                    ps.setLong(14, block.getNrgConsumed());
+                    ps.setLong(15, block.getNrgLimit());
+                    ps.setLong(16, block.getBlockSize());
+                    ps.setTimestamp(17, new Timestamp(block.getBlockTimestamp()));
+                    ps.setLong(18, block.getNumTransactions());
+                    ps.setLong(19, block.getBlockTime());
+                    ps.setBigDecimal(20, block.getNrgReward());
+                    ps.setDouble(21, block.getApproxNrgReward());
+                    ps.setString(22, block.getLastTransactionHash());
+                    ps.setString(23, block.getTransactionHashes());
+                    ps.setInt(24, block.getBlockYear());
+                    ps.setInt(25, block.getBlockMonth());
+                    ps.setInt(26, block.getBlockDay());
+                    ps.execute();
+
+                    con.commit();
+
+                }
+                catch (SQLException e){
+                    con.rollback();
+                    throw e;
+                }
+
+            }
+
+        } catch (SQLException e) {
+            return false;
+
+        }
+        return true;
     }
 
     @Override
     public boolean save(List<Block> blocks) {
 
-
-
-        try(Connection  con = DbConnectionPool.getConnection();
-            var ps = con.prepareStatement(DbQuery.INSERT_BLOCK);
-            var psMap = con.prepareStatement(DbQuery.INSERT_BLOCK_MAP)) {
-
-            try{
-
+        try(Connection con= DbConnectionPool.getConnection();
+            PreparedStatement ps = con.prepareStatement(DbQuery.InsertBlock)) {
+            try {
                 for (Block block : blocks) {
                     Block comp = getByBlockNumber(block.getBlockNumber());
                     if (comp == null || !comp.equals(block)) {
@@ -63,23 +106,22 @@ public class BlockServiceImpl implements BlockService {
                         ps.setString(9, block.getNonce());
                         ps.setString(10, block.getBloom());
                         ps.setString(11, block.getSolution());
-                        ps.setString(12, block.getDifficulty());
-                        ps.setString(13, block.getTotalDifficulty());
+                        ps.setLong(12, block.getDifficulty());
+                        ps.setLong(13, block.getTotalDifficulty());
                         ps.setLong(14, block.getNrgConsumed());
                         ps.setLong(15, block.getNrgLimit());
-                        ps.setLong(16, block.getSize());
+                        ps.setLong(16, block.getBlockSize());
                         ps.setLong(17, block.getBlockTimestamp());
                         ps.setLong(18, block.getNumTransactions());
                         ps.setLong(19, block.getBlockTime());
-                        ps.setString(20, block.getNrgReward().toString(16));
-                        ps.setLong(21, block.getTransactionId().longValue());
-                        ps.setString(22, block.getTransactionList());
-
-                        psMap.setString(1, block.getBlockHash());
-                        psMap.setLong(2, block.getBlockNumber());
-                        psMap.execute();
+                        ps.setBigDecimal(20, (block.getNrgReward()));
+                        ps.setDouble(21, block.getApproxNrgReward());
+                        ps.setString(22, block.getLastTransactionHash());
+                        ps.setString(23, block.getTransactionHashes());
+                        ps.setInt(24, block.getBlockYear());
+                        ps.setInt(25, block.getBlockMonth());
+                        ps.setInt(26, block.getBlockDay());
                         ps.execute();
-
                     }
 
                 }
@@ -89,46 +131,53 @@ public class BlockServiceImpl implements BlockService {
                 con.rollback();
                 throw e;
             }
-            return true;
+
         } catch (SQLException e) {
             return false;
 
         }
+        return true;
 
     }
 
     @Override
     public Block getByBlockNumber(long blockNumber) throws SQLException {
         Block block;
-        try (Connection con = DbConnectionPool.getConnection();
-             PreparedStatement ps = con.prepareStatement(DbQuery.BLOCKGET_BY_BLOCK_NUMBER)) {
-            ps.setLong(1, blockNumber);
-            try (ResultSet rs = ps.executeQuery()) {
-                block = null;
-                while (rs.next()) {
-                    block = new Block.BlockBuilder().blockNumber(rs.getLong("block_number")).
-                            blockHash(rs.getString("block_hash")).
-                            minerAddress(rs.getString("miner_address")).
-                            parentHash(rs.getString("parent_hash")).
-                            receiptTxRoot(rs.getString("receipt_tx_root")).
-                            stateRoot(rs.getString("state_root")).
-                            txTrieRoot(rs.getString("tx_trie_root")).
-                            extraData(rs.getString("extra_data")).
-                            nonce(rs.getString("nonce")).
-                            bloom(rs.getString("bloom")).
-                            solution(rs.getString("solution")).
-                            difficulty(rs.getString("difficulty")).
-                            totalDifficulty(rs.getString("total_difficulty")).
-                            nrgConsumed(rs.getLong("nrg_consumed")).
-                            nrgLimit(rs.getLong("nrg_limit")).
-                            size(rs.getLong("size")).
-                            blockTimestamp(rs.getLong("block_timestamp")).
-                            numTransactions(rs.getLong("num_transactions")).
-                            blockTime(rs.getLong("block_time")).
-                            nrgReward(new BigInteger(rs.getString("nrg_reward"), 16)).
-                            transactionId(new BigInteger(rs.getString("transaction_id"))).
-                            transactionList(rs.getString("transaction_list")).build();
+        try (Connection con = DbConnectionPool.getConnection()) {
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.BlockGetByBlockNumber)) {
+                ps.setLong(1, blockNumber);
+                try (ResultSet rs = ps.executeQuery()) {
+                    block = null;
+                    while (rs.next()) {
+                        block = new Block.BlockBuilder()
+                                .blockNumber(rs.getLong("block_number"))
+                                .blockHash(rs.getString("block_hash"))
+                                .minerAddress(rs.getString("miner_address"))
+                                .parentHash(rs.getString("parent_hash"))
+                                .receiptTxRoot(rs.getString("receipt_tx_root"))
+                                .stateRoot(rs.getString("state_root"))
+                                .txTrieRoot(rs.getString("tx_trie_root"))
+                                .extraData(rs.getString("extra_data"))
+                                .nonce(rs.getString("nonce"))
+                                .bloom(rs.getString("bloom"))
+                                .solution(rs.getString("solution"))
+                                .difficulty(rs.getLong("difficulty"))
+                                .totalDifficulty(rs.getLong("total_difficulty"))
+                                .nrgConsumed(rs.getLong("nrg_consumed"))
+                                .nrgLimit(rs.getLong("nrg_limit"))
+                                .blockSize(rs.getLong("block_size"))
+                                .blockTimestamp(rs.getLong("block_timestamp"))
+                                .numTransactions(rs.getLong("num_transactions"))
+                                .blockTime(rs.getLong("block_time"))
+                                .nrgReward(rs.getBigDecimal("nrg_reward"))
+                                .transactionHash(rs.getString("transaction_hash"))
+                                .transactionList(rs.getString("transaction_hashes"))
+                                .approxNrgReward(rs.getDouble("approx_nrg_reward"))
+                                .build();
+                    }
                 }
+
+
             }
 
 
@@ -138,21 +187,21 @@ public class BlockServiceImpl implements BlockService {
     }
 
     @Override
-    public boolean deleteFromAndUpdate(long blockNumber, List<TokenBalance> tokenBalances, List<Balance> balances) throws SQLException {
+    public boolean deleteFromAndUpdate(long blockNumber, List<TokenHolders> tokenHolders, List<Account> accounts) throws SQLException {
 
         //Use the try with resources to avoid memory leakage
         try (Connection con = DbConnectionPool.getConnection();
-             PreparedStatement psDeleteToke = con.prepareStatement(DbQuery.TOKEN_DELETE_BY_BLOCK);
-             PreparedStatement psDeleteBalance = con.prepareStatement(DbQuery.BALANCE_DELETE_FROM_BLOCK);
-             PreparedStatement psDeleteBlockMap = con.prepareStatement(DbQuery.BLOCK_MAP_DELETE_BY_BLOCK);
-             PreparedStatement psDeleteTransactionMap = con.prepareStatement(DbQuery.TRANSACTION_MAP_DELETE_BY_ID);
-             PreparedStatement psDeleteTransaction = con.prepareStatement(DbQuery.TRANSACTION_DELETE_BY_ID);
-             PreparedStatement psDeleteBlock = con.prepareStatement(DbQuery.BLOCKS_DELETE_FROM);
-             PreparedStatement psDeleteContracts = con.prepareStatement(DbQuery.CONTRACT_DELETE);
-             PreparedStatement psDeleteEvents = con.prepareStatement(DbQuery.EVENT_DELETE);
-             PreparedStatement psDeleteTransfers = con.prepareStatement(DbQuery.TRANSFER_DELETE);
-             PreparedStatement psDeleteTokenBalances = con.prepareStatement(DbQuery.TOKEN_BALANCE_DELETE_BY_BLOCK_NUMBER);
-             PreparedStatement psDeleteGraphing = con.prepareStatement(DbQuery.GRAPHING_DELETE)
+             PreparedStatement psDeleteToken = con.prepareStatement(DbQuery.TokenDeleteByBlock);
+             PreparedStatement psDeleteBalance = con.prepareStatement(DbQuery.AccountDeleteFromBlock);
+             PreparedStatement psDeleteTransaction = con.prepareStatement(DbQuery.TransactionDeleteByBlock);
+             PreparedStatement psDeleteBlock = con.prepareStatement(DbQuery.BlocksDeleteFrom);
+             PreparedStatement psDeleteContracts = con.prepareStatement(DbQuery.ContractDelete);
+             PreparedStatement psDeleteEvents = con.prepareStatement(DbQuery.EventDelete);
+             PreparedStatement psDeleteTransfers = con.prepareStatement(DbQuery.TokenTransfersDelete);
+             PreparedStatement psDeleteTokenBalances = con.prepareStatement(DbQuery.TokenHoldersDeleteByBlockNumber);
+             PreparedStatement psDeleteGraphing = con.prepareStatement(DbQuery.GraphingDelete);
+             PreparedStatement psDeleteMetric = MetricsServiceImpl.getInstance().prepareDelete(con);
+             PreparedStatement psInternalTransferService = InternalTransferServiceImpl.getInstance().prepareDelete(con, blockNumber)
         ) {
 
 
@@ -160,23 +209,16 @@ public class BlockServiceImpl implements BlockService {
             List<PreparedStatement> statements = new ArrayList<>();
             try {
 
-                Block lastBlock = getByBlockNumber(blockNumber -1);
+                psDeleteMetric.execute();
 
-                psDeleteToke.setLong(1, blockNumber);
-                psDeleteToke.execute();
+                psInternalTransferService.execute();
+                psDeleteToken.setLong(1, blockNumber);
+                psDeleteToken.execute();
 
                 psDeleteBalance.setLong(1, blockNumber);
                 psDeleteBalance.execute();
 
-                psDeleteBlockMap.setLong(1, blockNumber);
-                psDeleteBlockMap.execute();
-
-
-                psDeleteTransactionMap.setLong(1, lastBlock.getTransactionId().longValue());
-                psDeleteTransactionMap.execute();
-
-
-                psDeleteTransaction.setLong(1, lastBlock.getTransactionId().longValue());
+                psDeleteTransaction.setLong(1, blockNumber);
                 psDeleteTransaction.execute();
 
                 psDeleteBlock.setLong(1, blockNumber);
@@ -206,9 +248,9 @@ public class BlockServiceImpl implements BlockService {
                 List<ParserState> statesToUpdate = new ArrayList<>();
 
 
-                statesToUpdate.add(builder.blockNumber(BigInteger.valueOf(blockNumber - 1)).transactionID(getByBlockNumber(blockNumber - 1).getTransactionId()).id(ParserStateServiceImpl.DB_ID).build());
-                statesToUpdate.add(builder.transactionID(BigInteger.valueOf(-1)).id(ParserStateServiceImpl.BLKCHAIN_ID).build());
-                statesToUpdate.add(builder.transactionID(BigInteger.valueOf(-1)).id(ParserStateServiceImpl.INTEGRITY_ID).build());
+                statesToUpdate.add(builder
+                        .blockNumber(BigInteger.valueOf(blockNumber - 1))
+                        .id(ParserStateServiceImpl.DB_ID).build());
 
 
                 /*
@@ -231,7 +273,7 @@ public class BlockServiceImpl implements BlockService {
                     statesToUpdate.add(builder
                             .id(ParserStateServiceImpl.GRAPHING_ID)
                             .blockNumber(BigInteger.valueOf(newLastRecord == null ? 1 : newLastRecord.getBlockNumber()))
-                            .transactionID(BigInteger.valueOf(-1)).build());// build the new head of the graphing table
+                            .build());// build the new head of the graphing table
                     //the default value of the parser state is 1
 
                 }
@@ -240,9 +282,9 @@ public class BlockServiceImpl implements BlockService {
                 psUpdateParserState.executeBatch();
 
 
-                //These are the balances that must remain in the db after the reorg
-                statements.add(BalanceServiceImpl.getInstance().prepare(con, balances));
-                statements.add(TokenBalanceServiceImpl.getInstance().prepare(con, tokenBalances));
+                //These are the accounts that must remain in the db after the reorg
+                statements.add(AccountServiceImpl.getInstance().prepare(con, accounts));
+                statements.add(TokenHoldersServiceImpl.getInstance().prepare(con, tokenHolders));
 
                 for (var statement : statements) statement.executeBatch();
 
@@ -252,7 +294,6 @@ public class BlockServiceImpl implements BlockService {
             }
             catch (SQLException e) {
 
-                GENERAL.debug("Threw exception in deleteFrom: ", e);
 
                 try {
                     Objects.requireNonNull(con).rollback();
@@ -303,34 +344,29 @@ public class BlockServiceImpl implements BlockService {
     }
 
 
-    public Long getMaxTransactionIdForBlock(long blockNumber) throws SQLException {
-        long out = -1L;
-        try(Connection connection = DbConnectionPool.getConnection();
-            PreparedStatement ps = connection.prepareStatement(DbQuery.MAX_TRANSACTION_ID_FOR_BLOCK_NUMBER)){
-            ps.setLong(1,blockNumber);
-            try(ResultSet rs =ps.executeQuery()){
-
-                while (rs.next()){
-                    out = rs.getLong(1);
-                }
+    public Long getLastBlockNumber()  {
+        Long out=0L;
 
 
+        try (Connection con = DbConnectionPool.getConnection();
+             PreparedStatement ps = con.prepareStatement(DbQuery.BlockGetMaxBlockNumber);
+             ResultSet resultSet = ps.executeQuery()){
+
+            while (resultSet.next()) {
+                out =resultSet.getLong(1);
             }
-            return out;
-        } catch (SQLException e) {
-            GENERAL.debug("Threw Exception while getting max transaction id");
-            throw e;
-        }
 
+        } catch (SQLException|NullPointerException e) {
+            GENERAL.debug("Threw exception in getLastBlockNumber:", e);
+        }
+        return out;
     }
 
     @Override
-    public PreparedStatement[] prepare(Connection con, List<Block> blocks) throws SQLException {
-        PreparedStatement ps = con.prepareStatement(DbQuery.INSERT_BLOCK);
-        PreparedStatement psMap = con.prepareStatement(DbQuery.INSERT_BLOCK_MAP);
+    public PreparedStatement prepare(Connection con, List<Block> blocks) throws SQLException {
+        PreparedStatement ps = con.prepareStatement(DbQuery.InsertBlock);
 
         for(Block block:blocks) {
-
 
             ps.setLong(1, block.getBlockNumber());
             ps.setString(2, block.getBlockHash());
@@ -343,26 +379,25 @@ public class BlockServiceImpl implements BlockService {
             ps.setString(9, block.getNonce());
             ps.setString(10, block.getBloom());
             ps.setString(11, block.getSolution());
-            ps.setString(12, block.getDifficulty());
-            ps.setString(13, block.getTotalDifficulty());
+            ps.setLong(12, block.getDifficulty());
+            ps.setLong(13, block.getTotalDifficulty());
             ps.setLong(14, block.getNrgConsumed());
             ps.setLong(15, block.getNrgLimit());
-            ps.setLong(16, block.getSize());
+            ps.setLong(16, block.getBlockSize());
             ps.setLong(17, block.getBlockTimestamp());
             ps.setLong(18, block.getNumTransactions());
             ps.setLong(19, block.getBlockTime());
-            ps.setString(20, block.getNrgReward().toString(16));
-            ps.setLong(21, block.getTransactionId().longValue());
-            ps.setString(22, block.getTransactionList());
-
-            psMap.setString(1, block.getBlockHash());
-            psMap.setLong(2, block.getBlockNumber());
-            psMap.addBatch();
+            ps.setBigDecimal(20, (block.getNrgReward()));
+            ps.setDouble(21, block.getApproxNrgReward());
+            ps.setString(22, block.getLastTransactionHash());
+            ps.setString(23, block.getTransactionHashes());
+            ps.setInt(24, block.getBlockYear());
+            ps.setInt(25, block.getBlockMonth());
+            ps.setInt(26, block.getBlockDay());
             ps.addBatch();
-
         }
 
-        return new PreparedStatement[]{ps,psMap};
+        return ps;
     }
 
 }

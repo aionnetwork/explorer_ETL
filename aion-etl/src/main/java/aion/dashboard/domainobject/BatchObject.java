@@ -8,36 +8,45 @@ import java.util.*;
 public class BatchObject {
 
 
+    private List<Graphing> graphings;
     private List<Block> blocks;
     private List<Transaction> transactions;
-    private ParserState parser_state;
+    private List<ParserState> parserState;
     private List<Event> events;
-    private List<Transfer> transfers;
+    private List<TokenTransfers> tokenTransfers;
+    private List<Metrics> metrics;
+    private Set<InternalTransfer> internalTransfers;
     //---------------------------------------We only care about the first token found in a transaction list
     private Set<Token> tokens;
     //---------------------------------------These values are unique and therefore should only be added once
-    private Map<String, TokenBalance> tokenBalances;
+    private Map<String, TokenHolders> tokenBalances;
     private Map<String, Contract> contracts;
-    private Map<String, Balance> balanceMap;
+    private Map<String, Account> accountMap;
+
 
     public BatchObject (){
-        blocks = new ArrayList<>();
-        transactions = new ArrayList<>();
-        tokens = new HashSet<>();
-        balanceMap = new HashMap<>();
-        tokenBalances = new HashMap<>();
-        events = new ArrayList<>();
-        contracts = new HashMap<>();
-        transfers = new ArrayList<>();
-
+        blocks = Collections.synchronizedList(new ArrayList<>());
+        transactions = Collections.synchronizedList(new ArrayList<>());
+        tokens = Collections.synchronizedSet(new HashSet<>());
+        accountMap = Collections.synchronizedMap(new HashMap<>());
+        tokenBalances = Collections.synchronizedMap(new HashMap<>());
+        events = Collections.synchronizedList(new ArrayList<>());
+        contracts = Collections.synchronizedMap(new HashMap<>());
+        tokenTransfers = Collections.synchronizedList(new ArrayList<>());
+        graphings = Collections.synchronizedList(new ArrayList<>());
+        parserState = Collections.synchronizedList(new ArrayList<>());
+        metrics = Collections.synchronizedList(new ArrayList<>());
+        internalTransfers = Collections.synchronizedSet(new HashSet<>());
     }
 
 
+    public void addMetric(Metrics metric){metrics.add(metric);}
     public void addTransaction(Transaction tx){
         transactions.add(tx);
     }
-    public void addAllTransaction(List<Transaction> txList){
-        transactions.addAll(txList);
+
+    public void addInternalTransfer(InternalTransfer transfer){
+        internalTransfers.add(transfer);
     }
     public void addBlock(Block blk){
         blocks.add(blk);
@@ -46,12 +55,20 @@ public class BatchObject {
         tokens.add(tkn);
     }
 
-    public void addTokenBalance(TokenBalance tokenBalance) {
+    public synchronized void addAllGraphing(List<Graphing> graphings){
+        this.graphings.addAll(graphings);
+    }
 
-        if (tokenBalances.containsKey(tokenBalance.getHolderAddress().concat(tokenBalance.getContractAddress())))
-            tokenBalances.replace(tokenBalance.getHolderAddress().concat(tokenBalance.getContractAddress()), tokenBalance);
+    public List<Graphing> getGraphings() {
+        return graphings;
+    }
+
+    public void addTokenBalance(TokenHolders tokenHolders) {
+
+        if (tokenBalances.containsKey(tokenHolders.getHolderAddress().concat(tokenHolders.getContractAddress())))
+            tokenBalances.replace(tokenHolders.getHolderAddress().concat(tokenHolders.getContractAddress()), tokenHolders);
         else
-            tokenBalances.put(tokenBalance.getHolderAddress().concat(tokenBalance.getContractAddress()), tokenBalance);
+            tokenBalances.put(tokenHolders.getHolderAddress().concat(tokenHolders.getContractAddress()), tokenHolders);
 
     }
 
@@ -66,25 +83,19 @@ public class BatchObject {
     }
 
 
-    public void addTransfer(Transfer transfer) {
-        transfers.add(transfer);
+    public void addTransfer(TokenTransfers tokenTransfers) {
+        this.tokenTransfers.add(tokenTransfers);
     }
 
-    public void putBalance(Balance balance) {
-        if (balanceMap.containsKey(balance.getAddress())) {
-            var prev = balanceMap.get(balance.getAddress());
-            balance.setTransactionId(prev.getTransactionId());
-            balance.setContract(prev.getContract());
-            balanceMap.replace(balance.getAddress(), balance);
+    public void putAccount(Account account) {
+        if (accountMap.containsKey(account.getAddress())) {
+            var prev = accountMap.get(account.getAddress());
+            account.setTransactionHash(prev.getTransactionHash());
+            account.setContract(prev.getContract());
+            accountMap.replace(account.getAddress(), account);
         }
         else
-            balanceMap.put(balance.getAddress(), balance);
-    }
-
-    public void putAllBalance(Map<String, Balance> balances) {
-
-        balanceMap.putAll(balances);
-
+            accountMap.put(account.getAddress(), account);
     }
 
 
@@ -98,16 +109,21 @@ public class BatchObject {
         this.blocks.addAll(that.blocks);
         this.transactions.addAll(that.transactions);
         this.tokens.addAll(that.tokens);
-        this.balanceMap.putAll(that.balanceMap);
-        this.transfers.addAll(that.transfers);
+        this.accountMap.putAll(that.accountMap);
+        this.tokenTransfers.addAll(that.tokenTransfers);
         this.events.addAll(that.events);
         this.contracts.putAll(that.contracts);
         this.tokenBalances.putAll(that.tokenBalances);
+        this.graphings.addAll(that.graphings);
+        this.internalTransfers.addAll(that.internalTransfers);
 
 
     }
 
 
+    public List<InternalTransfer> getInternalTransfers(){
+        return new ArrayList<>(internalTransfers);
+    }
     public List<Block> getBlocks() {
         return blocks;
     }
@@ -124,21 +140,21 @@ public class BatchObject {
         return tokens;
     }
 
-    public List<Balance> getBalances(){
-        return new ArrayList<>(balanceMap.values());
+    public List<Account> getAccounts(){
+        return new ArrayList<>(accountMap.values());
     }
 
 
-    public ParserState getParser_state() {
-        return parser_state;
+    public List<ParserState> getParserState() {
+        return parserState;
     }
 
-    public BatchObject setParser_state(ParserState parser_state) {
-        this.parser_state = parser_state;
+    public BatchObject addParserState(ParserState parserState) {
+        this.parserState.add( parserState);
         return this;
     }
 
-    public List<TokenBalance> getTokenBalances() {
+    public List<TokenHolders> getTokenBalances() {
         return new ArrayList<>(tokenBalances.values());
     }
 
@@ -150,7 +166,9 @@ public class BatchObject {
         return events;
     }
 
-    public List<Transfer> getTransfers() {
-        return transfers;
+    public List<TokenTransfers> getTokenTransfers() {
+        return tokenTransfers;
     }
+
+    public List<Metrics> getMetrics(){return metrics;}
 }

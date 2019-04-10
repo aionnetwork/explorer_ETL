@@ -11,20 +11,23 @@ import java.util.List;
 public interface ParserStateService {
 
 
-    boolean update(ParserState parserState);
-
+    boolean update(ParserState parser_state);
+    boolean updateHeadBlockChain(BigInteger blkNum);
+    boolean updateHeadDataBase(BigInteger blkNum, BigInteger txNum);
     boolean updateHeadIntegrity(BigInteger blkNum);
-
+    boolean updateBlockMeanState(BigInteger blkNum);
     boolean updateGraphingState(BigInteger blkNum);
-    boolean updateAll(List<ParserState> parserStates);
+    boolean updateAll(List<ParserState> parser_stateList);
     List<ParserState> readState();
     ParserState readDBState();
     ParserState readChainState();
     ParserState readIntegrityState();
 
     ParserState readGraphingState();
+    ParserState readBlockMeanState();
+    ParserState readTransactionMeanState();
 
-    PreparedStatement prepare(Connection con, List<ParserState> parserStates) throws SQLException;
+    PreparedStatement prepare(Connection con, List<ParserState> parser_stateList) throws SQLException;
 
 
 }

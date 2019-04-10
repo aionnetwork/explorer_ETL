@@ -6,16 +6,16 @@ public class Event {
     private String name;//The name of the Event triggered
     private String parameterList;// the parameter list stored as a json object in the format ["to: Address", "from:Address", "value: uint"]
     private String inputList;// The list of input values
-    private long transactionId;// the hash of the transaction on which the event was fired
+    private String transactionHash;// the hash of the transaction on which the event was fired
     private long blockNumber; // the block in which the event was fired
     private String contractAddr; // the address of the contract which fired the event
     private long timestamp;
 
-    private Event(String name, String parameterList, String inputList, long transactionId, long blockNumber, String contractAddr, long timestamp) {
+    private Event(String name, String parameterList, String inputList, String transactionHash, long blockNumber, String contractAddr, long timestamp) {
         this.name = name;
         this.parameterList = parameterList;
         this.inputList = inputList;
-        this.transactionId = transactionId;
+        this.transactionHash = transactionHash;
         this.blockNumber = blockNumber;
         this.contractAddr = contractAddr;
         this.timestamp = timestamp;
@@ -33,8 +33,8 @@ public class Event {
         return inputList;
     }
 
-    public long getTransactionId() {
-        return transactionId;
+    public String getTransactionHash() {
+        return transactionHash;
     }
 
     public long getBlockNumber() {
@@ -60,24 +60,23 @@ public class Event {
                 Objects.equals(getName(), event.getName()) &&
                 Objects.equals(getParameterList(), event.getParameterList()) &&
                 Objects.equals(getInputList(), event.getInputList()) &&
-                Objects.equals(getTransactionId(), event.getTransactionId()) &&
+                Objects.equals(getTransactionHash(), event.getTransactionHash()) &&
                 Objects.equals(getContractAddr(), event.getContractAddr());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getParameterList(), getInputList(), getTransactionId(), getBlockNumber(), getContractAddr(), getTimestamp());
+        return Objects.hash(getName(), getParameterList(), getInputList(), getTransactionHash(), getBlockNumber(), getContractAddr(), getTimestamp());
     }
 
     public static class EventBuilder {
         private String name;
         private String parameterList;// the parameter list stored as a json object in the format ["to: Address, from:Address, value: uint"]
         private String inputList;// The list of input values
-        private long transactionID;// the hash of the transaction on which the event was fired
+        private String transactionHash;// the hash of the transaction on which the event was fired
         private long blockNumber; // the block in which the event was fired
         private String contractAddr; // the address of the contract which fired the event
         private long timestamp;
-
 
 
         public EventBuilder setName(String name) {
@@ -95,8 +94,8 @@ public class Event {
             return this;
         }
 
-        public EventBuilder setTransactionID(long transactionID) {
-            this.transactionID = transactionID;
+        public EventBuilder setTransactionHash(String transactionHash) {
+            this.transactionHash = transactionHash;
             return this;
         }
 
@@ -111,7 +110,7 @@ public class Event {
         }
 
         public Event build() {
-            return new Event(name, parameterList, inputList, transactionID, blockNumber, contractAddr, timestamp);
+            return new Event(name, parameterList, inputList, transactionHash, blockNumber, contractAddr, timestamp);
         }
 
 

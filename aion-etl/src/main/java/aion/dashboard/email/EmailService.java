@@ -1,6 +1,7 @@
 package aion.dashboard.email;
 
 import aion.dashboard.config.Config;
+import aion.dashboard.service.SharedExecutorService;
 import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +15,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 
@@ -41,7 +41,7 @@ public class EmailService {
 	}
 
 	private EmailService() {
-		if (INSTANCE != null)//Ignore linting rule this is to enforce the singleton
+		if (INSTANCE != null) // can ignore this check is to prevent creations of another instance of this class
 			throw new IllegalStateException("EmailService already instantiated!");
 
         timer = null;
@@ -53,19 +53,18 @@ public class EmailService {
 		hostName = config.getHostname();
 		props = new Properties();
 
-
 		props.put("mail.smtp.auth", "true");
 		props.put("mail.smtp.starttls.enable", "true");
 		props.put("mail.smtp.host", "smtp.gmail.com");
 		props.put("mail.smtp.port", "587");
 
-		executor = Executors.newSingleThreadExecutor();
+		executor = SharedExecutorService.getInstance().getExecutorService();
 	}
 
 	public boolean send(String subject, String content) {
         if (!Config.getInstance().areReportsEnabled()) return false;
 
-		if ( (senderUsername == null || senderPassword == null || recipientList == null) || (timer != null && timer.elapsed(TimeUnit.MINUTES) <= TIME_OUT))
+		if ( (senderUsername == null || senderPassword == null || recipientList == null) || (timer != null && timer.elapsed(TimeUnit.MINUTES) <= TIME_OUT))//don't spam users
 			return false;
         if (timer == null || timer.elapsed(TimeUnit.MINUTES) > TIME_OUT)
             timer = Stopwatch.createStarted();//reset the timer if the timeout has elapsed or this is the first time the send method runs
@@ -89,7 +88,7 @@ public class EmailService {
 			//set message headers
 			msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
 			msg.addHeader("format", "flowed");
-			msg.addHeader("Content-Transfer-Encoding", "8bit");
+			msg.addHeader("Content-TokenTransfers-Encoding", "8bit");
 			msg.setFrom(new InternetAddress(senderUsername, hostName+": Report"));
 			msg.setReplyTo(InternetAddress.parse(senderUsername, false));
 			msg.setSubject(subject, "UTF-8");
@@ -109,17 +108,5 @@ public class EmailService {
 	}
 
 
-	public void close(){
-		executor.shutdown();
 
-		try {
-			if (executor.awaitTermination(1500, TimeUnit.MILLISECONDS)){
-				executor.shutdownNow();
-
-			}
-		} catch (InterruptedException e) {
-			executor.shutdownNow();
-			Thread.currentThread().interrupt();
-		}
-	}
 }

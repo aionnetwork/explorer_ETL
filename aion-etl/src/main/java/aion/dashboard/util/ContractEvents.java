@@ -23,10 +23,6 @@ import java.util.stream.IntStream;
  */
 @SuppressWarnings("WeakerAccess")
 public class ContractEvents {
-
-    private ContractEvents(){
-        throw new UnsupportedOperationException("Cannot create an instance of contract events");
-    }
     private static final Logger GENERAl = LoggerFactory.getLogger("logger_general");
 
     static {
@@ -41,24 +37,35 @@ public class ContractEvents {
     /*
     Obtained from the ATS draft proposal accurate as of 21-Aug
      */
-    public static final String CREATED_EVENT ="Created(uint128,address)";
-    public static final String SENT_EVENT = "Sent(address,address,address,uint128,bytes,bytes)";
-    public static final String BURNED_EVENT = "Burned(address,address,uint128,bytes)";
-    public static final String MINTED_EVENT = "Minted(address,address,uint128,bytes)";
-    public static final String AUTHORIZED_OPERATOR_EVENT ="AuthorizedOperator(address,address)";
-    public static final String REVOKED_OPERATOR_EVENT ="RevokedOperator(address,address)";
+    public static final String CreatedEvent="Created(uint128,address)";
+    public static final String SentEvent = "Sent(address,address,address,uint128,bytes,bytes)";
+    public static final String BurnedEvent = "Burned(address,address,uint128,bytes)";
+    public static final String MintedEvent = "Minted(address,address,uint128,bytes)";
+    public static final String AuthorizedOperatorEvent ="AuthorizedOperator(address,address)";
+    public static final String RevokedOperatorEvent="RevokedOperator(address,address)";
+
+
+    /*
+     * A topic is the hash of the event signature.
+     */
+    public static final byte[] CreatedTopic= HashUtil.h256(CreatedEvent.getBytes());
+    public static final byte[] SentTopic = HashUtil.h256(SentEvent.getBytes());
+    public static final byte[] BurnedTopic = HashUtil.h256(BurnedEvent.getBytes());
+    public static final byte[] MintedTopic = HashUtil.h256(MintedEvent.getBytes());
+    public static final byte[] AuthorizedOperatorTopic = HashUtil.h256(AuthorizedOperatorEvent.getBytes());
+    public static final byte[] RevokedOperatorTopic = HashUtil.h256(RevokedOperatorEvent.getBytes());
 
 
 
     /*
      * A topic is the hash of the event signature.
      */
-    public static final byte[] CreatedBloomHash= HashUtil.keccak256(CREATED_EVENT.getBytes());
-    public static final byte[] SentBloomHash = HashUtil.keccak256(SENT_EVENT.getBytes());
-    public static final byte[] BurnedBloomHash = HashUtil.keccak256(BURNED_EVENT.getBytes());
-    public static final byte[] MintedBloomHash = HashUtil.keccak256(MINTED_EVENT.getBytes());
-    public static final byte[] AuthorizedOperatorBloomHash = HashUtil.keccak256(AUTHORIZED_OPERATOR_EVENT.getBytes());
-    public static final byte[] RevokedOperatorBloomHash = HashUtil.keccak256(REVOKED_OPERATOR_EVENT.getBytes());
+    public static final byte[] CreatedBloomHash= HashUtil.keccak256(CreatedEvent.getBytes());
+    public static final byte[] SentBloomHash = HashUtil.keccak256(SentEvent.getBytes());
+    public static final byte[] BurnedBloomHash = HashUtil.keccak256(BurnedEvent.getBytes());
+    public static final byte[] MintedBloomHash = HashUtil.keccak256(MintedEvent.getBytes());
+    public static final byte[] AuthorizedOperatorBloomHash = HashUtil.keccak256(AuthorizedOperatorEvent.getBytes());
+    public static final byte[] RevokedOperatorBloomHash = HashUtil.keccak256(RevokedOperatorEvent.getBytes());
 
     static final Pattern IntegerTypeMatcher;
     static final Pattern UnsignedIntegerTypeMatcher;
@@ -130,14 +137,141 @@ public class ContractEvents {
                 List<String> typeNames = new ArrayList<>(Collections.nCopies(contractAbiEntry.inputs.size(), ""));
                 List<String> names = new ArrayList<>(Collections.nCopies(contractAbiEntry.inputs.size(), ""));
 
-                if (!zippedIndexedParam.isEmpty()) {
-                    readIndexedParams(txLog, contractAbiEntry, zippedIndexedParam, types, inputs, typeNames, names);
+                if (zippedIndexedParam.size() > 0) {
+                    for (int i = 1; i < txLog.getTopics().size() && i-1 < zippedIndexedParam.size(); i++) {
+
+
+                        var tuple2 = zippedIndexedParam.get(i-1);
+
+                        String topic = txLog.getTopics().get(i).replace("0x", "");//ignore the first topic
+                        typeNames.set(tuple2.x, tuple2.y.getType());
+                        names.set(tuple2.x,tuple2.y.getName());
+                        if (IntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
+                            types.set(tuple2.x, BigInteger.class);
+                            inputs.set(tuple2.x, new BigInteger(ByteUtil.hexStringToBytes(topic)));
+                        } else if (UnsignedIntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
+                            types.set(tuple2.x,BigInteger.class);
+                            //
+                            inputs.set(tuple2.x,ByteUtil.bytesToBigInteger(ByteUtil.hexStringToBytes(topic)));
+                        } else if (tuple2.y.getType().equalsIgnoreCase("string")) {
+                            types.set(tuple2.x,String.class);
+                            inputs.set(tuple2.x,(topic));
+                        } else if (StaticBytesMatcher.matcher(tuple2.y.getType()).find()) {
+                            types.set(tuple2.x,String.class);
+                            inputs.set(tuple2.x,topic);
+                        }
+                        else if (DynamicBytesMatcher.matcher(tuple2.y.getType()).find()){
+                            types.set(tuple2.x,String.class);
+                            inputs.set(tuple2.x, topic);
+                        }
+                        else if (tuple2.y.getType().equalsIgnoreCase("address")) {
+                            types.set(tuple2.x,String.class);
+
+                            inputs.set(tuple2.x,topic);
+
+                        } else if (tuple2.y.getType().equalsIgnoreCase("bool")) {
+                            long temp = Long.parseLong(topic, 16);
+                            types.set(tuple2.x,Boolean.class);
+                            inputs.set(tuple2.x, temp != 0);
+                        } else if (ArrayTypeMatcher.matcher(tuple2.y.getType()).find()) {
+
+                            throw new Exception("Found array type: "+ contractAbiEntry.name);
+                        }
+                    }
                 }
 
 
                 if (!zippedNonIndexedParam.isEmpty()) {
 
-                    readNonIndexedParams(txLog, contractAbiEntry, zippedNonIndexedParam, types, inputs, typeNames, names);
+                    List<ISolidityArg> args = new ArrayList<>();
+
+                    for (int i = 0; i < zippedNonIndexedParam.size(); i++) {
+
+                        var tuple2 = zippedNonIndexedParam.get(i);
+                        typeNames.set(tuple2.x, tuple2.y.getType());
+                        names.set(tuple2.x,tuple2.y.getName());
+
+
+                        if (IntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
+
+                            Int intValue = Int.createForDecode();
+                            intValue.setType(tuple2.y.getType());
+                            intValue.setDynamicParameters(tuple2.y.getParamLengths());
+                            args.add(intValue);
+                            types.set(tuple2.x, BigInteger.class);
+
+                        } else if (UnsignedIntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
+                            Uint uintValue = Uint.createForDecode();
+                            uintValue.setType(tuple2.y.getType());
+                            uintValue.setDynamicParameters(tuple2.y.getParamLengths());
+                            args.add(uintValue);
+                            types.set(tuple2.x, BigInteger.class);
+
+
+                        } else if (tuple2.y.getType().equalsIgnoreCase("string")) {
+
+                            SString stringVal = SString.createForDecode();
+                            stringVal.setType(tuple2.y.getType());
+                            stringVal.setDynamicParameters(tuple2.y.getParamLengths());
+                            args.add(stringVal);
+                            types.set(tuple2.x, String.class);
+
+
+                        } else if (StaticBytesMatcher.matcher(tuple2.y.getType()).find()) {
+
+                            Bytes bytesVal = Bytes.createForDecode();
+                            bytesVal.setType(tuple2.y.getType());
+                            bytesVal.setDynamicParameters(tuple2.y.getParamLengths());
+                            types.set(tuple2.x, String.class);
+                            args.add(bytesVal);
+
+                        }
+                        else if(DynamicBytesMatcher.matcher(tuple2.y.getType()).find()){
+                            DynamicBytes bytesVal = DynamicBytes.createForDecode();
+                            bytesVal.setType(tuple2.y.getType());
+                            bytesVal.setDynamicParameters(tuple2.y.getParamLengths());
+                            types.set(tuple2.x, String.class);
+                            args.add(bytesVal);
+                        }
+                        else if (tuple2.y.getType().equalsIgnoreCase("address")) {
+
+                            Address addressVal = Address.createForDecode();
+                            addressVal.setType(tuple2.y.getType());
+                            addressVal.setDynamicParameters(tuple2.y.getParamLengths());
+
+                            types.set(tuple2.x, String.class);
+                            args.add(addressVal);
+
+                        } else if (tuple2.y.getType().equalsIgnoreCase("bool")) {
+
+                            Bool boolVal = Bool.createForDecode();
+                            boolVal.setType(tuple2.y.getType());
+                            boolVal.setDynamicParameters(tuple2.y.getParamLengths());
+                            args.add(boolVal);
+                            types.set(tuple2.x, Boolean.class);
+                        } else if (ArrayTypeMatcher.matcher(tuple2.y.getType()).find()) {
+                            throw new Exception("Found array type: "+ contractAbiEntry.name);
+
+                        }
+
+
+                    }
+                    int[] offsets = getOffsets(args);
+                    int count = 0;
+                    for (int i = 0; i < args.size(); i++) {
+                        ISolidityArg arg = args.get(i);
+                        int offset = offsets[count];
+                        int index = zippedNonIndexedParam.get(i).x;
+                        count++;
+                        if (arg.isType("address"))
+                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
+                        else if (arg.isType("uint") || arg.isType("int")) {
+                            inputs.set(index, arg.decode(offset, txLog.getData()));
+                        } else if (arg.decode(offset, txLog.getData()) instanceof byte[]) {
+                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
+                        } else
+                            inputs.set(index, arg.decode(offset, txLog.getData()));
+                    }
 
                 }
                 builder.setNames(names);
@@ -148,162 +282,15 @@ public class ContractEvents {
 
                 return Optional.of(builder.build());
             }catch (IndexOutOfBoundsException ignored){
-                return Optional.empty();
+
             } catch (Exception e) {
                 GENERAl.debug("Read event threw Exception: ", e);
                 throw new DecodeException();
             }
 
-        } else {
-            return Optional.empty();
         }
+        return Optional.empty();
     }//decodeEventLog
-
-    private static void readNonIndexedParams(TxLog txLog,
-                                             ContractAbiEntry contractAbiEntry,
-                                             List<Tuple2<Integer, ContractAbiIOParam>> zippedNonIndexedParam,
-                                             List<Class> types, List<Object> inputs,
-                                             List<String> typeNames,
-                                             List<String> names) throws DecodeException {
-        List<ISolidityArg> args = new ArrayList<>();
-
-        for (int i = 0; i < zippedNonIndexedParam.size(); i++) {
-
-            var tuple2 = zippedNonIndexedParam.get(i);
-            typeNames.set(tuple2.x, tuple2.y.getType());
-            names.set(tuple2.x,tuple2.y.getName());
-
-
-            if (IntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
-
-                Int intValue = Int.createForDecode();
-                intValue.setType(tuple2.y.getType());
-                intValue.setDynamicParameters(tuple2.y.getParamLengths());
-                args.add(intValue);
-                types.set(tuple2.x, BigInteger.class);
-
-            } else if (UnsignedIntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
-                Uint uintValue = Uint.createForDecode();
-                uintValue.setType(tuple2.y.getType());
-                uintValue.setDynamicParameters(tuple2.y.getParamLengths());
-                args.add(uintValue);
-                types.set(tuple2.x, BigInteger.class);
-
-
-            } else if (tuple2.y.getType().equalsIgnoreCase("string")) {
-
-                SString stringVal = SString.createForDecode();
-                stringVal.setType(tuple2.y.getType());
-                stringVal.setDynamicParameters(tuple2.y.getParamLengths());
-                args.add(stringVal);
-                types.set(tuple2.x, String.class);
-
-
-            } else if (StaticBytesMatcher.matcher(tuple2.y.getType()).find()) {
-
-                Bytes bytesVal = Bytes.createForDecode();
-                bytesVal.setType(tuple2.y.getType());
-                bytesVal.setDynamicParameters(tuple2.y.getParamLengths());
-                types.set(tuple2.x, String.class);
-                args.add(bytesVal);
-
-            }
-            else if(DynamicBytesMatcher.matcher(tuple2.y.getType()).find()){
-                DynamicBytes bytesVal = DynamicBytes.createForDecode();
-                bytesVal.setType(tuple2.y.getType());
-                bytesVal.setDynamicParameters(tuple2.y.getParamLengths());
-                types.set(tuple2.x, String.class);
-                args.add(bytesVal);
-            }
-            else if (tuple2.y.getType().equalsIgnoreCase("address")) {
-
-                Address addressVal = Address.createForDecode();
-                addressVal.setType(tuple2.y.getType());
-                addressVal.setDynamicParameters(tuple2.y.getParamLengths());
-
-                types.set(tuple2.x, String.class);
-                args.add(addressVal);
-
-            } else if (tuple2.y.getType().equalsIgnoreCase("bool")) {
-
-                Bool boolVal = Bool.createForDecode();
-                boolVal.setType(tuple2.y.getType());
-                boolVal.setDynamicParameters(tuple2.y.getParamLengths());
-                args.add(boolVal);
-                types.set(tuple2.x, Boolean.class);
-            } else if (ArrayTypeMatcher.matcher(tuple2.y.getType()).find()) {
-                throw new DecodeException("Found array type: "+ contractAbiEntry.name);
-
-            }
-
-
-        }
-        int[] offsets = getOffsets(args);
-        int count = 0;
-        for (int i = 0; i < args.size(); i++) {
-            ISolidityArg arg = args.get(i);
-            int offset = offsets[count];
-            int index = zippedNonIndexedParam.get(i).x;
-            count++;
-            if (arg.isType("address"))
-                inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
-            else if (arg.isType("uint") || arg.isType("int")) {
-                inputs.set(index, BigInteger.valueOf((Long) arg.decode(offset, txLog.getData())));
-            } else if (arg.decode(offset, txLog.getData()) instanceof byte[]) {
-                inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
-            } else
-                inputs.set(index, arg.decode(offset, txLog.getData()));
-        }
-    }
-
-    private static void readIndexedParams(TxLog txLog,
-                                          ContractAbiEntry contractAbiEntry,
-                                          List<Tuple2<Integer, ContractAbiIOParam>> zippedIndexedParam,
-                                          List<Class> types,
-                                          List<Object> inputs,
-                                          List<String> typeNames,
-                                          List<String> names) throws DecodeException {
-        for (int i = 1; i < txLog.getTopics().size() && i-1 < zippedIndexedParam.size(); i++) {
-
-
-            var tuple2 = zippedIndexedParam.get(i-1);
-
-            String topic = txLog.getTopics().get(i).replace("0x", "");//ignore the first topic
-            typeNames.set(tuple2.x, tuple2.y.getType());
-            names.set(tuple2.x,tuple2.y.getName());
-            if (IntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
-                types.set(tuple2.x, BigInteger.class);
-                inputs.set(tuple2.x, new BigInteger(ByteUtil.hexStringToBytes(topic)));
-            } else if (UnsignedIntegerTypeMatcher.matcher(tuple2.y.getType()).find()) {
-                types.set(tuple2.x,BigInteger.class);
-                //
-                inputs.set(tuple2.x,ByteUtil.bytesToBigInteger(ByteUtil.hexStringToBytes(topic)));
-            } else if (tuple2.y.getType().equalsIgnoreCase("string")) {
-                types.set(tuple2.x,String.class);
-                inputs.set(tuple2.x,(topic));
-            } else if (StaticBytesMatcher.matcher(tuple2.y.getType()).find()) {
-                types.set(tuple2.x,String.class);
-                inputs.set(tuple2.x,topic);
-            }
-            else if (DynamicBytesMatcher.matcher(tuple2.y.getType()).find()){
-                types.set(tuple2.x,String.class);
-                inputs.set(tuple2.x, topic);
-            }
-            else if (tuple2.y.getType().equalsIgnoreCase("address")) {
-                types.set(tuple2.x,String.class);
-
-                inputs.set(tuple2.x,topic);
-
-            } else if (tuple2.y.getType().equalsIgnoreCase("bool")) {
-                long temp = Long.parseLong(topic, 16);
-                types.set(tuple2.x,Boolean.class);
-                inputs.set(tuple2.x, temp != 0);
-            } else if (ArrayTypeMatcher.matcher(tuple2.y.getType()).find()) {
-
-                throw new DecodeException("Found array type: "+ contractAbiEntry.name);
-            }
-        }
-    }
 
     private static int[] getOffsets(List<ISolidityArg> outputParams) {
         int[] ret = new int[outputParams.size()];

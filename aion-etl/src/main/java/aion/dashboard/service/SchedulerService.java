@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SchedulerService {
 
-    private static final SchedulerService INSTANCE = new SchedulerService();
+    private static SchedulerService Instance = new SchedulerService();
     private ScheduledExecutorService executorService;
     private boolean isClosed;
     private SchedulerService(){
@@ -25,7 +25,7 @@ public class SchedulerService {
     }
 
     public static SchedulerService getInstance() {
-        return INSTANCE;
+        return Instance;
     }
 
     public void add(Runnable task, long initialDelay ,long delay, TimeUnit unit){
@@ -41,16 +41,18 @@ public class SchedulerService {
         if (isClosed){
             throw new IllegalStateException("Service is already closed.");
         }
-        executorService.shutdown();
-        isClosed = true;
-        try {
-            executorService.awaitTermination(5, TimeUnit.SECONDS);
-            executorService.shutdownNow();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+
+
+        //noinspection Duplicates
+        try{
+            isClosed = true;
+            executorService.shutdown();
+            executorService.awaitTermination(10, TimeUnit.SECONDS);
+        }
+        catch (Exception ignored){}
+        finally {
             executorService.shutdownNow();
         }
-
     }
 
     public boolean isClosed() {

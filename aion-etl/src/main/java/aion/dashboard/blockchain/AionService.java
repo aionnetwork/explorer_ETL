@@ -13,11 +13,14 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
+import java.util.function.Function;
 
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
 
-public class AionService {
+public class AionService implements AutoCloseable{
+
 
 	private final IAionAPI api;
 	List<String> connections;
@@ -34,41 +37,45 @@ public class AionService {
 
 	AionService() {
 
+		requestExecutor = Executors.newSingleThreadExecutor();
 
 		Config config = Config.getInstance();
 		connections = config.getApiConnections();
 		api = IAionAPI.init();
-
 		connectionIndex = -1;
 
 	}
 
-	// TODO: if not connected to node[0], do periodic retries to fallback to a closer node
 	public void reconnect() throws AionApiException {
 
 		if (isConnected())
 			return; // everything's good
 
-		ApiMsg apiMsg = new ApiMsg();
 		// try to re-connect starting from index 0 in connection list
+		while(!Thread.currentThread().isInterrupted()) {
+			if (attemptReconnect()) return;
+		}
+		GENERAL.error("Api Connection Error: Failed to establish connection to any known Aion client.");
+		throw new AionApiException();
+
+	}
+
+	private boolean attemptReconnect() {
+		ApiMsg apiMsg = new ApiMsg();
 		for (int i = 0; i < connections.size(); i++) {
 			String url = connections.get(i);
-			synchronized (MUTEX) {
-				apiMsg.set(api.connect(url));
-			}
+			apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
+
 			if (apiMsg.isError()) {
 				GENERAL.debug("Api Connection Failed. Endpoint: [{}]. Error: [{}] {}", url, apiMsg.getErrorCode(), apiMsg.getErrString());
 			} else if (api.isConnected()) {
 				GENERAL.debug("Api Connected to endpoint [{}]", url);
 				connectionIndex = i;
 
-				return;
+				return true;
 			}
 		}
-
-		GENERAL.error("Api Connection Error: Failed to establish connection to any known Aion client.");
-		throw new AionApiException();
-
+		return false;
 	}
 
 	public boolean isConnected() {
@@ -88,9 +95,8 @@ public class AionService {
 			for (int i = 0; i< connections.size();i++) {
 				String url = connections.get(i);
 
-				synchronized (MUTEX){
-					apiMsg.set(api.connect(url));
-				}
+
+				apiMsg.set(doApiRequest(iAionApi->iAionApi.connect(url), api));
 
 				if (apiMsg.isError())
 					GENERAL.debug("Api Connection Failed at node {} falling back. Endpoint [{}]. Error: [{}] {}", i + 1, url, apiMsg.getErrorCode(), apiMsg.getErrString());
@@ -113,45 +119,43 @@ public class AionService {
 		ApiMsg apiMsg;
 		try {
 			GENERAL.debug("Calling getBlockDetailsByRange({},{}) size: [{}]", start, end, end - start + 1);
-			synchronized (MUTEX){
-				apiMsg = api.getAdmin().getBlockDetailsByRange(start, end);
-			}
+			apiMsg = doApiRequest(iAionApi -> iAionApi.getAdmin().getBlockDetailsByRange(start, end), api);
+
 			if (apiMsg.isError()) {
-                throw new AionApiException(getErrorMessage(apiMsg));
+				throw new AionApiException(formatError(apiMsg));
 			} else {
 				result = apiMsg.getObject();
 			}
-		} catch (Exception e) {
+		} catch (AionApiException e) {
 			GENERAL.debug("AionApi: threw Exception in getBlockDetailsByRange()", e);
 			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
 
 
         return result;
 	}
 
-	private String getErrorMessage(ApiMsg apiMsg) {
-		return "AionApi: ERR_CODE[" + apiMsg.getErrorCode() + "]: " + apiMsg.getErrString();
-	}
-
 	public String getBlockHashbyNumber(long blockNumber) throws AionApiException {
 		String result;
 		ApiMsg apiMsg = new ApiMsg();
-        try {
-			synchronized (MUTEX){
-				apiMsg.set(api.getChain().getBlockByNumber(blockNumber));
-			}
+		try {
+			apiMsg.set(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+
 			if (apiMsg.isError()) {
-				throw new AionApiException(getErrorMessage(apiMsg));
+				throw new AionApiException(formatError(apiMsg));
 			} else {
 				Block b = apiMsg.getObject();
 				result = b.getHash().toString();
 			}
 
 
-        } catch (Exception e) {
-			GENERAL.debug("AionApi: threw Exception in getBlockDetailsByRange()", e);
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in getBlockHashByNumber()", e);
 			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
 
 		return result;
@@ -160,22 +164,20 @@ public class AionService {
 	public long getBlockNumber() throws AionApiException {
 		long result;
 		ApiMsg apiMsg = new ApiMsg();
-        try {
-			synchronized (MUTEX){
-				if (GENERAL.isTraceEnabled()){
-					GENERAL.trace("Starting call to block number.");
-				}
-				apiMsg.set(api.getChain().blockNumber());
-			}
+		try {
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().blockNumber(), api));
+
 			if (apiMsg.isError()) {
-				throw new AionApiException(getErrorMessage(apiMsg));
+				throw new AionApiException(formatError(apiMsg));
 			} else {
 				result = apiMsg.getObject();
 			}
 
-        } catch (Exception e) {
+		} catch (AionApiException e) {
 			GENERAL.debug("AionApi: threw Exception in getBlockNumber()", e);
 			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
 
 		return result;
@@ -194,17 +196,20 @@ public class AionService {
 		IContract result;
 		try {
 			synchronized (MUTEX){
-				result = api.getContractController().getContractAt(from, contractAddr, abi);
+				result = api.getContractController().getContractAt(from, contractAddr, abi);//no need for an
+				// async call this is basically just the construction of the contract object
 			}
 
 			if (result == null) throw new AionApiException("Contract not found at address");
-			if (result.getAbiDefinition() == null || result.getAbiDefinition().isEmpty()) throw  new AionApiException("Contract failed to return ABI");
+			if (result.getAbiDefinition() == null || result.getAbiDefinition().isEmpty()) throw new AionApiException("Contract failed to return ABI");
 
 
         }
-		catch (Exception e){
+		catch (AionApiException e){
 			GENERAL.debug("AionApi: threw Exception in getContract()", e);
 			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
 		return result;
 	}
@@ -221,45 +226,44 @@ public class AionService {
 	public List<Object> callContractFunction(IContract contract, String functionName, ISolidityArg... args) throws AionApiException {
 
 
-        ContractResponse response;
-		ApiMsg apiMsg;
-        try {
-			synchronized (MUTEX) {
-				contract.newFunction(functionName);
+		try {
 
-				for (var arg : args) contract.setParam(arg); // set all the arguments associated with the contract
+			ApiMsg apiMsg = (doApiRequest(contractObj -> {
+				contractObj.newFunction(functionName);
 
-				contract.setTxNrgLimit(NRG_LIMIT_TX_MAX);
-				contract.setTxNrgPrice(NRG_PRICE_MIN);//Get the recommended NRG price from the connected kernel
-				contract.build();
+				for (var arg : args) contractObj.setParam(arg); // set all the arguments associated with the contract
 
+				contractObj.setTxNrgLimit(NRG_LIMIT_TX_MAX);
+				contractObj.setTxNrgPrice(NRG_PRICE_MIN);//Get the recommended NRG price from the connected kernel
+				contractObj.build();
+				return contractObj.call();
+			}, contract));
 
-				apiMsg = (contract.call());
-				if (apiMsg.isError())
-					throw new AionApiException(getErrorMessage(apiMsg));
-				else response = apiMsg.getObject();
-			}
-			if (response.isStatusError() || response.isTxError()) {
-				String error;
-				if (response.isTxError()){
-					error = response.getError();
+			if (apiMsg.isError())
+				throw new AionApiException(formatError(apiMsg));
+			else {
+				ContractResponse response = apiMsg.getObject();
+
+				if (response.isStatusError() || response.isTxError()) {
+					String error;
+					if (response.isTxError()) {
+						error = response.getError();
+					} else {
+						error = response.statusToString();
+					}
+
+					throw new AionApiException(formatError(apiMsg) + "\nTransaction error: " + error);
+
 				}
-				else {
-					error = response.statusToString();
-				}
-
-				throw new AionApiException("AionApi: CONTRACT STATUS["+ response.getStatus() +"]: "+ error);
-
+				return response.getData();
 			}
-
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in callContractFunction() ", e);
+			throw  e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
-		catch (Exception e){
-			GENERAL.debug("AionApi: threw Exception in callContractFunction() ",e);
-			throw e;
-		}
 
-
-		return response.getData();
 	}
 
 
@@ -282,17 +286,18 @@ public class AionService {
 		BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			synchronized (MUTEX) {
-				apiMsg.set(api.getChain().getBalance(Address.wrap(address)));
-			}
+			apiMsg.set(doApiRequest(iAionAPI -> iAionAPI.getChain().getBalance(Address.wrap(address)), api));
+
 			if (apiMsg.isError()) {
-				throw new AionApiException(getErrorMessage(apiMsg));
+				throw new AionApiException(formatError(apiMsg));
 			} else {
 				result = apiMsg.getObject();
 			}
-		} catch (Exception e) {
+		} catch (AionApiException e) {
 			GENERAL.debug("AionApi: threw Exception in getNonce()", e);
 			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
 		}
 
 		return result;
@@ -303,20 +308,22 @@ public class AionService {
     public BigInteger getNonce(String address) throws AionApiException{
         BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
-        try {
-            synchronized (MUTEX) {
-            	apiMsg.set(api.getChain().getNonce(Address.wrap(address)));
-			}
-            if (apiMsg.isError()) {
-                throw new AionApiException(getErrorMessage(apiMsg));
-            } else {
-                result = apiMsg.getObject();
-            }
+		try {
 
-        } catch (Exception e) {
-            GENERAL.debug("AionApi: threw Exception in getNonce()", e);
-            throw e;
-        }
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getNonce(Address.wrap(address)), api));
+
+			if (apiMsg.isError()) {
+				throw new AionApiException(formatError(apiMsg));
+			} else {
+				result = apiMsg.getObject();
+			}
+
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in getNonce()", e);
+			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
 
         return result;
 
@@ -336,27 +343,68 @@ public class AionService {
         Map<String, CompileResponse> compileResponse;
 		ApiMsg apiMsg = new ApiMsg();
 
-        try {
-            synchronized (MUTEX){
-            	apiMsg.set(api.getTx().compile(src));
-			}
+		try {
 
-            if (apiMsg.isError())
-                throw new AionApiException(getErrorMessage(apiMsg));
-            compileResponse = apiMsg.getObject();
+			apiMsg.set(doApiRequest(aionAPI -> aionAPI.getTx().compile(src), api));
+
+			if (apiMsg.isError())
+				throw new AionApiException(formatError(apiMsg));
+			compileResponse = apiMsg.getObject();
 
 
-        } catch (Exception e) {
-            GENERAL.debug("AionApi: threw Exception in compileResponse() ", e);
-            throw e;
-        }
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in compileResponse() ", e);
+			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
 
 
         return compileResponse.get(contractName);
     }
+	@Override
 	public void close() {
 		if (api != null) api.destroyApi();
 	}
 
 
+	private String formatRuntimeException(RuntimeException e) {
+		return "AionService: Caught a runtime exception while reading Aionapi: EXCEPTION_MESSAGE[" + e.getMessage()+"]";
+	}
+
+	private String formatError(ApiMsg apiMsg){
+    	var startStr = "AionApi: ERR_CODE[" +apiMsg.getErrorCode()+"]: ";
+    	if (apiMsg.getErrorCode()==-404)return startStr + "Api request timed out.";// custom error message
+		else if (apiMsg.getErrorCode()==-405) return startStr + "Api request failed with a runtime error.";
+    	else return startStr + apiMsg.getErrString();
+	}
+
+
+	private ExecutorService requestExecutor;
+
+	private <T> ApiMsg doApiRequest(Function<T, ApiMsg> request, T resource){
+		Future<ApiMsg> res = CompletableFuture
+				.supplyAsync(()-> {
+					synchronized (MUTEX) {
+						return request.apply(resource);
+					}
+				}, requestExecutor);
+		try {
+
+			return res.get(Config.getInstance().getApiTimeOut(), TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return new ApiMsg(-1);
+		} catch (ExecutionException e) {
+			return new ApiMsg(-405);
+		} catch (TimeoutException e) {
+			return new ApiMsg(-404);
+		}
+		finally {
+			if (!res.isDone()) {
+				res.cancel(true);
+				api.destroyApi();
+			}
+		}
+	}
 }

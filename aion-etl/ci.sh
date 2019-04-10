@@ -1,10 +1,11 @@
 #!/bin/bash
-
+pid=$(lsof -i:7091 -sTCP:LISTEN -t);
 ETL_DIR=/home/aion/deployment/etl
 
-if [ -s "$ETL_DIR/etl.pid" ]; then
-    pid=$(cat $ETL_DIR/etl.pid)
+if [[ -n ${pid} ]]; then
+
     sudo kill -TERM $pid
+    sleep 10s
     sudo kill -KILL $pid
 
 fi

@@ -1,7 +1,10 @@
 package aion.dashboard.domainobject;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
 import java.util.Objects;
+
+import static aion.dashboard.util.Utils.getZDT;
 
 public class Block {
 
@@ -16,17 +19,37 @@ public class Block {
     private String nonce;
     private String bloom;
     private String solution;
-    private String difficulty;
-    private String totalDifficulty;
+    private long difficulty;
+    private long totalDifficulty;
     private long nrgConsumed;
     private long nrgLimit;
-    private long size;
+    private long blockSize;
     private long blockTimestamp;
     private long numTransactions;
     private long blockTime;
-    private String transactionList;
-    private BigInteger nrgReward;
-    private BigInteger transactionId;
+    private String transactionHashes;
+    private String lastTransactionHash;
+    private BigDecimal nrgReward;
+    private int blockYear;
+    private int blockMonth;
+    private int blockDay;
+    private double approxNrgReward;
+
+    public int getBlockYear() {
+        return blockYear;
+    }
+
+    public int getBlockMonth() {
+        return blockMonth;
+    }
+
+    public int getBlockDay() {
+        return blockDay;
+    }
+
+    public double getApproxNrgReward() {
+        return approxNrgReward;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -36,7 +59,7 @@ public class Block {
         return blockNumber == block.blockNumber &&
                 nrgConsumed == block.nrgConsumed &&
                 nrgLimit == block.nrgLimit &&
-                size == block.size &&
+                blockSize == block.blockSize &&
                 blockTimestamp == block.blockTimestamp &&
                 numTransactions == block.numTransactions &&
                 blockTime == block.blockTime &&
@@ -52,30 +75,36 @@ public class Block {
                 Objects.equals(solution, block.solution) &&
                 Objects.equals(difficulty, block.difficulty) &&
                 Objects.equals(totalDifficulty, block.totalDifficulty) &&
-                Objects.equals(transactionId, block.transactionId) &&
-                Objects.equals(transactionList, block.transactionList) &&
+                Objects.equals(transactionHashes, block.transactionHashes) &&
+                Objects.equals(lastTransactionHash, block.lastTransactionHash) &&
                 Objects.equals(nrgReward, block.nrgReward);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(blockNumber, blockHash, minerAddress, parentHash, receiptTxRoot, stateRoot, txTrieRoot, extraData, nonce, bloom, solution, difficulty, totalDifficulty, nrgConsumed, nrgLimit, size, blockTimestamp, numTransactions, blockTime, transactionId, transactionList, nrgReward);
+        return Objects.hash(blockNumber, blockHash, minerAddress, parentHash, receiptTxRoot, stateRoot, txTrieRoot, extraData, nonce, bloom, solution, difficulty, totalDifficulty, nrgConsumed, nrgLimit, blockSize, blockTimestamp, numTransactions, blockTime, lastTransactionHash, transactionHashes, nrgReward);
     }
 
-    public BigInteger getTransactionId() {
-        return transactionId;
+    public String getLastTransactionHash() {
+        return lastTransactionHash;
     }
 
-    public void setTransactionId(BigInteger transactionId) {
-        this.transactionId = transactionId;
+    public void setLastTransactionHash(String lastTransactionHash) {
+        this.lastTransactionHash = lastTransactionHash;
     }
 
-    public String getTransactionList() {
-        return transactionList;
+    public String getTransactionHashes() {
+        return transactionHashes;
     }
 
-    public void setTransactionList(String transactionList) {
-        this.transactionList = transactionList;
+
+
+    public void setApproxNrgReward(double approxNrgReward) {
+        this.approxNrgReward = approxNrgReward;
+    }
+
+    public void setTransactionHashes(String transactionHashes) {
+        this.transactionHashes = transactionHashes;
     }
 
     public long getBlockNumber() {
@@ -166,19 +195,19 @@ public class Block {
         this.solution = solution;
     }
 
-    public String getDifficulty() {
+    public long getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(String difficulty) {
+    public void setDifficulty(long difficulty) {
         this.difficulty = difficulty;
     }
 
-    public String getTotalDifficulty() {
+    public long getTotalDifficulty() {
         return totalDifficulty;
     }
 
-    public void setTotalDifficulty(String totalDifficulty) {
+    public void setTotalDifficulty(long totalDifficulty) {
         this.totalDifficulty = totalDifficulty;
     }
 
@@ -198,12 +227,12 @@ public class Block {
         this.nrgLimit = nrgLimit;
     }
 
-    public long getSize() {
-        return size;
+    public long getBlockSize() {
+        return blockSize;
     }
 
-    public void setSize(long size) {
-        this.size = size;
+    public void setBlockSize(long blockSize) {
+        this.blockSize = blockSize;
     }
 
     public long getBlockTimestamp() {
@@ -212,6 +241,11 @@ public class Block {
 
     public void setBlockTimestamp(long blockTimestamp) {
         this.blockTimestamp = blockTimestamp;
+        final ZonedDateTime zonedDateTime = getZDT(blockTimestamp);
+        blockYear = zonedDateTime.getYear();
+        blockMonth = zonedDateTime.getMonthValue();
+        blockDay = zonedDateTime.getDayOfMonth();
+
     }
 
     public long getNumTransactions() {
@@ -230,11 +264,11 @@ public class Block {
         this.blockTime = blockTime;
     }
 
-    public BigInteger getNrgReward() {
+    public BigDecimal getNrgReward() {
         return nrgReward;
     }
 
-    public void setNrgReward(BigInteger nrgReward) {
+    public void setNrgReward(BigDecimal nrgReward) {
         this.nrgReward = nrgReward;
     }
 
@@ -256,12 +290,12 @@ public class Block {
                 ", totalDifficulty='" + totalDifficulty + '\'' +
                 ", nrgConsumed=" + nrgConsumed +
                 ", nrgLimit=" + nrgLimit +
-                ", size=" + size +
+                ", blockSize=" + blockSize +
                 ", blockTimestamp=" + blockTimestamp +
                 ", numTransactions=" + numTransactions +
                 ", blockTime=" + blockTime +
-                ", transactionId=" + transactionId +
-                ", transactionList='" + transactionList + '\'' +
+                ", transactionHashes='" + transactionHashes + '\'' +
+                ", lastTransactionHash='" + lastTransactionHash + '\'' +
                 ", nrgReward=" + nrgReward +
                 '}';
     }
@@ -278,19 +312,24 @@ public class Block {
         String nonce;
         String bloom;
         String solution;
-        String difficulty;
-        String totalDifficulty;
+        long difficulty;
+        long totalDifficulty;
         long nrgConsumed;
         long nrgLimit;
-        long size;
+        long blockSize;
         long blockTimestamp;
         long numTransactions;
         long blockTime;
-        String transactionList;
-        BigInteger transactionId;
-        BigInteger nrgReward;
+        String transactionHashes;
+        String lastTransactionHash;
+        BigDecimal nrgReward;
+        double approxNrgReward;
 
 
+        public BlockBuilder approxNrgReward(double nrgReward){
+            approxNrgReward = nrgReward;
+            return this;
+        }
 
 
         public BlockBuilder blockNumber(long blockNumber) {
@@ -348,12 +387,12 @@ public class Block {
             return this;
         }
 
-        public BlockBuilder difficulty(String difficulty) {
+        public BlockBuilder difficulty(long difficulty) {
             this.difficulty = difficulty;
             return this;
         }
 
-        public BlockBuilder totalDifficulty(String totalDifficulty) {
+        public BlockBuilder totalDifficulty(long totalDifficulty) {
             this.totalDifficulty = totalDifficulty;
             return this;
         }
@@ -368,8 +407,8 @@ public class Block {
             return this;
         }
 
-        public BlockBuilder size(long size) {
-            this.size = size;
+        public BlockBuilder blockSize(long blockSize) {
+            this.blockSize = blockSize;
             return this;
         }
 
@@ -388,17 +427,17 @@ public class Block {
             return this;
         }
 
-        public BlockBuilder  transactionId(BigInteger transactionId) {
-            this.transactionId = transactionId;
+        public BlockBuilder transactionHash(String lastTransactionHash) {
+            this.lastTransactionHash = lastTransactionHash;
             return this;
         }
 
         public BlockBuilder transactionList(String transactionList) {
-            this.transactionList = transactionList;
+            this.transactionHashes = transactionList;
             return this;
         }
 
-        public BlockBuilder nrgReward(BigInteger nrgReward) {
+        public BlockBuilder nrgReward(BigDecimal nrgReward) {
             this.nrgReward = nrgReward;
             return this;
         }
@@ -421,14 +460,14 @@ public class Block {
             block.totalDifficulty = totalDifficulty;
             block.nrgConsumed = nrgConsumed;
             block.nrgLimit = nrgLimit;
-            block.size = size;
-            block.blockTimestamp = blockTimestamp;
+            block.blockSize = blockSize;
+            block.setBlockTimestamp(blockTimestamp);
             block.numTransactions = numTransactions;
             block.blockTime = blockTime;
-            block.transactionList = transactionList;
-            block.transactionId=transactionId;
+            block.transactionHashes = transactionHashes;
+            block.lastTransactionHash = lastTransactionHash;
             block.nrgReward = nrgReward;
-
+            block.approxNrgReward = approxNrgReward;
             return block;
         }
     }
