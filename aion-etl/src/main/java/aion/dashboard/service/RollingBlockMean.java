@@ -46,6 +46,24 @@ public interface RollingBlockMean {
                 blockCountWindow);
     }
 
+    static RollingBlockMean init(ParserStateService psService, AionService apiService) throws AionApiException {
+        Config config = Config.getInstance();
+
+        long transactionTimeWindow = config.getTransactionWindowSize() * 60L; // in minutes
+        int blockTimeWindow = config.getBlockWindowStableSize();
+        int blockCountWindow = config.getBlockWindowCountSize();
+        int blockMaxSize = config.getBlockMaxWindowSize();
+
+        return new RollingBlockMeanImpl(
+                psService.readBlockMeanState().getBlockNumber().longValue(),
+                psService.readTransactionMeanState().getBlockNumber().longValue(),
+                psService.readDBState().getBlockNumber().longValue(),
+                apiService,
+                blockMaxSize,
+                blockTimeWindow,
+                transactionTimeWindow,
+                blockCountWindow);
+    }
 
 
 
@@ -57,13 +75,6 @@ public interface RollingBlockMean {
     void add(BlockDetails blockDetails);
     void reorg(long consistentBlock);
 
-    /**
-     *
-     * Compute the mean from the current first block
-     * This method is not thread-safe as no guarantees can be made as to which is the first block
-     * @return the metrics at this time
-     */
-    Optional<List<Graphing>> compute();
 
 
     long getStartOfBlockWindow();

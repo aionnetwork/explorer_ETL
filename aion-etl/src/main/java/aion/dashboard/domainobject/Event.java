@@ -1,6 +1,13 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.ContractEvent;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+import org.json.JSONArray;
+
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Event {
     private String name;//The name of the Event triggered
@@ -67,6 +74,38 @@ public class Event {
     @Override
     public int hashCode() {
         return Objects.hash(getName(), getParameterList(), getInputList(), getTransactionHash(), getBlockNumber(), getContractAddr(), getTimestamp());
+    }
+
+
+    private static final ThreadLocal<EventBuilder> threadLocalBuilder = ThreadLocal.withInitial(() -> new EventBuilder());
+
+    @SuppressWarnings("Duplicates")
+    static Event from(ContractEvent contractEvent, BlockDetails b, TxDetails tx){
+        JSONArray inputList = new JSONArray();
+        JSONArray paramList = new JSONArray();
+        threadLocalBuilder.get().setName(contractEvent.getEventName())
+                .setContractAddr(contractEvent.getAddress())
+                .setTimestamp(b.getTimestamp())
+                .setBlockNumber(b.getNumber())
+                .setTransactionHash(tx.getTxHash().toString());
+
+        List<String> names = contractEvent.getNames();
+        List<String> types = contractEvent.getTypes();
+        List<Object> inputs = contractEvent.getInputs();
+
+        for (int i = 0; i < names.size(); i++) {
+            paramList.put(types.get(i) + " " + names.get(i));
+            inputList.put(inputs.get(i));
+        }
+        threadLocalBuilder.get().setInputList(inputList.toString())
+                .setParameterList(paramList.toString());
+
+        return threadLocalBuilder.get().build();
+
+    }
+
+    public static List<Event> eventsFrom(List<ContractEvent> events, BlockDetails b, TxDetails tx){
+        return events.stream().map(event -> from(event, b, tx)).collect(Collectors.toList());
     }
 
     public static class EventBuilder {

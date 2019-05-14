@@ -48,6 +48,12 @@ public class BatchObject {
     public void addInternalTransfer(InternalTransfer transfer){
         internalTransfers.add(transfer);
     }
+
+
+    public void addInternalTransfers(List<InternalTransfer> transfer){
+        internalTransfers.addAll(transfer);
+    }
+
     public void addBlock(Block blk){
         blocks.add(blk);
     }
@@ -83,9 +89,19 @@ public class BatchObject {
     }
 
 
+    public void addEvents(List<Event> event) {
+        events.addAll(event);
+    }
+
+
     public void addTransfer(TokenTransfers tokenTransfers) {
         this.tokenTransfers.add(tokenTransfers);
     }
+
+    public void addTransfers(List<TokenTransfers> tokenTransfers) {
+        this.tokenTransfers.addAll(tokenTransfers);
+    }
+
 
     public void putAccount(Account account) {
         if (accountMap.containsKey(account.getAddress())) {

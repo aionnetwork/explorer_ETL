@@ -6,7 +6,8 @@
 <!--https://examples.javacodegeeks.com/enterprise-java/logback/logback-rollingfileappender-example/-->
 <!--https://blog.takipi.com/how-to-instantly-improve-your-java-logging-with-7-logback-tweaks/-->
 <!--https://logback.qos.ch/manual/appenders.html-->
-<configuration debug="true" scan="false" scanPeriod="60 seconds">
+<configuration scan="false" scanPeriod="60 seconds">
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
     <property name="LOG_BASE" value="logs" />
     <property name="LOG_ARCHIVE" value="${LOG_BASE}/archive" />
     <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->

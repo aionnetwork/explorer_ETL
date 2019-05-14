@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -33,6 +34,12 @@ public class Utils {
         else {
             return Instant.ofEpochSecond(timestamp).atZone(UTC_ZONE_ID);
         }
+    }
+
+
+
+    public static  <T> T getLastRecord(List<T> list){
+        return list.get(list.size()-1);
     }
 
     public static BigDecimal toAion(BigInteger weiValue){

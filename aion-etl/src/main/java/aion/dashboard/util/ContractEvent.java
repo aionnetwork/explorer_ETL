@@ -1,8 +1,9 @@
 package aion.dashboard.util;
 
-import org.aion.base.util.ByteUtil;
+import org.aion.util.bytes.ByteUtil;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -112,6 +113,26 @@ final public class ContractEvent {
 
     public String getAddress() {
         return Address;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ContractEvent)) return false;
+        ContractEvent event = (ContractEvent) o;
+        return SignatureHash.equals(event.SignatureHash) &&
+                EventName.equals(event.EventName) &&
+                Inputs.equals(event.Inputs) &&
+                classType.equals(event.classType) &&
+                Types.equals(event.Types) &&
+                Address.equals(event.Address) &&
+                names.equals(event.names);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(SignatureHash, EventName, Inputs, classType, Types, Address, names);
     }
 
     public static final class ContractEventBuilder {

@@ -1,26 +1,30 @@
 package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.config.Config;
+import aion.dashboard.blockchain.Extractor;
+import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
-import aion.dashboard.service.AccountServiceImpl;
-import aion.dashboard.service.ParserStateServiceImpl;
-import aion.dashboard.service.ReorgServiceImpl;
-import aion.dashboard.service.SchedulerService;
-import aion.dashboard.worker.BlockchainReaderThread;
-import aion.dashboard.worker.DBThread;
+import aion.dashboard.parser.*;
+import aion.dashboard.service.*;
 import aion.dashboard.worker.IntegrityCheckThread;
-import aion.dashboard.worker.ShutdownHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigInteger;
 import java.sql.SQLException;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class InitTask {
+public final class InitTask {
 
+    private InitTask(){
+        throw new UnsupportedOperationException("Cannot create an instance of: "+ InitTask.class.getSimpleName());
+    }
 
-    private static final String VersionNumber = "v4.02";
+    private static final String VERSION_NUMBER = "v2.2";
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
     private static void revert(String blk) {
@@ -45,7 +49,7 @@ public class InitTask {
     }
 
     private static void printVersion() {
-        System.out.println("Aion ETL "+VersionNumber);
+        System.out.println("Aion ETL "+ VERSION_NUMBER);
     }
 
 
@@ -69,57 +73,80 @@ public class InitTask {
     public static void start() throws AionApiException {
         Logger general = GENERAL;
         general.info("--------------------------------");
-        general.info("Starting ETL {}", VersionNumber);
+        general.info("Starting ETL {}", VERSION_NUMBER);
         general.info("--------------------------------");
-        //starting migration
-        try {
-            AionService.getInstance().reconnect();
 
-            BigInteger headDbBlock = ParserStateServiceImpl.getInstance().readDBState().getBlockNumber();
-            //noinspection StatementWithEmptyBody
-            if (AccountServiceImpl.getInstance().getMaxBlock() == 0 && !headDbBlock.equals(BigInteger.valueOf(-1))) {// check if block table is empty
+        ParserStateService ps = ParserStateServiceImpl.getInstance();
+        ContractService contractService= ContractServiceImpl.getInstance();
+        TokenService tokenService = TokenServiceImpl.getInstance();
+
+        Extractor extractor = new Extractor(AionService.getInstance(),ps, new LinkedBlockingDeque<>());
+
+        TokenParser tokenParser= new TokenParser(new LinkedBlockingDeque<>(), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
+
+        AccountParser accountParser = new AccountParser(new LinkedBlockingQueue<>(), Web3Service.getInstance(), new LinkedBlockingQueue<>());
+
+        Parser parser = new ParserBuilder().setAccountProd(accountParser)
+                .setTokenProd(tokenParser)
+                .setQueue(new LinkedBlockingQueue<>())
+                .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
+                .setExtractor(extractor).setApiService(Web3Service.getInstance()).createParser();
 
 
-            //new MigrationThread().start();// start migration if balance table is empty and the block table is not empty
+        Consumer consumer = new ConsumerBuilder().setAccountProducer(accountParser)
+                .setBlockProducer(parser).setTokenProducer(tokenParser)
+                .setAccountWriter(new AccountWriter())
+                .setBlockWriter(new BlockWriter())
+                .setTokenWriter(new TokenWriter())
+                .setService(new ReorgServiceImpl(AionService.getInstance(),ps))
+                .createConsumer();
+
+
+
+        List<Producer> producers = new ArrayList<>();
+        producers.add(tokenParser);
+        producers.add(accountParser);
+
+
+        IntegrityCheckThread checkThread = new IntegrityCheckThread();
+        checkThread.start();
+        extractor.start();
+        parser.start();
+        tokenParser.start();
+        accountParser.start();
+        consumer.start();
+
+
+        AbstractGraphingTask task = AbstractGraphingTask.getInstance(Config.getInstance().getTaskType());
+        task.scheduleNow();
+
+
+        Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task));
+    }
+
+    private static Thread buildShutdownHook(Extractor extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task) {
+        return new Thread(()->{
+            Thread.currentThread().setName("shutdown-hook");
+            GENERAL.info("Shutting down the ETL.");
+            shutdownProducer(extractor);
+            shutdownProducer(parser);
+
+
+            for (var producer:producers){
+                shutdownProducer(producer);
             }
-        } catch (SQLException e) {
-            general.debug("Failed to read state of balance table. Exiting.");
-            System.exit(-1);
-        }
 
-        BlockchainReaderThread chainThread = new BlockchainReaderThread();
-        DBThread dbThread = new DBThread(chainThread);
-        //StatisticsThread statisticsThread = new StatisticsThread();
-        IntegrityCheckThread integrityCheckThread = new IntegrityCheckThread();
-        ShutdownHook shutdownHook = new ShutdownHook.Builder()
-                .dbThread(dbThread)
-                .integrityCheckThread(integrityCheckThread)
-                .readerThread(chainThread)
-                .build();
+            consumer.stop();
+            task.stop();
+            AionService.getInstance().close();
+            GENERAL.info("Succesfully shutdown the ETL");
 
-
-        Runtime runtime = Runtime.getRuntime();
-        runtime.addShutdownHook(shutdownHook);
-
-
-        chainThread.start();
-        dbThread.start();
-        integrityCheckThread.start();
-
-        schedule(chainThread, dbThread);
-        //statisticsThread.start();
+        });
     }
 
-    private static void schedule(BlockchainReaderThread readerThread, DBThread dbThread) throws AionApiException {
-
-
-        SchedulerService.getInstance().add(new DataBaseTask(), 90, TimeUnit.SECONDS);
-        SchedulerService.getInstance().add(new QueueStatisticsTask(readerThread), 15, TimeUnit.SECONDS);
-        SchedulerService.getInstance().add(new AionServiceStatisticsTask(dbThread, readerThread), 60, TimeUnit.SECONDS);
-        SchedulerService.getInstance().add(AionServiceMonitorTask.getInstance(), 10, TimeUnit.MINUTES);
-
-        GraphingTask.getInstance().scheduleNow();
-
-
+    private static void shutdownProducer(Producer<?> producer){
+        producer.stop();
+        producer.awaitTermination();
     }
+
 }

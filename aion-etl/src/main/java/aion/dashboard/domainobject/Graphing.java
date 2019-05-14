@@ -93,6 +93,17 @@ public class Graphing {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Graphing{" +
+                "graphType=" + graphType +
+                ", value=" + value +
+                ", timestamp=" + timestamp +
+                ", blockNumber=" + blockNumber +
+                ", detail='" + detail + '\'' +
+                '}';
+    }
+
     public static class GraphingBuilder {
         private BigDecimal value;
         private GraphType graphType;

@@ -1,7 +1,14 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.ContractEvent;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+
 import java.math.BigDecimal;
-import java.util.Objects;
+import java.math.BigInteger;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static aion.dashboard.util.Utils.approximate;
 
@@ -57,6 +64,52 @@ public class InternalTransfer {
 
     public double getApproxValue() {
         return approxValue;
+    }
+
+
+    private static final ThreadLocal<InternalTransferBuilder> threadLocalBuilder = ThreadLocal.withInitial(InternalTransferBuilder::new);
+    private static Optional<InternalTransfer> from(ContractEvent event, TxDetails tx, BlockDetails b, int transferCount) {
+        try {
+            return Optional.of( threadLocalBuilder.get().setBlockNumber(b.getNumber())
+                    .setTransactionHash(tx.getTxHash().toString())
+                    .setFromAddr(event.getAddress())
+                    .setTimestamp(b.getTimestamp())
+                    .setToAddr(getInput(event, String.class, "param1", "who"))
+                    .setValueTransferred(new BigDecimal(getInput(event, BigInteger.class, "param2", "amount")))
+                    .setTransferCount(transferCount)
+                    .build());
+        }
+        catch (RuntimeException e){
+            return Optional.empty();
+        }
+
+    }
+
+    public static List<InternalTransfer> transfersFrom(List<ContractEvent> eventList, TxDetails tx, BlockDetails b){
+
+        return IntStream.range(0, eventList.size())
+                .mapToObj(i-> from(eventList.get(i), tx, b, i))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+    }
+
+    private static <T> T getInput( ContractEvent event, Class<T> type, String... names ){
+        T ret = null;
+
+        for (var name: names){
+            Optional<T> res = event.getInput(name, type );
+            if (res.isPresent()){
+                ret= res.get();
+                break;
+            }
+        }
+        if (ret == null){
+            throw new NoSuchElementException("Could not find the specified input");
+        }
+        else {
+            return ret;
+        }
     }
 
     public static class InternalTransferBuilder{

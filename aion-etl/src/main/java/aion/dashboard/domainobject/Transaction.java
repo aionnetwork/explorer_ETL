@@ -1,6 +1,15 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.util.Utils;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+import org.aion.api.type.TxLog;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.math.BigDecimal;
+import java.util.List;
 
 import static aion.dashboard.util.Utils.getZDT;
 
@@ -26,6 +35,19 @@ public class Transaction {
     private int blockMonth;
     private int blockDay;
     private double approxValue;
+    private ContractType type;
+
+    public void setType(String type) {
+        this.type = ContractType.fromType(type);
+    }
+
+    public void setType(byte type){
+        this.type=ContractType.fromByte(type);
+    }
+
+    public String getType() {
+        return type.type;
+    }
 
     public int getBlockYear() {
         return blockYear;
@@ -180,27 +202,83 @@ public class Transaction {
         return this;
     }
 
+    private static final ThreadLocal<TransactionBuilder> builderThreadLocal = ThreadLocal.withInitial(TransactionBuilder::new);
+    public static Transaction from(TxDetails tx, BlockDetails b){
+        return builderThreadLocal.get()
+                .setType(tx.getType())
+                .setTransactionHash(tx.getTxHash().toString())
+                .setApproxValue(Utils.approximate(tx.getValue(), 18))
+                .setTransactionHash(tx.getTxHash().toString())
+                .setBlockHash(b.getHash().toString())
+                .setBlockNumber(b.getNumber())
+                .setBlockTimestamp(b.getTimestamp())
+                .setTransactionIndex(tx.getTxIndex())
+                .setFromAddr(tx.getFrom().toString())
+                .setToAddr(tx.getTo().toString())
+                .setNrgConsumed(tx.getNrgConsumed())
+                .setNrgPrice(tx.getNrgPrice())
+                .setTransactionTimestamp(tx.getTimestamp())
+                .setValue(new BigDecimal(tx.getValue()))
+                .setTransactionLog(buildLog(tx.getLogs()))
+                .setData(tx.getData().toString())
+                .setNonce(tx.getNonce().toString(16))
+                .setTxError(tx.getError())
+                .setContractAddr(tx.getContract().toString())
+                .build();
+    }
+
+    private static String buildLog(List<TxLog> logs){
+        JSONArray txLogs = new JSONArray();
+        for (var txLog : logs) {
+
+            JSONObject txLogObject = new JSONObject();
+            JSONArray topicsArr = new JSONArray();
+
+            for (var topic : txLog.getTopics()){
+                topicsArr.put(topic);
+            }
+            txLogObject.put("address", txLog.getAddress().toString());
+            txLogObject.put("data", txLog.getData());
+
+
+            txLogObject.put("topics", topicsArr);
+            txLogs.put(txLogObject);
+
+
+        }
+        return txLogs.toString();
+    }
 
     public static class TransactionBuilder {
 
-        String transactionHash;
-        String blockHash;
-        long blockNumber;
-        long blockTimestamp;
-        long transactionIndex;
-        String fromAddr;
-        String toAddr;
-        long nrgConsumed;
-        long nrgPrice;
-        long transactionTimestamp;
-        BigDecimal value;
-        String transactionLog;
-        String data;
-        String nonce;
-        String txError;
-        String contractAddr;
+        private String transactionHash;
+        private String blockHash;
+        private long blockNumber;
+        private long blockTimestamp;
+        private long transactionIndex;
+        private String fromAddr;
+        private String toAddr;
+        private long nrgConsumed;
+        private long nrgPrice;
+        private long transactionTimestamp;
+        private BigDecimal value;
+        private String transactionLog;
+        private String data;
+        private String nonce;
+        private String txError;
+        private String contractAddr;
         private double approxValue;
+        private ContractType type;
 
+        public TransactionBuilder setType(byte bytes){
+            type= ContractType.fromByte(bytes);
+            return this;
+        }
+
+        public TransactionBuilder setType(String typeStr){
+            type= ContractType.fromType(typeStr);
+            return this;
+        }
 
         public TransactionBuilder setTransactionHash(String transactionHash) {
             this.transactionHash = transactionHash;
@@ -304,8 +382,7 @@ public class Transaction {
             tx.txError = txError;
             tx.contractAddr = contractAddr;
             tx.approxValue = approxValue;
-
-
+            tx.type = type;
             return tx;
         }
 

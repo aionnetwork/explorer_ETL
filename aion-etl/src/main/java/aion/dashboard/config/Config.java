@@ -1,5 +1,6 @@
 package aion.dashboard.config;
 
+import aion.dashboard.task.AbstractGraphingTask;
 import ch.qos.logback.classic.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -62,6 +63,7 @@ public class Config {
     private long queueSize;
     private long timeOut;
     private boolean enableReports;
+    private List<String> web3Providers;
 
 
     private int BlockMaxWindowSize;
@@ -70,6 +72,7 @@ public class Config {
     private int BlockWindowStableSize;
     private boolean isTest;
     private long maxHeight;
+    private AbstractGraphingTask.TaskType taskType;
 
     private long apiTimeOut;
 
@@ -85,6 +88,8 @@ public class Config {
 
 			JSONObject sql = json.getJSONObject("sql");
 
+			taskType = AbstractGraphingTask.TaskType.valueOf(Optional.ofNullable(System.getenv("TASK_TYPE")).orElse("DB"));
+
             isTest = Optional.ofNullable(System.getenv("TEST")).orElse("false").equalsIgnoreCase("true");
             maxHeight = Long.parseLong(Optional.ofNullable(System.getenv("MAX_HEIGHT")).orElse("10000"));
 			sqlUsername = Optional.ofNullable(System.getenv("DB_USER")).orElse("");//sql.getString("username");
@@ -92,6 +97,7 @@ public class Config {
             GeneralLevel = Level.valueOf(Optional.ofNullable(System.getenv("ETL_LOG_LEVEL")).orElse("trace").toUpperCase());
 
 
+            web3Providers = json.getJSONArray("web3").toList().stream().map(Object::toString).collect(Collectors.toList());
 
 
             String javaAPI = System.getenv("JAVA_API_URI");
@@ -350,7 +356,15 @@ public class Config {
         return maxHeight;
     }
 
+    public AbstractGraphingTask.TaskType getTaskType() {
+        return taskType;
+    }
+
     public long getApiTimeOut() {
         return apiTimeOut;
+    }
+
+    public List<String> getWeb3Providers() {
+        return web3Providers;
     }
 }

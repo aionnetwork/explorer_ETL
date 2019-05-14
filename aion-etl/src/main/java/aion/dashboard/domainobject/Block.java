@@ -1,7 +1,12 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.Utils;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.Comparator;
 import java.util.Objects;
 
 import static aion.dashboard.util.Utils.getZDT;
@@ -298,6 +303,36 @@ public class Block {
                 ", lastTransactionHash='" + lastTransactionHash + '\'' +
                 ", nrgReward=" + nrgReward +
                 '}';
+    }
+
+    private static final ThreadLocal<BlockBuilder> threadLocalBuilder = ThreadLocal.withInitial(BlockBuilder::new);
+    public static Block from(BlockDetails b, String lastHash, String txList, BigDecimal nrgReward){
+        return threadLocalBuilder.get()
+                .blockNumber(b.getNumber())
+                .blockTime(b.getBlockTime())
+                .blockHash(b.getHash().toString())
+                .minerAddress(b.getMinerAddress().toString())
+                .parentHash(b.getParentHash().toString())
+                .receiptTxRoot(b.getReceiptTxRoot().toString())
+                .stateRoot(b.getStateRoot().toString())
+                .extraData(b.getExtraData().toString())
+                .nonce(b.getNonce().toString(16))
+                .bloom(b.getBloom().toString())
+                .solution(b.getSolution().toString())
+                .difficulty(b.getDifficulty().longValue())
+                .totalDifficulty(b.getTotalDifficulty().longValue())
+                .nrgConsumed(b.getNrgConsumed())
+                .nrgLimit(b.getNrgLimit())
+                .blockSize(b.getSize())
+                .blockTimestamp(b.getTimestamp())
+                .numTransactions(b.getTxDetails().size())
+                .blockTime((b.getBlockTime()))
+                .transactionHash(lastHash)
+                .transactionList(txList)
+                .nrgReward(nrgReward)
+                .txTrieRoot(b.getTxTrieRoot().toString())
+                .approxNrgReward(Utils.approximate(nrgReward,18))
+                .build();
     }
 
     public static class BlockBuilder {

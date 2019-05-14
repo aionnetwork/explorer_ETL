@@ -120,6 +120,13 @@ public class Token {
         return tokenDecimal;
     }
 
+
+    private static final ThreadLocal<TokenBuilder> builder = ThreadLocal.withInitial(() -> new TokenBuilder());
+
+    public static TokenBuilder getBuilder() {
+        return builder.get();
+    }
+
     public static class TokenBuilder {
 
         private String contractAddress="";

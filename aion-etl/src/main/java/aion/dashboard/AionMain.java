@@ -13,7 +13,7 @@ public class AionMain {
 
     }
 
-	public static void main(String[] args) throws AionApiException {
+	public static void main(String[] args) throws AionApiException, InterruptedException {
 		((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("logger_general")).setLevel(Config.getInstance().getGeneralLevel());
 		if (args.length == 0)
 			InitTask.start();

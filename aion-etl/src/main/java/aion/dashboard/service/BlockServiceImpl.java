@@ -11,6 +11,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class BlockServiceImpl implements BlockService {
 
@@ -398,6 +399,51 @@ public class BlockServiceImpl implements BlockService {
         }
 
         return ps;
+    }
+
+    @Override
+    public Optional<List<Block>> getBlocksInTimeRange(long timestampStart, long timestampEnd) {
+        try(Connection connection = DbConnectionPool.getConnection();
+            PreparedStatement ps = connection.prepareStatement(DbQuery.SelectFromBlockWhereTimestampBetween)){
+
+            ps.setLong(1, timestampStart);
+            ps.setLong(2, timestampEnd);
+            var blockBuilder = new Block.BlockBuilder();
+            List<Block> blocks= new ArrayList<>();
+            try (ResultSet rs = ps.executeQuery()){
+
+                while(rs.next()) {
+                    blocks.add(blockBuilder.blockNumber(rs.getLong("block_number"))
+                            .blockHash(rs.getString("block_hash"))
+                            .minerAddress(rs.getString("miner_address"))
+                            .parentHash(rs.getString("parent_hash"))
+                            .receiptTxRoot(rs.getString("receipt_tx_root"))
+                            .stateRoot(rs.getString("state_root"))
+                            .txTrieRoot(rs.getString("tx_trie_root"))
+                            .extraData(rs.getString("extra_data"))
+                            .nonce(rs.getString("nonce"))
+                            .bloom(rs.getString("bloom"))
+                            .solution(rs.getString("solution"))
+                            .difficulty(rs.getLong("difficulty"))
+                            .totalDifficulty(rs.getLong("total_difficulty"))
+                            .nrgConsumed(rs.getLong("nrg_consumed"))
+                            .nrgLimit(rs.getLong("nrg_limit"))
+                            .blockSize(rs.getLong("block_size"))
+                            .blockTimestamp(rs.getLong("block_timestamp"))
+                            .numTransactions(rs.getLong("num_transactions"))
+                            .blockTime(rs.getLong("block_time"))
+                            .nrgReward(rs.getBigDecimal("nrg_reward"))
+                            .transactionHash(rs.getString("transaction_hash"))
+                            .transactionList(rs.getString("transaction_hashes"))
+                            .approxNrgReward(rs.getDouble("approx_nrg_reward"))
+                            .build());
+                }
+            }
+
+            return Optional.of(blocks);
+        }catch (SQLException e){
+            return Optional.empty();
+        }
     }
 
 }

@@ -8,13 +8,13 @@ import aion.dashboard.domainobject.Token;
 import aion.dashboard.domainobject.TokenHolders;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.ReorganizationLimitExceededException;
-import aion.dashboard.task.GraphingTask;
+import aion.dashboard.task.AbstractGraphingTask;
 import aion.dashboard.util.ABIDefinitions;
 import aion.dashboard.util.TimeLogger;
 import aion.dashboard.util.Utils;
 import org.aion.api.IContract;
 import org.aion.api.sol.IAddress;
-import org.aion.base.type.Address;
+import org.aion.base.type.AionAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,7 +128,8 @@ public class ReorgServiceImpl implements ReorgService {
 
         GENERAL.debug("Starting Reorg...");
 
-        GraphingTask task = GraphingTask.getInstance();
+        AbstractGraphingTask task = AbstractGraphingTask.getInstance(Config.getInstance().getTaskType());
+
 
         if (!Objects.isNull(task.getFuture()))
             task.getFuture().cancel(true);
@@ -169,8 +170,8 @@ public class ReorgServiceImpl implements ReorgService {
         for (var contractAddr : tokensContractAddr) {
             Token token = TokenServiceImpl.getInstance().getByContractAddr(contractAddr);
             tokenMap.put(contractAddr, token);
-            contracts.put(contractAddr, borrowedAionService.getContract(Address.wrap(token.getCreatorAddress()),
-                    Address.wrap(token.getContractAddress()),
+            contracts.put(contractAddr, borrowedAionService.getContract(AionAddress.wrap(token.getCreatorAddress()),
+                    AionAddress.wrap(token.getContractAddress()),
                     ABIDefinitions.getInstance().getJSONString(ABIDefinitions.ATS_CONTRACT)));
         }
 

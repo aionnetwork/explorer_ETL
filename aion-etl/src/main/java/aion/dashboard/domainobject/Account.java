@@ -1,6 +1,11 @@
 package aion.dashboard.domainobject;
 
+import org.aion.api.type.AccountDetails;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Objects;
 
 import static aion.dashboard.util.Utils.approximate;
@@ -95,6 +100,19 @@ public class Account {
         return approxBalance;
     }
 
+
+    private static final ThreadLocal<AccountBuilder> accountBuilder = ThreadLocal.withInitial(AccountBuilder::new);
+
+    public static Account from(String address, BlockDetails blockDetails, TxDetails tx, BigDecimal balance, BigInteger nonce){
+        return accountBuilder.get()
+                .address(address.replace("0x",""))
+                .balance((balance))
+                .nonce(nonce.toString(16))
+                .lastBlockNumber(blockDetails.getNumber())
+                .contract(tx==null || tx.getContract().isEmptyAddress()? 0:1)
+                .transactionHash(tx==null?"":tx.getTxHash().toString())
+                .build();
+    }
     public static class AccountBuilder
 
     {

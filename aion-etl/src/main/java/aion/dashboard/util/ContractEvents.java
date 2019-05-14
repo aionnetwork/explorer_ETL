@@ -6,7 +6,7 @@ import org.aion.api.sol.impl.*;
 import org.aion.api.type.ContractAbiEntry;
 import org.aion.api.type.ContractAbiIOParam;
 import org.aion.api.type.TxLog;
-import org.aion.base.util.ByteUtil;
+import org.aion.util.bytes.ByteUtil;
 import org.aion.crypto.HashUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

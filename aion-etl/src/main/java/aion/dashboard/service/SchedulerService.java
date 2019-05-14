@@ -16,7 +16,7 @@ public class SchedulerService {
     private boolean isClosed;
     private SchedulerService(){
         isClosed=false;
-        executorService = Executors.newScheduledThreadPool(2);
+        executorService = Executors.newScheduledThreadPool(1);
     }
 
 
@@ -57,5 +57,9 @@ public class SchedulerService {
 
     public boolean isClosed() {
         return isClosed;
+    }
+
+    public ScheduledExecutorService getExecutorService() {
+        return executorService;
     }
 }
