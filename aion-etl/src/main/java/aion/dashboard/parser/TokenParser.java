@@ -69,6 +69,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
             res.setState(new ParserState.ParserStateBuilder()
                     .blockNumber(BigInteger.valueOf(lastBlockNumber))
                     .id(ParserStateServiceImpl.DB_ID).build());
+            consumeMessage();
             return Collections.singletonList(res);
         } else {
             return Collections.emptyList();

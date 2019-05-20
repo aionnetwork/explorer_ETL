@@ -76,15 +76,20 @@ public class Consumer {
     }
 
     private <T extends AbstractBatch> void doWrites(Iterator<T> record, WriteTask<T> writer) throws Exception {
-        while (record.hasNext()) {
-            var batch = record.next();
-            GENERAL.debug("Attempting to write batch with block number: {}", batch.getState().getBlockNumber());
-            try {
-                writer.write(batch);
-            } catch (Exception e) {
-                GENERAL.warn("Caught exception: ", e);
-                throw e;
+        lockDBWrite();
+        try {
+            while (record.hasNext()) {
+                var batch = record.next();
+                GENERAL.debug("Attempting to write batch with block number: {}", batch.getState().getBlockNumber());
+                try {
+                    writer.write(batch);
+                } catch (Exception e) {
+                    GENERAL.warn("Caught exception: ", e);
+                    throw e;
+                }
             }
+        }finally {
+            unlockDBWrite();
         }
     }
 
@@ -101,7 +106,6 @@ public class Consumer {
                 Thread.currentThread().setName("blocks-loader");
 
                 var message = getMessage(blockProducer);
-                lockDBWrite();
 
                 doWrites(message, blockWriter);
                 blockProducer.consume();
@@ -109,8 +113,6 @@ public class Consumer {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 // ignore for now
-            } finally {
-                unlockDBWrite();
             }
         }        GENERAL.info("Ended block loader");
     }
@@ -126,7 +128,6 @@ public class Consumer {
         while (keepRunning(producer)) {
             try {
                 var message = getMessage(producer);
-                lockDBWrite();
 
                 doWrites(message, writeTask);
                 producer.consume();
@@ -134,8 +135,6 @@ public class Consumer {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 // ignore for now
-            } finally {
-                unlockDBWrite();
             }
         }
     }

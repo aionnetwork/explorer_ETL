@@ -35,8 +35,6 @@ public class TokenWriter implements WriteTask<TokenBatch> {
             PreparedStatement psToken= tokenService.prepare(con,records.getTokens());
             PreparedStatement psHolders = tokenHoldersService.prepare(con, records.getTokenHolders());
             PreparedStatement psTransfer = transfersService.prepare(con,records.getTransfers())){
-
-
             try{
                 psToken.executeBatch();
                 psHolders.executeBatch();
@@ -44,6 +42,7 @@ public class TokenWriter implements WriteTask<TokenBatch> {
                 con.commit();
             }catch (Exception e){
                 con.rollback();
+                e.printStackTrace();
                 throw e;
             }
         }
