@@ -9,12 +9,14 @@ import aion.dashboard.exception.AionApiException;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
 import aion.dashboard.worker.IntegrityCheckThread;
+import org.aion.api.type.BlockDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -80,15 +82,17 @@ public final class InitTask {
         ContractService contractService= ContractServiceImpl.getInstance();
         TokenService tokenService = TokenServiceImpl.getInstance();
 
-        Extractor extractor = new Extractor(AionService.getInstance(),ps, new LinkedBlockingDeque<>());
+        Config config = Config.getInstance();
+        int queueSize = config.getQueueSize()<Integer.MAX_VALUE ? (int)config.getQueueSize(): 100;
+        Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize));
 
-        TokenParser tokenParser= new TokenParser(new LinkedBlockingDeque<>(), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
+        TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
 
-        AccountParser accountParser = new AccountParser(new LinkedBlockingQueue<>(), Web3Service.getInstance(), new LinkedBlockingQueue<>());
+        AccountParser accountParser = new AccountParser(new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), new LinkedBlockingQueue<>());
 
         Parser parser = new ParserBuilder().setAccountProd(accountParser)
                 .setTokenProd(tokenParser)
-                .setQueue(new LinkedBlockingQueue<>())
+                .setQueue(new ArrayBlockingQueue<>(queueSize))
                 .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
                 .setExtractor(extractor).setApiService(Web3Service.getInstance()).createParser();
 

@@ -202,5 +202,18 @@ final public class ContractEvent {
             this.address = address;
             return this;
         }
+
+        @Override
+        public String toString() {
+            return "ContractEventBuilder{" +
+                    "SignatureHash='" + SignatureHash + '\'' +
+                    ", EventName='" + EventName + '\'' +
+                    ", Inputs=" + Inputs +
+                    ", ClassType=" + ClassType +
+                    ", TypeName=" + TypeName +
+                    ", names=" + names +
+                    ", address='" + address + '\'' +
+                    '}';
+        }
     }
 }

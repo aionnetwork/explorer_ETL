@@ -191,7 +191,7 @@ public class Token {
         public Token build(){
             if(contractAddress.equals("") || creatorAddress.equals("") || transactionHash.equals("") || name.equals("") || symbol.equals("")||
             totalSupply.equals(BigInteger.ZERO) || totalLiquidSupply.equals(BigInteger.ZERO) || granularity.equals(BigInteger.ZERO) || timestamp<=0){
-                throw new IllegalStateException("Falsely identified a token");
+                throw new IllegalStateException("Falsely identified a token: "+ this.toString());
             }
             return new Token(contractAddress,  transactionHash,  creatorAddress, totalLiquidSupply,  totalSupply,  granularity, tokenDecimal, name,  symbol,  timestamp);
         }
@@ -199,6 +199,22 @@ public class Token {
         public TokenBuilder setTokenDecimal(int tokenDecimal) {
             this.tokenDecimal = tokenDecimal;
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return "TokenBuilder{" +
+                    "contractAddress='" + contractAddress + '\'' +
+                    ", transactionHash='" + transactionHash + '\'' +
+                    ", creatorAddress='" + creatorAddress + '\'' +
+                    ", totalLiquidSupply=" + totalLiquidSupply +
+                    ", totalSupply=" + totalSupply +
+                    ", granularity=" + granularity +
+                    ", name='" + name + '\'' +
+                    ", symbol='" + symbol + '\'' +
+                    ", timestamp=" + timestamp +
+                    ", tokenDecimal=" + tokenDecimal +
+                    '}';
         }
     }
 }

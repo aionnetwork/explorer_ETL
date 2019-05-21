@@ -3,10 +3,14 @@ package aion.dashboard.domainobject;
 import aion.dashboard.util.ContractEvent;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
+import org.checkerframework.checker.nullness.Opt;
 import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class Event {
@@ -77,13 +81,13 @@ public class Event {
     }
 
 
-    private static final ThreadLocal<EventBuilder> threadLocalBuilder = ThreadLocal.withInitial(() -> new EventBuilder());
+    private static final ThreadLocal<EventBuilder> threadLocalBuilder = ThreadLocal.withInitial(EventBuilder::new);
 
     @SuppressWarnings("Duplicates")
-    static Event from(ContractEvent contractEvent, BlockDetails b, TxDetails tx){
+    static Optional<Event> from(ContractEvent contractEvent, BlockDetails b, TxDetails tx){
         JSONArray inputList = new JSONArray();
         JSONArray paramList = new JSONArray();
-        threadLocalBuilder.get().setName(contractEvent.getEventName())
+        final EventBuilder eventBuilder = threadLocalBuilder.get().setName(contractEvent.getEventName())
                 .setContractAddr(contractEvent.getAddress())
                 .setTimestamp(b.getTimestamp())
                 .setBlockNumber(b.getNumber())
@@ -93,19 +97,35 @@ public class Event {
         List<String> types = contractEvent.getTypes();
         List<Object> inputs = contractEvent.getInputs();
 
-        for (int i = 0; i < names.size(); i++) {
-            paramList.put(types.get(i) + " " + names.get(i));
-            inputList.put(inputs.get(i));
-        }
-        threadLocalBuilder.get().setInputList(inputList.toString())
-                .setParameterList(paramList.toString());
+        if (names.stream().noneMatch(s -> s.isBlank()||s.isEmpty())
+                && types.stream().noneMatch(s -> s.isBlank()||s.isEmpty()) ) {// sanitize any bad events
 
-        return threadLocalBuilder.get().build();
+
+            for (int i = 0; i < names.size(); i++) {
+                paramList.put(types.get(i) + " " + names.get(i));
+                inputList.put(inputs.get(i));
+            }
+            eventBuilder.setInputList(inputList.toString())
+                    .setParameterList(paramList.toString());
+
+            if (GENERAL.isTraceEnabled()) {
+                GENERAL.trace("Built event: {}", contractEvent);
+            }
+
+            return Optional.ofNullable(eventBuilder.build());
+        }else {
+            return Optional.empty();
+        }
 
     }
+    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
     public static List<Event> eventsFrom(List<ContractEvent> events, BlockDetails b, TxDetails tx){
-        return events.stream().map(event -> from(event, b, tx)).collect(Collectors.toList());
+        return events.stream()
+                .map(event -> from(event, b, tx))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
     }
 
     public static class EventBuilder {

@@ -105,7 +105,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
             GENERAL.info("Failed to load contract from the database;");
             throw e;
         }
-        catch (NoSuchElementException e) {
+        catch (NoSuchElementException | IllegalStateException e) {
             GENERAL.info("Falsely identified token: {}", contractAddr);
         }
 
