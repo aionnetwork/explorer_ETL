@@ -65,19 +65,18 @@ public abstract class Producer<T> implements Runnable {
      * @return the result of this operation
      * @throws InterruptedException if the thread is interrupted during a sleep operation
      */
-    protected List<T> task() throws Exception {
-        if (shouldReset.get()) {
-            throw new ResetException();
-        }
-        return Collections.emptyList();
-    }
+    protected abstract List<T> task() throws Exception ;
 
     protected abstract void doReset();
 
-    public void run() {
+    public final void run() {// declares the event loop that will run the task
         do {
             try {
-                var res = task();
+                if (shouldReset.get()) {//check preconditions
+                    throw new ResetException();
+                }
+
+                List<T> res = task();// run the task and store the result only if it is valid
                 if (res != null && !res.isEmpty()) queue.put(res);
                 Thread.sleep(100);
             } catch (InterruptedException e) {

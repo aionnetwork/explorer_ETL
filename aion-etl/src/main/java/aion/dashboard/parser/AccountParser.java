@@ -34,7 +34,6 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
 
     @Override
     protected List<AccountBatch> task() throws Exception {
-        super.task();
         Thread.currentThread().setName("account-parser");
         List<Message<String>> messages = getMessage();
         GENERAL.debug("Starting account parser.");

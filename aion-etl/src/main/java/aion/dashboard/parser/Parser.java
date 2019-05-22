@@ -46,7 +46,6 @@ public class Parser extends Producer<ParserBatch> {
 
     @Override
     protected List<ParserBatch> task() throws Exception {
-        super.task();
         var blocks = extractor.peek();
         Thread.currentThread().setName("block-parser");
 

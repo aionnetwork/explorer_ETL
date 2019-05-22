@@ -15,23 +15,25 @@ public final class Extractor extends Producer<BlockDetails>{
     private AionService apiService;
     private ParserStateService parserStateService;
     private AtomicLong ptr;
+    private final int requestSize;
+    private static final int MAX_RQ_SIZE=1000;
 
 
     public Extractor(AionService apiService, ParserStateService parserStateService, BlockingQueue<List<BlockDetails>> queue){
+        this(apiService, parserStateService, queue, (long) MAX_RQ_SIZE);
+    }
+
+
+    public Extractor(AionService apiService, ParserStateService parserStateService, BlockingQueue<List<BlockDetails>> queue, long requestSize) {
         super(queue);
         this.apiService = apiService;
         this.parserStateService = parserStateService;
+        this.requestSize = (int) Math.min(requestSize, (long) MAX_RQ_SIZE);
+        this.ptr = new AtomicLong(getPointer());
+
     }
 
 
-
-
-    @Override
-    public void run() {
-        Thread.currentThread().setName("extractor");
-        ptr = new AtomicLong(getPointer());
-        super.run();
-    }
 
     private long getPointer(){
         return parserStateService.readDBState().getBlockNumber().longValue();
@@ -39,9 +41,10 @@ public final class Extractor extends Producer<BlockDetails>{
 
     @Override
     protected List<BlockDetails> task() throws Exception {
-        super.task();// check the preconditions
+        Thread.currentThread().setName("extractor");
+
         try {
-            List<BlockDetails> records = getBlocks(ptr.get() + 1, 1000);
+            List<BlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
             ptr.set(Utils.getLastRecord(records).getNumber());
             return records;
         } catch (AionApiException e){

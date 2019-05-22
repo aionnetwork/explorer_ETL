@@ -48,7 +48,6 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
     @Override
     protected List<TokenBatch> task() throws Exception {
-        super.task();
         Thread.currentThread().setName("token-parser");
         var records = getMessage();
         Set<String> holdersSet = new HashSet<>();

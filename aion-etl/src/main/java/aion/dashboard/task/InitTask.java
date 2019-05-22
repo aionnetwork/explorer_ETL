@@ -84,7 +84,7 @@ public final class InitTask {
 
         Config config = Config.getInstance();
         int queueSize = config.getQueueSize()<Integer.MAX_VALUE ? (int)config.getQueueSize(): 100;
-        Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize));
+        Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
 
         TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
 
