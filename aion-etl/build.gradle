@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'distribution'
 group 'aion-etl'
-version '2.2.'
+version '2.2'
 
 mainClassName = "aion.dashboard.AionMain"
 
@@ -80,7 +80,7 @@ dependencies {
     compile group: 'com.google.protobuf', name: 'protobuf-java', version: '3.5.0'
     compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.0'
     compile files('lib/libAionApi-v0.1.17.643dae5-19-05-08.jar')
-    compile files('lib/libnzmq.jar')
+    compile files('lib/3rdParty.libnzmq-0.3.4.jar')
     compile files('lib/libnsc.jar')
     compile files('lib/aion_vm_api-0.3.2.jar')
     compile files('lib/modAionBase-0.3.2.jar')
