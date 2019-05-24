@@ -45,6 +45,10 @@ public final class Extractor extends Producer<BlockDetails>{
 
         try {
             List<BlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
+
+            if (GENERAL.isTraceEnabled()) {
+                records.forEach(blk-> GENERAL.trace("Retrieved block with block_number: {}", blk.getNumber()));
+            }
             ptr.set(Utils.getLastRecord(records).getNumber());
             return records;
         } catch (AionApiException e){

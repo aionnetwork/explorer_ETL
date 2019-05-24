@@ -74,6 +74,10 @@ public class Utils {
 
     }
 
+
+    public static String sanitizeHex(String address){
+        return address.replaceFirst("^0x","");
+    }
     public static Optional<String> getValidAddress(String address){
         if (address.length() >= 64){
             String s;

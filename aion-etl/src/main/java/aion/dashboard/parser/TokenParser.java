@@ -1,6 +1,7 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.cache.CacheManager;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.domainobject.Token;
@@ -11,8 +12,8 @@ import aion.dashboard.parser.type.TokenBatch;
 import aion.dashboard.service.ContractService;
 import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.TokenService;
-import aion.dashboard.util.ABIDefinitions;
-import aion.dashboard.util.ContractEvent;
+import aion.dashboard.parser.events.SolABIDefinitions;
+import aion.dashboard.parser.events.ContractEvent;
 import org.aion.api.IContract;
 import org.aion.api.sol.IAddress;
 import org.aion.api.type.BlockDetails;
@@ -32,11 +33,11 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     private final AionService apiService;
     private final ContractService contractService;
     private final TokenService service;
-    private final Map<String, Token> tokenMap = new ConcurrentHashMap<>();
-    private final Map<String, Contract> contractMap = new ConcurrentHashMap<>();
+    private final CacheManager<String, Token> tokenCacheManager = CacheManager.getManager(CacheManager.Cache.TOKEN);
+    private final CacheManager<String, Contract> contractCacheManager = CacheManager.getManager(CacheManager.Cache.CONTRACT);
 
     void registerContract(Contract contract){
-        contractMap.put(contract.getContractAddr(), contract);
+        contractCacheManager.putIfAbsent(contract.getContractAddr(), contract);
     }
 
     public TokenParser(BlockingQueue<List<TokenBatch>> queue, BlockingQueue<List<Message<ContractEvent>>> workQueue, AionService apiService, ContractService contractService, TokenService service) {
@@ -59,17 +60,30 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
                     GENERAL.trace("Starting request for account: {}", getResponse(ContractEvent.class, msg.getItem()).map(ContractEvent::getAddress).orElse(""));
                 }
 
-                res= res.merge(readTokenEvent(msg, holdersSet));
+                if (msg.getItem().stream().anyMatch(ContractEvent::isAvm)){
+                    //leave empty for now
+                }
+                else {
+                    res= res.merge(readTokenEvent(msg, holdersSet));
+                }
                 if (lastBlockNumber<msg.getBlockDetails().getNumber()){
                     lastBlockNumber=msg.getBlockDetails().getNumber();
                 }
             }
 
-            res.setState(new ParserState.ParserStateBuilder()
-                    .blockNumber(BigInteger.valueOf(lastBlockNumber))
-                    .id(ParserStateServiceImpl.DB_ID).build());
+            List<TokenBatch> ret;
+
+            if (res.getTokenHolders().isEmpty() && res.getTokens().isEmpty() && res.getTransfers().isEmpty()){
+                ret = Collections.emptyList();
+                GENERAL.error("Failed to transform the event at: {}", lastBlockNumber);
+            }else {
+                res.setState(new ParserState.ParserStateBuilder()
+                        .blockNumber(BigInteger.valueOf(lastBlockNumber))
+                        .id(ParserStateServiceImpl.DB_ID).build());
+                ret=Collections.singletonList(res);
+            }
             consumeMessage();
-            return Collections.singletonList(res);
+            return ret;
         } else {
             return Collections.emptyList();
         }
@@ -77,18 +91,23 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
     }
 
-    TokenBatch readTokenEvent(Message<ContractEvent> msg, Set<String> holdersSet) throws SQLException, AionApiException {
+    private TokenBatch readTokenEvent(Message<ContractEvent> msg, Set<String> holdersSet) throws SQLException, AionApiException {
         var contractAddr = msg.getItem().get(0).getAddress();
         var res = new TokenBatch();
         try {
 
 
-            Token token = tokenMap.containsKey(contractAddr) ?
-                    tokenMap.get(contractAddr) :
+            Token token = tokenCacheManager.contains(contractAddr) ?
+                    tokenCacheManager.getIfPresent(contractAddr) :
                     service.getByContractAddr(contractAddr);
-            Contract contract = contractMap.containsKey(contractAddr) ?
-                    contractMap.get(contractAddr) :
-                    Objects.requireNonNull(contractService.selectContractsByContractAddr(contractAddr));
+            Contract contract;
+            if (contractCacheManager.contains(contractAddr)) contract = contractCacheManager.getIfPresent(contractAddr);
+            else {
+                contract = Objects.requireNonNull(contractService.selectContractsByContractAddr(contractAddr));
+                registerContract(contract);
+            }
+
+
             if (token == null || Parsers.isSupplyUpdate(msg.getItem())) {
                 // get token
                 token = createToken(contract);
@@ -113,14 +132,14 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
 
     private void updateCache(String contractAddr, Token token, Contract contract) {
-        tokenMap.put(contractAddr, token);
-        contractMap.put(contractAddr, contract);
+        tokenCacheManager.putIfAbsent(contractAddr, token);
+        contractCacheManager.putIfAbsent(contractAddr, contract);
     }
 
     private List<TokenHolders> getHolders(List<ContractEvent> events, Contract contract, Token token, BlockDetails b, Set<String> holdersSet) throws AionApiException {
 
-        final ABIDefinitions abiDefinitions = ABIDefinitions.getInstance();
-        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), abiDefinitions.getJSONString(ABIDefinitions.ATS_CONTRACT));
+        final SolABIDefinitions solAbiDefinitions = SolABIDefinitions.getInstance();
+        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), solAbiDefinitions.getJSONString(SolABIDefinitions.ATS_CONTRACT));
         List<TokenHolders> res = new ArrayList<>();
 
         for (var event : events) {
@@ -138,7 +157,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     }
 
 
-    Optional<TokenHolders> createHolder(String address, BlockDetails b, Token token, IContract blockChainInterface) throws AionApiException {
+    private Optional<TokenHolders> createHolder(String address, BlockDetails b, Token token, IContract blockChainInterface) throws AionApiException {
         if (!address.isBlank() && org.aion.base.util.Utils.isValidAddress(address)) {
 
             var balance = getResponse(BigInteger.class, apiService.callContractFunction(blockChainInterface, "balanceOf", IAddress.copyFrom(address))).filter(Parsers.NUM_RESPONSE_EXISTS);
@@ -150,9 +169,9 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
     }
 
-    Token createToken(Contract contract) throws AionApiException {
-        final ABIDefinitions abiDefinitions = ABIDefinitions.getInstance();
-        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), abiDefinitions.getJSONString(ABIDefinitions.ATS_CONTRACT));
+    private Token createToken(Contract contract) throws AionApiException {
+        final SolABIDefinitions solAbiDefinitions = SolABIDefinitions.getInstance();
+        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), solAbiDefinitions.getJSONString(SolABIDefinitions.ATS_CONTRACT));
 
 
         //get token details from the chain

@@ -1,4 +1,4 @@
-package aion.dashboard.util;
+package aion.dashboard.parser.events;
 
 import aion.dashboard.exception.DecodeException;
 import org.aion.api.sol.ISolidityArg;
@@ -111,6 +111,7 @@ public class ContractEvents {
         if (txLog.getTopics().get(0).replace("0x", "").equals(contractAbiEntry.getHashed().replace("0x", ""))) {
             try {
                 ContractEvent.ContractEventBuilder builder = ContractEvent.builder();
+                builder.setAvm(false);
 
                 builder.setAddress(txLog.getAddress().toString());
                 builder.setEventName(contractAbiEntry.name);
@@ -136,6 +137,10 @@ public class ContractEvents {
                 List<Object> inputs = new ArrayList<>(Collections.nCopies(contractAbiEntry.inputs.size(), new Object()));
                 List<String> typeNames = new ArrayList<>(Collections.nCopies(contractAbiEntry.inputs.size(), ""));
                 List<String> names = new ArrayList<>(Collections.nCopies(contractAbiEntry.inputs.size(), ""));
+
+                if (zippedIndexedParam.size() != txLog.getTopics().size() -1){
+                    throw new DecodeException();
+                }
 
                 if (zippedIndexedParam.size() > 0) {
                     for (int i = 1; i < txLog.getTopics().size() && i-1 < zippedIndexedParam.size(); i++) {

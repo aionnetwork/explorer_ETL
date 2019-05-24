@@ -1,6 +1,6 @@
 package aion.dashboard.domainobject;
 
-import aion.dashboard.util.ContractEvent;
+import aion.dashboard.parser.events.ContractEvent;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 

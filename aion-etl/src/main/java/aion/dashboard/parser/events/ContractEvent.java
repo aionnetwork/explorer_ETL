@@ -1,10 +1,9 @@
-package aion.dashboard.util;
+package aion.dashboard.parser.events;
 
 import org.aion.util.bytes.ByteUtil;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Encapsulates the data extracted from a contract event
@@ -18,8 +17,9 @@ final public class ContractEvent {
     private final List<String> Types;
     private final String Address;
     private final List<String> names;
+    private final boolean avm;
 
-    private ContractEvent(String signatureHash, String eventName, List<Object> inputs, List<Class> classType, List<String> types, List<String> names, String address) {
+    private ContractEvent(String signatureHash, String eventName, List<Object> inputs, List<Class> classType, List<String> types, List<String> names, String address, boolean avm) {
         SignatureHash = signatureHash;
         EventName = eventName;
         Inputs = inputs;
@@ -27,10 +27,12 @@ final public class ContractEvent {
         Types = types;
         this.names = names;
         Address = address;
+        this.avm = avm;
     }
 
+    private static ThreadLocal<ContractEventBuilder> builder = ThreadLocal.withInitial(ContractEventBuilder::new);
     public static ContractEventBuilder builder() {
-        return new ContractEventBuilder();
+        return builder.get().reset();
     }
 
     /**
@@ -115,6 +117,19 @@ final public class ContractEvent {
         return Address;
     }
 
+    @Override
+    public String toString() {
+        return "ContractEvent{" +
+                "SignatureHash='" + SignatureHash + '\'' +
+                ", EventName='" + EventName + '\'' +
+                ", Inputs=" + Inputs +
+                ", classType=" + classType.stream().map(Class::getSimpleName).collect(Collectors.joining(",","[","]"))+
+                ", Types=" + Types +
+                ", Address='" + Address + '\'' +
+                ", names=" + names +
+                ", avm=" + avm +
+                '}';
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -135,6 +150,10 @@ final public class ContractEvent {
         return Objects.hash(SignatureHash, EventName, Inputs, classType, Types, Address, names);
     }
 
+    public boolean isAvm() {
+        return avm;
+    }
+
     public static final class ContractEventBuilder {
 
         private String SignatureHash;
@@ -144,10 +163,49 @@ final public class ContractEvent {
         private List<String> TypeName;
         private List<String> names;
         private String address;
+        private boolean avm;
 
         private ContractEventBuilder() {
 
 
+        }
+
+        private ContractEventBuilder reset(){
+            return setSignatureHash("")
+                    .setEventName("")
+                    .setAddress("")
+                    .setAvm(false);
+        }
+        ContractEventBuilder allocate(int num){
+
+            return setClassType(new ArrayList<>(Collections.nCopies(num, Object.class)))
+                    .setTypeName(new ArrayList<>(Collections.nCopies(num, "")))
+                    .setInputs(new ArrayList<>(Collections.nCopies(num, new Object())))
+                    .setNames(new ArrayList<>(Collections.nCopies(num, "")));
+        }
+
+        public ContractEventBuilder setInput(int index, Object obj){
+            Inputs.set(index, obj);
+            return this;
+        }
+
+        public ContractEventBuilder setClass(int index, Class clazz){
+            ClassType.set(index, clazz);
+
+            return this;
+        }
+
+
+
+        public ContractEventBuilder setType(int index, String type){
+            TypeName.set(index, type);
+            return this;
+        }
+
+        public ContractEventBuilder setName(int index, String name){
+            names.set(index, name);
+
+            return this;
         }
 
 
@@ -165,7 +223,12 @@ final public class ContractEvent {
                                 TypeName.size()));
             }
 
-            return new ContractEvent(SignatureHash, EventName, Inputs, ClassType, TypeName, names, address);
+            return new ContractEvent(SignatureHash, EventName, Inputs, ClassType, TypeName, names, address, avm);
+        }
+
+        public ContractEventBuilder setAvm(boolean avm) {
+            this.avm = avm;
+            return this;
         }
 
         public ContractEventBuilder setEventName(String eventName) {

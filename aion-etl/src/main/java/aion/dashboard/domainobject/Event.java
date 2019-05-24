@@ -1,9 +1,8 @@
 package aion.dashboard.domainobject;
 
-import aion.dashboard.util.ContractEvent;
+import aion.dashboard.parser.events.ContractEvent;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
-import org.checkerframework.checker.nullness.Opt;
 import org.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

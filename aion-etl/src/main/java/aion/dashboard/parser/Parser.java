@@ -1,13 +1,14 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.APIService;
+import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.RollingBlockMean;
-import aion.dashboard.util.ContractEvent;
+import aion.dashboard.parser.events.ContractEvent;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 import org.json.JSONArray;
@@ -73,7 +74,9 @@ public class Parser extends Producer<ParserBatch> {
             //loop through blocks
             block = blockDetails.next();
 
-            GENERAL.trace("Parsing block: {}. With hash: {}", block.getNumber(), block.getHash().toString());
+            if (GENERAL.isTraceEnabled()) {
+                GENERAL.trace("Parsing block: {}. With hash: {}", block.getNumber(), block.getHash());
+            }
 
             //Add miner
             addressesFromBlock.add(block.getMinerAddress().toString());
@@ -92,7 +95,7 @@ public class Parser extends Producer<ParserBatch> {
 
                 final Optional<Contract> contract = Parsers.readContract(tx, block);
                 contract.ifPresent(contract1 -> {
-                    tokenProd.registerContract(contract1);
+                    registerContracts(contract1);
                     batchObject.addContract(contract1);
                 });//Attempt to read the contract information
                 addressesFromBlock.addAll(Parsers.accFromTransaction(tx));
@@ -105,7 +108,7 @@ public class Parser extends Producer<ParserBatch> {
 
                 batchObject.addTx(Transaction.from(tx, block));
 
-                parseEvents(batchObject, block, tokenMessages, canRead, tx);
+                Parsers.parseEvents(batchObject, block, tokenMessages, canRead, tx);
             }
 
 
@@ -148,23 +151,12 @@ public class Parser extends Producer<ParserBatch> {
         return batchObject;
     }//parse blk
 
-    private void parseEvents(ParserBatch batchObject, BlockDetails block, List<Message<ContractEvent>> tokenMessages, boolean canRead, TxDetails tx) {
-        if (canRead) {
-            //Attempt to do fun stuff with the events
-            List<ContractEvent> events = Parsers.readEvents(tx.getLogs());
 
-            batchObject.addEvents(Event.eventsFrom(events, block, tx));
-
-
-            if (Parsers.containsInternalTransfer(events)) {
-                //Attempt Read internal transfers
-                batchObject.addTransfers(Parsers.readInternalTransfer(events, tx, block));
-            } else if (Parsers.containsTokenEvent(events)) {
-                tokenMessages.add(new Message<>(events, block, tx));
-            }
-
-        }
+    private void registerContracts(Contract contract1){
+        EventDecoder.register(contract1);
+        tokenProd.registerContract(contract1);
     }
+
 
     @Override
     protected void doReset() {

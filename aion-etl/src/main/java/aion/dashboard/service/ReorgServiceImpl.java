@@ -9,9 +9,8 @@ import aion.dashboard.domainobject.TokenHolders;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.ReorganizationLimitExceededException;
 import aion.dashboard.task.AbstractGraphingTask;
-import aion.dashboard.util.ABIDefinitions;
+import aion.dashboard.parser.events.SolABIDefinitions;
 import aion.dashboard.util.TimeLogger;
-import aion.dashboard.util.Utils;
 import org.aion.api.IContract;
 import org.aion.api.sol.IAddress;
 import org.aion.base.type.AionAddress;
@@ -172,7 +171,7 @@ public class ReorgServiceImpl implements ReorgService {
             tokenMap.put(contractAddr, token);
             contracts.put(contractAddr, borrowedAionService.getContract(AionAddress.wrap(token.getCreatorAddress()),
                     AionAddress.wrap(token.getContractAddress()),
-                    ABIDefinitions.getInstance().getJSONString(ABIDefinitions.ATS_CONTRACT)));
+                    SolABIDefinitions.getInstance().getJSONString(SolABIDefinitions.ATS_CONTRACT)));
         }
 
         List<TokenHolders> res = new ArrayList<>();

@@ -1,6 +1,7 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
@@ -67,7 +68,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         blockcountwindow = blockCountWindow;
 
         service.reconnect();
-
+        Thread.currentThread().setName("rolling-mean");
 
         this.transactionTimeWindow = transactionTimeWindow;
         this.blockMaxSize = blockMaxSize;
@@ -85,7 +86,8 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     private List<BlockDetails> getBlockDetailsInRange(long start, long end, AionService service) throws AionApiException {
         long startPointer = start;
-        long requestSize = (end - startPointer) <= 1000 ? start - end : 1000;
+        long maxSize = Config.getInstance().getBlockQueryRange();
+        long requestSize = (end - startPointer) <= maxSize ? start - end : maxSize;
 
         List<BlockDetails> temp = new ArrayList<>();
 

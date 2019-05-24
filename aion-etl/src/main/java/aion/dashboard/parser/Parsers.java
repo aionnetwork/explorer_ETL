@@ -1,12 +1,13 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.domainobject.Contract;
-import aion.dashboard.domainobject.InternalTransfer;
-import aion.dashboard.domainobject.Token;
-import aion.dashboard.domainobject.TokenTransfers;
+import aion.dashboard.domainobject.*;
+import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.exception.DecodeException;
-import aion.dashboard.util.ABIDefinitions;
-import aion.dashboard.util.ContractEvent;
+import aion.dashboard.parser.events.AVMABIDefinitions;
+import aion.dashboard.parser.events.SolABIDefinitions;
+import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.parser.type.Message;
+import aion.dashboard.parser.type.ParserBatch;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.ContractAbiEntry;
 import org.aion.api.type.TxDetails;
@@ -22,8 +23,9 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static aion.dashboard.util.ContractEvents.decodeEventLog;
+import static aion.dashboard.parser.events.ContractEvents.decodeEventLog;
 
 public class Parsers {
 
@@ -45,23 +47,24 @@ public class Parsers {
     static boolean containsReadableEvent(byte[] bloomBytes) {
         bloomBytes = Arrays.copyOf(bloomBytes, bloomBytes.length);// Copying byte array for sanity reasons
         Bloom bloom = new Bloom(bloomBytes);
+        var avmHashes=AVMABIDefinitions.getInstance().getAllHashes().stream();
 
 
-        List<ContractAbiEntry> entries = ABIDefinitions.getInstance().getAllEvents();
+        var entries = SolABIDefinitions.getInstance().getAllEvents().stream().map(ContractAbiEntry::getHashed);
 
-        return entries.parallelStream()
-                .anyMatch(entry -> BloomFilter.containsEvent(bloom, ByteUtil.hexStringToBytes(entry.getHashed())));
+        return Stream.concat(entries, avmHashes).parallel().map(ByteUtil::hexStringToBytes)
+                .anyMatch(entry -> BloomFilter.containsEvent(bloom, entry));
     }
 
     static List<ContractEvent> readEvents(List<TxLog> logs){
-        return logs.stream().map(Parsers::readEvent)// Attempt to decode this element in the txlog
+        return logs.stream().map(log -> EventDecoder.decoderFor(log.getAddress().toString()).decodeEvent(log))// Attempt to decode this element in the txlog
                 .filter(Optional::isPresent)
                 .map(Optional::get)//Get the decoded event
                 .collect(Collectors.toList());// return the result
     }
 
     private static Optional<ContractEvent> readEvent(TxLog log){
-        List<ContractAbiEntry> entries = ABIDefinitions.getInstance().getAllEvents();// get the events that can be decoded
+        List<ContractAbiEntry> entries = SolABIDefinitions.getInstance().getAllEvents();// get the events that can be decoded
         for (var entry : entries) {
             try {
                 var optionalContractEvent = decodeEventLog(log, entry);// attempt to decode the event
@@ -92,18 +95,28 @@ public class Parsers {
 
     static boolean containsTokenEvent(List<ContractEvent> events) {
         for (var event: events){
-            if (checkForEvent(event.getSignatureHash(), ABIDefinitions.ATS_CONTRACT)){
+            if (checkForEventSol(event.getSignatureHash(), SolABIDefinitions.ATS_CONTRACT) ||
+                    checkForEventAVM(event.getSignatureHash(), AVMABIDefinitions.ATS_CONTRACT)){
                 return true;
             }
+
         }
         return false;
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static boolean checkForEvent(String topic, String contract){
-        return ABIDefinitions.getInstance().getABI(contract)
+    private static boolean checkForEventSol(String topic, String contract){
+        return SolABIDefinitions.getInstance().getABI(contract)
                 .parallelStream()
                 .anyMatch(e -> e.getHashed().replace("0x", "").equals(topic.replace("0x", "")));
+    }
+
+
+    private static boolean checkForEventAVM(String topic, String contract){
+        return AVMABIDefinitions.getInstance()
+                .signatureForContract(contract)
+                .parallelStream()
+                .anyMatch(e->e.getHashed().replace("0x", "").equals(topic.replace("0x", "")));
     }
 
     static List<InternalTransfer> readInternalTransfer(List<ContractEvent> events, TxDetails txDetails, BlockDetails blockDetails){
@@ -181,5 +194,23 @@ public class Parsers {
 
     static List<String> getInputs(ContractEvent event, String... params){
         return Arrays.stream(params).map(param -> event.getInput(param, String.class)).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
+    }
+
+    static void parseEvents(ParserBatch batchObject, BlockDetails block, List<Message<ContractEvent>> tokenMessages, boolean canRead, TxDetails tx) {
+        if (canRead) {
+            //Attempt to do fun stuff with the events
+            List<ContractEvent> events = readEvents(tx.getLogs());
+
+            batchObject.addEvents(Event.eventsFrom(events, block, tx));
+
+
+            if (containsInternalTransfer(events)) {
+                //Attempt Read internal transfers
+                batchObject.addTransfers(readInternalTransfer(events, tx, block));
+            } else if (containsTokenEvent(events)) {
+                tokenMessages.add(new Message<>(events, block, tx));
+            }
+
+        }
     }
 }

@@ -1,5 +1,6 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.Utils;
 import org.aion.api.type.AccountDetails;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
@@ -105,7 +106,7 @@ public class Account {
 
     public static Account from(String address, BlockDetails blockDetails, TxDetails tx, BigDecimal balance, BigInteger nonce){
         return accountBuilder.get()
-                .address(address.replace("0x",""))
+                .address(Utils.sanitizeHex(address))
                 .balance((balance))
                 .nonce(nonce.toString(16))
                 .lastBlockNumber(blockDetails.getNumber())

@@ -1,4 +1,4 @@
-package aion.dashboard.util;
+package aion.dashboard.parser.events;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.exception.AionApiException;
@@ -36,7 +36,7 @@ import static org.aion.api.impl.Contract.*;
  * TODO replace all accessors of the ATS ad ERC20Token lists with accessors to the map
  * TODO implement a map that stores the JSON representation of ABIs
  */
-public class ABIDefinitions {
+public class SolABIDefinitions {
 
 
     public static final String ATS_CONTRACT = "ATS";
@@ -47,7 +47,7 @@ public class ABIDefinitions {
 
     static {
         try {
-            instance = new ABIDefinitions();
+            instance = new SolABIDefinitions();
         } catch (InitializationException e) {
             System.out.println("Failed to read the abi");
             System.exit(-1);
@@ -55,7 +55,7 @@ public class ABIDefinitions {
     }
 
 
-    private static ABIDefinitions instance;
+    private static SolABIDefinitions instance;
 
 
 
@@ -63,7 +63,7 @@ public class ABIDefinitions {
     private Map<String, String> contractJSONABIMap;
 
 
-    public ABIDefinitions() throws InitializationException {
+    public SolABIDefinitions() throws InitializationException {
 
         try {
             AionService service = AionService.getInstance();
@@ -80,13 +80,15 @@ public class ABIDefinitions {
 
     }
 
-    public static ABIDefinitions getInstance() {
+    public static SolABIDefinitions getInstance() {
 
         return instance;
     }
 
+    private static final String CONTRACT_LOCATION = "./contracts/sol";
+
     private static Map<String,String> listABIFiles(){
-        File contractFolder = new File("./contracts");
+        File contractFolder = new File(CONTRACT_LOCATION);
 
 
 
@@ -94,17 +96,17 @@ public class ABIDefinitions {
         return Arrays.stream(Objects.requireNonNull(contractFolder.listFiles()))
                 .map(File::getName)
                 .filter(s -> s.endsWith("js"))// get only the js files
-                .collect(Collectors.toMap((String s)-> s.replace(".js",""), s -> "contracts/"+s));//use contract name as the key
+                .collect(Collectors.toMap((String s)-> s.replace(".js",""), s -> CONTRACT_LOCATION+"/"+s));//use contract name as the key
     }
 
 
     private static Map<String, String> listSolFiles(){
         //The solidity contracts must have the same name as the stored contract
-        File contractFolder = new File("./contracts");
+        File contractFolder = new File(CONTRACT_LOCATION);
         return Arrays.stream(Objects.requireNonNull(contractFolder.listFiles()))
                 .map(File::getName)
                 .filter(s -> s.endsWith("sol"))//filter out the js files
-                .collect(Collectors.toMap((String s)-> s.replace(".sol",""), s -> "contracts/"+s));//Use the contract name as the key in the key value pair
+                .collect(Collectors.toMap((String s)-> s.replace(".sol",""), s -> CONTRACT_LOCATION+"/"+s));//Use the contract name as the key in the key value pair
     }
 
 

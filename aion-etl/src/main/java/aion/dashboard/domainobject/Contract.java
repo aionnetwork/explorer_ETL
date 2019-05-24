@@ -91,6 +91,9 @@ public class Contract {
         return type.type;
     }
 
+    public ContractType getContractType(){
+        return type;
+    }
     private static final ThreadLocal<ContractBuilder> builder = ThreadLocal.withInitial(ContractBuilder::new);
     public static Contract from(BlockDetails b, TxDetails tx){
         return builder.get()
