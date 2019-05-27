@@ -93,7 +93,7 @@ public class AVMEventDecoder extends EventDecoder {
                 decodeNonIndexedData(builder, txLog.getData(), signature.nonIndexedParameters);
 
                 return Optional.of(builder.build());
-            } catch (DecodeException e){
+            } catch (DecodeException | RuntimeException e){
                 return Optional.empty();
             }
         } else {
