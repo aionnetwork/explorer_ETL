@@ -6,6 +6,7 @@ import aion.dashboard.domainobject.Contract;
 import aion.dashboard.exception.InvalidContractException;
 import aion.dashboard.service.ContractService;
 import aion.dashboard.service.ContractServiceImpl;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.TxLog;
 
 import java.util.Objects;
@@ -23,12 +24,14 @@ public abstract class EventDecoder {
      * @param contractAddress the contract which triggered the event
      * @return the decoder to be used to decode the event
      */
-    @SuppressWarnings("unused")
     public static EventDecoder decoderFor(String contractAddress){
-        final Contract contract = findContract(contractAddress.replaceFirst("0x","")).orElseThrow(()->
-                new InvalidContractException("Failed to find the contract in the cache or the database."));
+        final ContractType contractType;
+        if (Utils.sanitizeHex(contractAddress).equalsIgnoreCase("0000000000000000000000000000000000000000000000000000000000000200"))
+            contractType = ContractType.DEFAULT;
+        else
+            contractType = findContract(Utils.sanitizeHex(contractAddress)).map(Contract::getContractType).orElseThrow(() -> new InvalidContractException("Failed to find contract in the database"));
 
-        return decoderFor(contract.getContractType());
+        return decoderFor(contractType);
     }
 
 

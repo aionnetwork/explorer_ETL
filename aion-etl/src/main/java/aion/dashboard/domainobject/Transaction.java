@@ -217,6 +217,7 @@ public class Transaction {
                 .setToAddr(tx.getTo().toString())
                 .setNrgConsumed(tx.getNrgConsumed())
                 .setNrgPrice(tx.getNrgPrice())
+                .setData(tx.getData().toString())
                 .setTransactionTimestamp(tx.getTimestamp())
                 .setValue(new BigDecimal(tx.getValue()))
                 .setTransactionLog(buildLog(tx.getLogs()))
