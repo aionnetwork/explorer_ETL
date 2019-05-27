@@ -3,7 +3,6 @@ package aion.dashboard.task;
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.service.GraphingService;
 import aion.dashboard.service.GraphingServiceImpl;
-import aion.dashboard.service.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,13 +12,15 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractGraphingTask<T>  implements Runnable{
 
 
-
+    private final ScheduledExecutorService scheduledWorker = Executors.newScheduledThreadPool(1);
     public enum TaskType{
         DB, KERNEL
     }
@@ -69,8 +70,7 @@ public abstract class AbstractGraphingTask<T>  implements Runnable{
 
         Duration duration = Duration.between(zonedNow, zonedDateTime);
         long delay = duration.getSeconds();//get the next hour in which this task should run
-
-        future = SchedulerService.getInstance().addRunOnce(this, delay, TimeUnit.SECONDS);//run the graphing service 2 minutes after the hour to allow for additional blocks to be imported
+        future=scheduledWorker.schedule(this, delay, TimeUnit.SECONDS);
         //this is a safe guard against running the service before all blocks have been added to the DB
 
     }
@@ -86,8 +86,8 @@ public abstract class AbstractGraphingTask<T>  implements Runnable{
         } else {
             //Schedule the service to run in the background now
             GENERAL.debug("Next execution of Graphing Task scheduled at {}", timeNow.plusMinutes(INITIAL_DELAY));
+            future=scheduledWorker.schedule(this, INITIAL_DELAY, TimeUnit.MINUTES);
 
-            future = SchedulerService.getInstance().addRunOnce(this, INITIAL_DELAY, TimeUnit.MINUTES);
         }
     }
 }

@@ -37,7 +37,7 @@ public abstract class CacheManager<K ,V> {
     public abstract V getIfPresent(K key);
 
     public final boolean contains(K key){
-        return getIfPresent(key) == null;
+        return getIfPresent(key) != null;
     }
 
     public final V computeIfAbsent(K key, Supplier<V> vSupplier){
