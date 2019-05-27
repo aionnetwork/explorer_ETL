@@ -30,6 +30,7 @@ public class AVMEventDecoder extends EventDecoder {
     private static final Pattern BYTE_ARRAY_PATTERN=Pattern.compile("^[Bb]yte\\[]$");
     private static final Pattern SHORT_PATTERN=Pattern.compile("^[Ss]hort$");
     private static final Pattern CHAR_PATTERN=Pattern.compile("^[Cc]har$");
+    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
 
     private final Map<String,List<AVMABIDefinitions.AVMEventSignature>> signatureMap;
@@ -94,6 +95,8 @@ public class AVMEventDecoder extends EventDecoder {
 
                 return Optional.of(builder.build());
             } catch (DecodeException | RuntimeException e){
+                GENERAL.trace("Failed to parse log:{}\nWith signature:{}\n",txLog, signature);
+                GENERAL.trace("Caused by exception: ",e);
                 return Optional.empty();
             }
         } else {

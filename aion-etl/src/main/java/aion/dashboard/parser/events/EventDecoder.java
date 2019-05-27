@@ -8,6 +8,8 @@ import aion.dashboard.service.ContractService;
 import aion.dashboard.service.ContractServiceImpl;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.TxLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +19,7 @@ public abstract class EventDecoder {
 
 
     private static ContractService service = ContractServiceImpl.getInstance();
+    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
     private static final CacheManager<String,Contract> CONTRACT_CACHE = CacheManager.getManager(CacheManager.Cache.CONTRACT);
     /**
@@ -24,16 +27,20 @@ public abstract class EventDecoder {
      * @param contractAddress the contract which triggered the event
      * @return the decoder to be used to decode the event
      */
-    public static EventDecoder decoderFor(String contractAddress){
-        final ContractType contractType;
-        if (Utils.sanitizeHex(contractAddress).equalsIgnoreCase("0000000000000000000000000000000000000000000000000000000000000200"))
-            contractType = ContractType.DEFAULT;
-        else
-            contractType = findContract(Utils.sanitizeHex(contractAddress)).map(Contract::getContractType).orElseThrow(() -> new InvalidContractException("Failed to find contract in the database"));
+    public static EventDecoder decoderFor(String contractAddress) {
+        try {
+            final ContractType contractType;
+            if (Utils.sanitizeHex(contractAddress).equalsIgnoreCase("0000000000000000000000000000000000000000000000000000000000000200"))
+                contractType = ContractType.DEFAULT;
+            else
+                contractType = findContract(Utils.sanitizeHex(contractAddress)).map(Contract::getContractType).orElseThrow(() -> new InvalidContractException("Failed to find contract in the database"));
 
-        return decoderFor(contractType);
+            return decoderFor(contractType);
+        }catch (Exception e){
+            GENERAL.error("Error finding decoder for contract: {}", contractAddress);
+            throw e;
+        }
     }
-
 
     public static EventDecoder decoderFor(ContractType type){
         switch (type) {
