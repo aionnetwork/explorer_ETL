@@ -29,11 +29,9 @@ public abstract class EventDecoder {
      */
     public static EventDecoder decoderFor(String contractAddress) {
         try {
-            final ContractType contractType;
-            if (Utils.sanitizeHex(contractAddress).equalsIgnoreCase("0000000000000000000000000000000000000000000000000000000000000200"))
-                contractType = ContractType.DEFAULT;
-            else
-                contractType = findContract(Utils.sanitizeHex(contractAddress)).map(Contract::getContractType).orElseThrow(() -> new InvalidContractException("Failed to find contract in the database"));
+            final ContractType contractType= findContract(Utils.sanitizeHex(contractAddress))
+                    .map(Contract::getContractType)
+                    .orElse(ContractType.DEFAULT);
 
             return decoderFor(contractType);
         }catch (Exception e){
