@@ -271,4 +271,8 @@ public class DbQuery {
 
     public static String InternalTransferDelete = "delete from graphing where block_number > ?";
 
+
+    //---------------------------VerifiedContract-------------------------
+    public static final String SelectFromVerifiedContract =  "SELECT permission from verified_contract where contract_address = ?";
+
 }

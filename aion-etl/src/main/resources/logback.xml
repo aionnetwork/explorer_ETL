@@ -33,7 +33,7 @@
     <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
     <appender name="appender_console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d %-5level [%thread]: %msg%n</pattern>
+            <pattern>%logger{0} | %d %-5level| [%thread]: %msg%n</pattern>
         </encoder>
     </appender>
     <appender name="appenderasync_console" level="info" class="ch.qos.logback.classic.AsyncAppender">
@@ -87,14 +87,41 @@
         <neverBlock>true</neverBlock>
         <appender-ref ref="appender_analytics" />
     </appender>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_integrity" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_BASE}/integrity.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${LOG_ARCHIVE}/integrity/integrity.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>15</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>100MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%date{"yyyy-MM-dd'T'HH:mm:ss.SSS"}| %-5level | [%thread]: %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="appenderasync_integrity" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <maxFlushTime>30000</maxFlushTime>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="appender_integrity" />
+    </appender>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
     <logger name="logger_analytics" level="debug" additivity="false">
         <appender-ref ref="appenderasync_analytics"/>
     </logger>
-    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
     <logger name="logger_general" level="trace" additivity="false">
         <appender-ref ref="appenderasync_file"/>
         <appender-ref ref="appenderasync_console"/>
         <!--all error-level logs trigger email-->
         <!--appender-ref ref="appender_email"/-->
+    </logger>
+    <logger name="logger_integrity" level="trace" additivity="false">
+        <appender-ref ref="appenderasync_integrity"/>
+        <appender-ref ref="appenderasync_console"/>
     </logger>
 </configuration>

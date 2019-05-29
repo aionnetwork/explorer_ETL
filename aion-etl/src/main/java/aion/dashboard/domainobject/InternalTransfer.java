@@ -1,6 +1,7 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.service.VerifierService;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
@@ -88,10 +89,11 @@ public class InternalTransfer {
     public static List<InternalTransfer> transfersFrom(List<ContractEvent> eventList, TxDetails tx, BlockDetails b){
 
         return IntStream.range(0, eventList.size())
-                .mapToObj(i-> from(eventList.get(i), tx, b, i))
-                .filter(Optional::isPresent)
+                .filter(i-> VerifierService.getInstance().verify(eventList.get(i).getAddress(), VerifierService.Permission.INTERNAL_TRANSFER))//check if the contract is allowed to create an internal transfer
+                .mapToObj(i-> from(eventList.get(i), tx, b, i))//create the internal transfer
+                .filter(Optional::isPresent)//check  if the transfer could be read
                 .map(Optional::get)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());// store into a list and return
     }
 
     private static <T> T getInput( ContractEvent event, Class<T> type, String... names ){
