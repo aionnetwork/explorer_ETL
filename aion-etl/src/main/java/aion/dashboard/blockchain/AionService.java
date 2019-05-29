@@ -1,5 +1,7 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.blockchain.type.APITransaction;
 import aion.dashboard.config.Config;
 import aion.dashboard.exception.AionApiException;
 import org.aion.api.IAionAPI;
@@ -7,6 +9,7 @@ import org.aion.api.IContract;
 import org.aion.api.sol.ISolidityArg;
 import org.aion.api.type.*;
 import org.aion.base.type.AionAddress;
+import org.aion.base.type.Hash256;
 import org.aion.vm.api.interfaces.Address;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,17 +144,10 @@ public class AionService implements APIService{
 
 	public String getBlockHashbyNumber(long blockNumber) throws AionApiException {
 		String result;
-		ApiMsg apiMsg = new ApiMsg();
 		try {
-			reconnect();
-			apiMsg.set(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+			Block b = doGetBlock(blockNumber);
+			result = b.getHash().toString();
 
-			if (apiMsg.isError()) {
-				throw new AionApiException(formatError(apiMsg));
-			} else {
-				Block b = apiMsg.getObject();
-				result = b.getHash().toString();
-			}
 
 
 		} catch (AionApiException e) {
@@ -162,6 +158,19 @@ public class AionService implements APIService{
 		}
 
 		return result;
+	}
+
+	private Block doGetBlock(long blockNumber) throws AionApiException {
+
+		reconnect();
+		var apiMsg =(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+
+		if (apiMsg.isError()) {
+			throw new AionApiException(formatError(apiMsg));
+		}
+
+
+		return apiMsg.getObject();
 	}
 
 	public long getBlockNumber() throws AionApiException {
@@ -380,8 +389,43 @@ public class AionService implements APIService{
 		if (api != null) api.destroyApi();
 	}
 
+	@Override
+	public APIBlock getBlock(long blockNumber) throws AionApiException {
+		try {
+			return APIBlock.from(doGetBlock(blockNumber));
+		}catch (RuntimeException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+	}
 
-	private String formatRuntimeException(RuntimeException e) {
+    @Override
+    public APITransaction getTransaction(String txHash) throws Exception {
+
+
+		ApiMsg apiMsg = new ApiMsg();
+		Transaction transaction;
+		try {
+
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getTransactionByHash(Hash256.wrap(txHash)), api));
+
+			if (apiMsg.isError()) {
+				throw new AionApiException(formatError(apiMsg));
+			} else {
+				transaction = apiMsg.getObject();
+			}
+
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in getNonce()", e);
+			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+
+		return APITransaction.from(transaction);
+    }
+
+
+    private String formatRuntimeException(RuntimeException e) {
 		return "AionService: Caught a runtime exception while reading Aionapi: EXCEPTION_MESSAGE[" + e.getMessage()+"]";
 	}
 

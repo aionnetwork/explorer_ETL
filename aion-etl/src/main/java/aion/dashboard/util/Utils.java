@@ -37,7 +37,9 @@ public class Utils {
     }
 
 
-
+    public static String strip(String str){
+        return str.strip().replaceAll("^0*","");
+    }
     public static  <T> T getLastRecord(List<T> list){
         return list.get(list.size()-1);
     }
@@ -163,5 +165,9 @@ public class Utils {
         } while (resultPredicate.negate().test(res));
         return res;
 
+    }
+
+    public static boolean compareStrings(String str1, String str2){
+        return strip(str1).equalsIgnoreCase(strip(str2));
     }
 }

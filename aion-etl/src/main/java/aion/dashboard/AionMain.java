@@ -15,6 +15,7 @@ public class AionMain {
 
 	public static void main(String[] args) throws AionApiException, InterruptedException {
 		((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("logger_general")).setLevel(Config.getInstance().getGeneralLevel());
+		((ch.qos.logback.classic.Logger) LoggerFactory.getLogger("logger_integrity")).setLevel(Config.getInstance().getIntegrityCheckLevel());
 		if (args.length == 0)
 			InitTask.start();
 		else {

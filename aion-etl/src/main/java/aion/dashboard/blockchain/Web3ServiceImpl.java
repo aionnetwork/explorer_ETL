@@ -1,13 +1,20 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.blockchain.type.APITransaction;
+import aion.dashboard.blockchain.type.Result;
 import aion.dashboard.config.Config;
 import aion.dashboard.exception.HttpStatusException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.service.SchedulerService;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.aion.api.sol.impl.Int;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.Closeable;
@@ -16,7 +23,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +34,8 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String GET_BALANCE = "eth_getBalance";
     private static final String GET_NONCE = "eth_getTransactionCount";
     private static final String GET_BLOCK_NUMBER="eth_blockNumber";
+    private static final String GET_BLOCK = "eth_getBlockByNumber";
+    private static final String GET_TRANSACTION_BY_HASH= "eth_getTransactionByHash";
     private final AtomicReference<String> endpoint;
     private final AtomicInteger count;
     private final HttpHeaders httpHeaders;
@@ -35,6 +43,8 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private List<String> web3Providers;
     private Future<?> future;
     private boolean isClosed = false;
+    private final ObjectMapper mapper;
+
 
     private Web3ServiceImpl() {
         httpHeaders = new HttpHeaders();
@@ -44,12 +54,21 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         future = es.scheduleWithFixedDelay(this::heartBeat, 0, 100, TimeUnit.SECONDS);
         count = new AtomicInteger(0);
         endpoint = new AtomicReference<>(web3Providers.get(count.get()));
+        mapper = new ObjectMapper();
 
 
         restExecutor = new RestTemplateBuilder()
                 .setReadTimeout(Duration.ofMillis(10_000L))
                 .setConnectTimeout(Duration.ofMillis(10_000L))
                 .build();
+
+    }
+
+
+    private static ObjectMapper configuredMapper(){
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(JsonGenerator.Feature.WRITE_NUMBERS_AS_STRINGS, true);
+        return mapper;
     }
 
     public static Web3ServiceImpl getInstance() {
@@ -70,7 +89,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         JSONArray array = new JSONArray(args);
 
         JSONObject object = new JSONObject();
-        object.put("method", method).put("params", array);
+        object.put("method", method).put("params", array).put("id",1);
 
         return object.toString();
     }
@@ -106,7 +125,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     public boolean ping(String ep) {
         try {
 
-            String res = executeCall(buildWeb3Call("ping"), ep);
+            String res = executeCall(buildWeb3Call("ping"), ep, String.class);
             return res.equalsIgnoreCase("pong");
         } catch (Exception e) {
             return false;
@@ -139,8 +158,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
 
     @Override
     public long getBlockNumber() throws Exception {
-        var blockNumber = executeCall(buildWeb3Call(GET_BLOCK_NUMBER));
-        return Long.parseLong(blockNumber);
+        return  executeCall(buildWeb3Call(GET_BLOCK_NUMBER), endpoint.get(), Integer.class);
     }
 
     @Override
@@ -152,10 +170,11 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     }
 
     String executeCall(String jsonMethod) throws Web3ApiException {
-        return executeCall(jsonMethod, endpoint.get());// perform http request with the default ep
+        return executeCall(jsonMethod, endpoint.get(), String.class);// perform http request with the default ep
     }
 
-    String executeCall(String jsonMethod, String endpoint) throws Web3ApiException {
+
+    <T> T executeCall(String jsonMethod, String endpoint, Class<T> tClass) throws Web3ApiException {
         validateState();
         try {
 
@@ -164,7 +183,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
 
             HttpEntity<String> entity = new HttpEntity<>(jsonMethod, httpHeaders);
 
-            ResponseEntity<String> responseEntity = restExecutor.exchange(formatWeb3Provider(endpoint), HttpMethod.POST, entity, String.class);
+            ResponseEntity<Result> responseEntity = restExecutor.exchange(formatWeb3Provider(endpoint), HttpMethod.POST, entity, Result.class);
 
             // query the response status
 
@@ -172,15 +191,19 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
 
                 // if 200 extract the response
 
-                JSONObject responseObject = new JSONObject(Optional.ofNullable(responseEntity.getBody()).orElse("{}"));
 
-                var res = responseObject.optString("result", "");
+                var res = responseEntity.getBody().getResult();
 
-                if (res.isEmpty()) {
-                    throw new NoSuchElementException("Failed to get a valid response from web3. Response:\n" + responseObject.toString());
+                if (res == null) {
+                    throw new NoSuchElementException("Failed to get a valid response from web3. Response:\n" + responseEntity.toString());
+                } else if (res instanceof String && (((String) res).isBlank() || ((String) res).isEmpty())) {
+                    throw new NoSuchElementException("Failed to get a valid response from web3. Response:\n" + responseEntity.toString());
+                } else  if (res instanceof String || res instanceof Integer || res instanceof Long) {
+                    return (T) res;
                 } else {
-                    return res;
+                    return mapper.convertValue(res, tClass);
                 }
+
             } else {
                 // throw if not 200
                 throw new HttpStatusException(responseEntity.getStatusCode());
@@ -218,6 +241,16 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         future.cancel(true);
         isClosed = true;
         endpoint.set(null);
+    }
+
+    @Override
+    public APIBlock getBlock(long blockNumber) throws Web3ApiException {
+        return executeCall(buildWeb3Call(GET_BLOCK, blockNumber), endpoint.get(), APIBlock.class);
+    }
+
+    @Override
+    public APITransaction getTransaction(String txHash) throws Exception {
+        return executeCall(buildWeb3Call(GET_TRANSACTION_BY_HASH, txHash), endpoint.get(), APITransaction.class);
     }
 
 

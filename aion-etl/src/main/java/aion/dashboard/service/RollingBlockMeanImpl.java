@@ -96,7 +96,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 long endPointer  = startPointer + requestSize-1 ;// get range inclusive of request pointer
                 temp.addAll(service.getBlockDetailsByRange(startPointer, endPointer));
                 startPointer =temp.get(temp.size() -1).getNumber()+1;
-                requestSize = (end - startPointer+1) <= 1000 ? end - startPointer+1: 1000;
+                requestSize = (end - startPointer+1) <= maxSize ? end - startPointer+1: maxSize;
             }
         }
         return temp;
@@ -127,7 +127,6 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     }
 
-    @Override
     public synchronized void reorg(long consistentBlock) {
 
         blockHistory.removeIf(b -> b.getNumber() >= consistentBlock);

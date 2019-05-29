@@ -250,6 +250,33 @@ public class Transaction {
         return txLogs.toString();
     }
 
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "transactionHash='" + transactionHash + '\'' +
+                ", blockHash='" + blockHash + '\'' +
+                ", blockNumber=" + blockNumber +
+                ", blockTimestamp=" + blockTimestamp +
+                ", transactionIndex=" + transactionIndex +
+                ", fromAddr='" + fromAddr + '\'' +
+                ", toAddr='" + toAddr + '\'' +
+                ", nrgConsumed=" + nrgConsumed +
+                ", nrgPrice=" + nrgPrice +
+                ", transactionTimestamp=" + transactionTimestamp +
+                ", value=" + value +
+                ", transactionLog='" + transactionLog + '\'' +
+                ", data='" + data + '\'' +
+                ", nonce='" + nonce + '\'' +
+                ", txError='" + txError + '\'' +
+                ", contractAddr='" + contractAddr + '\'' +
+                ", blockYear=" + blockYear +
+                ", blockMonth=" + blockMonth +
+                ", blockDay=" + blockDay +
+                ", approxValue=" + approxValue +
+                ", type=" + type +
+                '}';
+    }
+
     public static class TransactionBuilder {
 
         private String transactionHash;

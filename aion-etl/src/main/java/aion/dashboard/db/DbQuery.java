@@ -58,6 +58,7 @@ public class DbQuery {
     public static final String AccountSelectByContractAddrAndTxID = "select * from account where transaction_hash = ? and address = ? limit 1";
     public static final String AccountCount = "select max(last_block_number) from account ";
     public static final String AccountSelectGreaterThanBlockNumber = "select * from account where last_block_number >=?";
+    public static final String AccountSelectRandom = "select * from account order by rand() limit ?";
 
     //Block
     public static final String BlockGetMaxBlockNumber ="select max(block_number) from block ";
@@ -95,6 +96,10 @@ public class DbQuery {
             "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
+
+
+    public static final String SelectFromBlockInRange = "Select * from block where block_number between ? and ?";
+
 
     //Transaction
     public static final String TransactionDeleteByBlock = "delete from transaction where block_number > ?";

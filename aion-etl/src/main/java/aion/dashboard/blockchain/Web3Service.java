@@ -1,5 +1,6 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.exception.Web3ApiException;
 
 import java.math.BigInteger;

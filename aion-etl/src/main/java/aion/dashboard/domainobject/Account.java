@@ -114,9 +114,21 @@ public class Account {
                 .transactionHash(tx==null?"":tx.getTxHash().toString())
                 .build();
     }
-    public static class AccountBuilder
 
-    {
+    @Override
+    public String toString() {
+        return "Account{" +
+                "lastBlockNumber=" + lastBlockNumber +
+                ", transactionHash='" + transactionHash + '\'' +
+                ", balance=" + balance +
+                ", address='" + address + '\'' +
+                ", contract=" + contract +
+                ", nonce='" + nonce + '\'' +
+                ", approxBalance=" + approxBalance +
+                '}';
+    }
+
+    public static class AccountBuilder {
         private String address;
         private String nonce;
         private BigDecimal balance;

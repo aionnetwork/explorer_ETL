@@ -1,15 +1,14 @@
 package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
-import aion.dashboard.config.Config;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
+import aion.dashboard.integrityChecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
-import aion.dashboard.worker.IntegrityCheckThread;
-import org.aion.api.type.BlockDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,8 +111,7 @@ public final class InitTask {
         producers.add(accountParser);
 
 
-        IntegrityCheckThread checkThread = new IntegrityCheckThread();
-        checkThread.start();
+        IntegrityCheckManager.getInstance().startAll();
         extractor.start();
         parser.start();
         tokenParser.start();
@@ -142,6 +140,8 @@ public final class InitTask {
 
             consumer.stop();
             task.stop();
+            IntegrityCheckManager.getInstance().shutdown();
+            Web3Service.getInstance().close();
             AionService.getInstance().close();
             GENERAL.info("Succesfully shutdown the ETL");
 

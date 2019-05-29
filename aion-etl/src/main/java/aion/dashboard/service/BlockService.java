@@ -26,4 +26,6 @@ public interface BlockService {
     PreparedStatement prepare(Connection con, List<Block> blocks) throws SQLException;
 
     Optional<List<Block>> getBlocksInTimeRange(long timestampStart, long timestampEnd);
+
+    Optional<List<Block>> getBlocksByRange(long numberStart, long numEnd );
 }
