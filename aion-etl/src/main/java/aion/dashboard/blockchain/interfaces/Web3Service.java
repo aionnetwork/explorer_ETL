@@ -1,11 +1,11 @@
-package aion.dashboard.blockchain;
+package aion.dashboard.blockchain.interfaces;
 
-import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.exception.Web3ApiException;
 
 import java.math.BigInteger;
 
-public interface Web3Service extends APIService{
+public interface Web3Service extends APIService {
 
 
     public static Web3Service getInstance() {

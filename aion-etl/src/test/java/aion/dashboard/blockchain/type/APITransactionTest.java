@@ -1,15 +1,12 @@
 package aion.dashboard.blockchain.type;
 
-import aion.dashboard.blockchain.APIService;
-import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.interfaces.APIService;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.domainobject.Transaction;
-import aion.dashboard.service.BlockService;
-import aion.dashboard.service.BlockServiceImpl;
 import aion.dashboard.service.TransactionService;
 import aion.dashboard.service.TransactionServiceImpl;
 import org.junit.jupiter.api.Test;
 
-import java.sql.SQLException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;

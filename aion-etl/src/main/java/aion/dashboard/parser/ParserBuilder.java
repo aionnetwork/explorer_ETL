@@ -1,6 +1,6 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.RollingBlockMean;

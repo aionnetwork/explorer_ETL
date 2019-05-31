@@ -1,13 +1,12 @@
-package aion.dashboard.integrityChecks;
+package aion.dashboard.integritychecks;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.service.AccountService;
 import aion.dashboard.util.Tuple2;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;

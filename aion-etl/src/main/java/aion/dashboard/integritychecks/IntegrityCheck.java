@@ -1,4 +1,4 @@
-package aion.dashboard.integrityChecks;
+package aion.dashboard.integritychecks;
 
 import aion.dashboard.domainobject.Block;
 import aion.dashboard.service.BlockService;

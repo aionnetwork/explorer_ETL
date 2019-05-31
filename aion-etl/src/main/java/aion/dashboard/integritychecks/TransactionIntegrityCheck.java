@@ -1,6 +1,6 @@
-package aion.dashboard.integrityChecks;
+package aion.dashboard.integritychecks;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.type.APITransaction;
 import aion.dashboard.domainobject.Block;
 import aion.dashboard.domainobject.Transaction;

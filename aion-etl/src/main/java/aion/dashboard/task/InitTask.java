@@ -2,11 +2,11 @@ package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Extractor;
-import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
-import aion.dashboard.integrityChecks.IntegrityCheckManager;
+import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
 import org.slf4j.Logger;

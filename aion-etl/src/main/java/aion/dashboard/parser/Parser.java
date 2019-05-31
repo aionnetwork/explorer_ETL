@@ -1,6 +1,6 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
