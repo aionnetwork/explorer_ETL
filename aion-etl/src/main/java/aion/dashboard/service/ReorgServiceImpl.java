@@ -107,7 +107,9 @@ public class ReorgServiceImpl implements ReorgService {
             var comparison = dbBlock !=null && apiBlock !=null && apiBlock.compareHash(dbBlock);
 
             if (!comparison){
-                GENERAL.error("Chain inconsistent at depth {}. DBBlock=[{}] != APIBlock=[{}]", blockToCheck, dbBlock.getBlockHash(), apiBlock.getHash() );
+                var dbHash = dbBlock == null ? "null" : dbBlock.getBlockHash();
+                var apiHash = apiBlock == null ? "null" : apiBlock.getHash();
+                GENERAL.error("Chain inconsistent at depth {}. DBBlock=[{}] != APIBlock=[{}]", blockToCheck, dbHash, apiHash );
                 return blockNumber - depth;
             }
             else {
