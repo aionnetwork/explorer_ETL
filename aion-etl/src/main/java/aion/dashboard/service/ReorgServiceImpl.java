@@ -1,6 +1,8 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.domainobject.Block;
@@ -33,6 +35,7 @@ public class ReorgServiceImpl implements ReorgService {
     private static final TimeLogger TIME_LOGGER = new TimeLogger(ReorgService.class.getName());
 
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
+    private final Web3Service web3Service;
 
     private TokenHoldersService tokenHoldersService;
     private ParserStateService stateService;
@@ -41,7 +44,8 @@ public class ReorgServiceImpl implements ReorgService {
     private BlockService blockService;
     private long reorgLimit;
 
-    public ReorgServiceImpl(AionService aionService, ParserStateService stateService) {
+    public ReorgServiceImpl(AionService aionService, ParserStateService stateService, Web3Service web3Service) {
+        this.web3Service = web3Service;
         accountService = AccountServiceImpl.getInstance();
         blockService = BlockServiceImpl.getInstance();
         tokenHoldersService = TokenHoldersServiceImpl.getInstance();
@@ -52,68 +56,66 @@ public class ReorgServiceImpl implements ReorgService {
     }
 
     @Override
-    public boolean reorg() throws AionApiException, ReorganizationLimitExceededException, SQLException {
+    public boolean reorg() throws Exception {
         if (!borrowedAionService.isConnected()) borrowedAionService.reconnect();
         long blkChainPointer = borrowedAionService.getBlockNumber();
         long dbPointer = stateService.readDBState().getBlockNumber().longValue();
         long consistentBlockPointer;
-        if (dbPointer == -1) return false;
-
-        if (blkChainPointer >= dbPointer) consistentBlockPointer = findConsistentBlock(dbPointer);
-        else consistentBlockPointer = findConsistentBlock(blkChainPointer);
-
-        long requestedReorgSize = dbPointer - consistentBlockPointer;
-
-        if (requestedReorgSize == 0){
-            GENERAL.trace("Reorg OK. ETL consistent at {}", consistentBlockPointer);
+        if (dbPointer == -1) {
             return false;
-        } else if (requestedReorgSize < 0) {
-            GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
-            throw new IllegalStateException();
-        } else if (requestedReorgSize > reorgLimit) {
-            GENERAL.debug("Reorg: Requested reorg greater than limit: {}", requestedReorgSize);
-            throw new ReorganizationLimitExceededException();
-        }
+        } else {
+            if (blkChainPointer >= dbPointer) consistentBlockPointer = checkDepth(dbPointer, reorgLimit);
+            else consistentBlockPointer = checkDepth(blkChainPointer, reorgLimit);
 
-        return performReorg(consistentBlockPointer);
+            long requestedReorgSize = dbPointer - consistentBlockPointer;
+
+            if (requestedReorgSize == 0) {
+                GENERAL.trace("Reorg OK. ETL consistent at {}", consistentBlockPointer);
+                return false;
+            } else if (requestedReorgSize < 0) {
+                GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
+                throw new IllegalStateException();
+            } else {
+                return performReorg(consistentBlockPointer);
+            }
+        }
     }
 
-    /**
-     * Find the last block at which the database matches the kernel
-     * @param startingBlock The block at which the search should start
-     * @return the mactching block number
-     * @throws AionApiException
-     * @throws ReorganizationLimitExceededException
-     * @throws SQLException
-     */
-    private long findConsistentBlock(long startingBlock) throws AionApiException, ReorganizationLimitExceededException, SQLException {
-        long consistentBlock = startingBlock;
 
 
-        while (true) {
-            Block dbBlock = blockService.getByBlockNumber(consistentBlock);
-            String dbHash = dbBlock == null? null : dbBlock.getBlockHash();
-            String chainHash = borrowedAionService.getBlockHashbyNumber(consistentBlock);
 
-
-            if (dbHash != null && dbHash.equals(chainHash)) {
-                GENERAL.trace("Chain consistent at height {}" + "BC[{}] == DB[{}]", consistentBlock, chainHash, dbHash);
-                break;
-            } else
-                GENERAL.debug("Chain inconsistent at height {}" + "BC[{}] != DB[{}]", consistentBlock, chainHash, dbHash);
-            if (consistentBlock <=1) {
-                GENERAL.debug("Reorg: Requested reorganization past genesis. Not allowed.");
-                throw new ReorganizationLimitExceededException();
-            } else if (startingBlock - consistentBlock >= reorgLimit) {
-                GENERAL.debug("Reorg: Requested reorganization exceeded limit.");
-                throw new ReorganizationLimitExceededException();
-
-            }
-
-            consistentBlock --;
+    private long checkDepth(long blockNumber, long depth) throws Exception {
+        var res = doCheck(blockNumber, depth);
+        if (res>0){
+            return res;
         }
+        else {
+            return blockNumber;
+        }
+    }
 
-        return consistentBlock;
+
+    private long doCheck(final long blockNumber, final long depth) throws Exception {
+        final long blockToCheck = blockNumber - depth;
+        if (depth <= 0 || blockToCheck < 0){
+            return -1;
+        }
+        else {
+            APIBlock apiBlock = web3Service.getBlock(blockToCheck);
+            Block dbBlock = blockService.getByBlockNumber(blockToCheck);
+
+            var comparison = apiBlock.compareHash(dbBlock);
+
+            if (!comparison){
+                GENERAL.error("Chain inconsistent at depth {}. DBBlock=[{}] != APIBlock=[{}]", blockToCheck, dbBlock.getBlockHash(), apiBlock.getHash() );
+                return blockNumber - depth;
+            }
+            else {
+                GENERAL.trace("Chain consistent at depth {}. DBBlock=[{}] == APIBlock=[{}]", blockToCheck, dbBlock.getBlockHash(), apiBlock.getHash() );
+
+                return doCheck(blockNumber, depth-1);
+            }
+        }
     }
 
     /**

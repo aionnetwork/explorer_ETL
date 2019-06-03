@@ -1,5 +1,6 @@
 package aion.dashboard.blockchain.type;
 
+import aion.dashboard.domainobject.Block;
 import aion.dashboard.util.Utils;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
@@ -32,6 +33,9 @@ public class APIBlock {
     private String hash;
     private long timestamp;
 
+    public String getHash() {
+        return hash;
+    }
 
     private APIBlock(String logsBloom, String totalDifficulty, String receiptsRoot, String extraData, String nrgUsed, List<String> transactions, String nonce, String miner, String difficulty, String number, String gasLimit, String gasUsed, String nrgLimit, String solution, String size, String transactionsRoot, String stateRoot, String parentHash, String hash, String timestamp) {
         this.logsBloom = Utils.sanitizeHex(logsBloom);
@@ -102,6 +106,12 @@ public class APIBlock {
 
 
     }
+
+    public boolean compareHash(Block block){
+        return Utils.compareStrings(this.hash, block.getBlockHash());
+    }
+
+
 
 
     private static final ThreadLocal<APIBlockBuilder> blockBuilderThreadLocal = ThreadLocal.withInitial(APIBlockBuilder::new);

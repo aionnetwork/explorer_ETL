@@ -54,6 +54,13 @@ public class Consumer {
         workers.submit(this::consumeBlocks);
         workers.submit(this::consumeTokens);
         workers.submit(this::consumeAccounts);
+        workers.scheduleWithFixedDelay(() -> {
+            try {
+                this.reorg();
+            } catch (Exception e) {
+                GENERAL.warn("The reorg failed with the exception: ",e);
+            }
+        }, 100, 10, TimeUnit.SECONDS);
     }
 
 
@@ -100,21 +107,9 @@ public class Consumer {
     }
 
     private void consumeBlocks() {
-        while (keepRunning(blockProducer)) {
-            try {
-                reorg();
-                Thread.currentThread().setName("blocks-loader");
-
-                var message = getMessage(blockProducer);
-
-                doWrites(message, blockWriter);
-                blockProducer.consume();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                // ignore for now
-            }
-        }        GENERAL.info("Ended block loader");
+        Thread.currentThread().setName("block-loader");
+        load(blockProducer, blockWriter);
+        GENERAL.info("Ended block loader");
     }
 
     private void consumeTokens() {
@@ -134,7 +129,7 @@ public class Consumer {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
-                // ignore for now
+                GENERAL.error("Failed to load blocks due to exception:  ",e);
             }
         }
     }
@@ -170,6 +165,7 @@ public class Consumer {
 
         try {
             Thread.currentThread().setName("Reorg-Th");
+            GENERAL.info("Checking for chain inconsistencies.");
 
             if (service.reorg()) {
                 reset();
