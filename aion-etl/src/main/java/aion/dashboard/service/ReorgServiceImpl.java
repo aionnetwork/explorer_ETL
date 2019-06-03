@@ -104,7 +104,7 @@ public class ReorgServiceImpl implements ReorgService {
             APIBlock apiBlock = web3Service.getBlock(blockToCheck);
             Block dbBlock = blockService.getByBlockNumber(blockToCheck);
 
-            var comparison = apiBlock.compareHash(dbBlock);
+            var comparison = dbBlock !=null && apiBlock !=null && apiBlock.compareHash(dbBlock);
 
             if (!comparison){
                 GENERAL.error("Chain inconsistent at depth {}. DBBlock=[{}] != APIBlock=[{}]", blockToCheck, dbBlock.getBlockHash(), apiBlock.getHash() );
