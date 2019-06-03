@@ -31,7 +31,7 @@ public final class InitTask {
     private static void revert(String blk) {
 
         ParserStateServiceImpl ps = ParserStateServiceImpl.getInstance();
-        ReorgServiceImpl reorgService = new ReorgServiceImpl(AionService.getInstance(), ps);
+        ReorgServiceImpl reorgService = new ReorgServiceImpl(AionService.getInstance(), ps, Web3Service.getInstance());
         long blknum = Long.parseLong(blk) + 1;
         try {
             reorgService.performReorg(blknum);
@@ -101,7 +101,7 @@ public final class InitTask {
                 .setAccountWriter(new AccountWriter())
                 .setBlockWriter(new BlockWriter())
                 .setTokenWriter(new TokenWriter())
-                .setService(new ReorgServiceImpl(AionService.getInstance(),ps))
+                .setService(new ReorgServiceImpl(AionService.getInstance(),ps, Web3Service.getInstance()))
                 .createConsumer();
 
 
