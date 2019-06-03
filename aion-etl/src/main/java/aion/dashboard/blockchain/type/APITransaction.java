@@ -68,7 +68,7 @@ public class APITransaction {
     }
 
     public boolean compareTransactions(aion.dashboard.domainobject.Transaction transaction){
-        return BigInteger.valueOf(transaction.getNrgPrice()).compareTo(this.nrgPrice) == 0 && Utils.compareStrings(transaction.getBlockHash(),(this.blockHash)) && Utils.compareStrings(transaction.getTransactionHash(),this.hash)
+        return transaction != null && BigInteger.valueOf(transaction.getNrgPrice()).compareTo(this.nrgPrice) == 0 && Utils.compareStrings(transaction.getBlockHash(),(this.blockHash)) && Utils.compareStrings(transaction.getTransactionHash(),this.hash)
                 && transaction.getTransactionIndex() == this.transactionIndex && Utils.compareStrings(transaction.getNonce(), this.nonce)
                 && Utils.compareStrings(transaction.getFromAddr(),this.from) && Utils.compareStrings(transaction.getToAddr(),this.to)
                 && Utils.compareStrings(transaction.getData(),this.input) && transaction.getBlockNumber() == this.blockNumber

@@ -87,28 +87,31 @@ public class APIBlock {
     }
 
     public boolean compareBlocks(aion.dashboard.domainobject.Block block ){
-        List<String> txHashes = Arrays.stream(block.getTransactionHashes().replaceAll("(\\[|]|\")", "").split(",")).filter(s -> !s.isBlank()).filter(s1 -> !s1.isEmpty()).collect(Collectors.toList());
-        if(this.transactions.containsAll(txHashes) && txHashes.containsAll(transactions)){
-            return Utils.compareStrings(this.parentHash, block.getParentHash()) && Utils.compareStrings(this.logsBloom, block.getBloom())
-                    && this.totalDifficulty== block.getTotalDifficulty() && Utils.compareStrings(this.receiptsRoot, block.getReceiptTxRoot())
-                    && Utils.compareStrings(this.extraData,(block.getExtraData())) && this.nrgUsed== block.getNrgConsumed()
-                    && Utils.compareStrings(this.nonce,block.getNonce()) && Utils.compareStrings(this.miner,(block.getMinerAddress()))
-                    && this.difficulty==(block.getDifficulty()) && this.number == block.getBlockNumber()
-                    && this.nrgLimit == (block.getNrgLimit()) && Utils.compareStrings(this.solution,(block.getSolution()))
-                    && this.size== block.getBlockSize() && Utils.compareStrings(this.transactionsRoot,(block.getTxTrieRoot()))
-                    && Utils.compareStrings(this.stateRoot, block.getStateRoot())&& Utils.compareStrings(block.getBlockHash(),(this.hash))
-                    && this.timestamp == block.getBlockTimestamp();
-
-        }
-        else {
+        if (block == null) {
             return false;
-        }
+        }else {
+            List<String> txHashes = Arrays.stream(block.getTransactionHashes().replaceAll("(\\[|]|\")", "").split(",")).filter(s -> !s.isBlank()).filter(s1 -> !s1.isEmpty()).collect(Collectors.toList());
 
+            if (this.transactions.containsAll(txHashes) && txHashes.containsAll(transactions)) {
+                return Utils.compareStrings(this.parentHash, block.getParentHash()) && Utils.compareStrings(this.logsBloom, block.getBloom())
+                        && this.totalDifficulty == block.getTotalDifficulty() && Utils.compareStrings(this.receiptsRoot, block.getReceiptTxRoot())
+                        && Utils.compareStrings(this.extraData, (block.getExtraData())) && this.nrgUsed == block.getNrgConsumed()
+                        && Utils.compareStrings(this.nonce, block.getNonce()) && Utils.compareStrings(this.miner, (block.getMinerAddress()))
+                        && this.difficulty == (block.getDifficulty()) && this.number == block.getBlockNumber()
+                        && this.nrgLimit == (block.getNrgLimit()) && Utils.compareStrings(this.solution, (block.getSolution()))
+                        && this.size == block.getBlockSize() && Utils.compareStrings(this.transactionsRoot, (block.getTxTrieRoot()))
+                        && Utils.compareStrings(this.stateRoot, block.getStateRoot()) && Utils.compareStrings(block.getBlockHash(), (this.hash))
+                        && this.timestamp == block.getBlockTimestamp();
+
+            } else {
+                return false;
+            }
+        }
 
     }
 
     public boolean compareHash(Block block){
-        return Utils.compareStrings(this.hash, block.getBlockHash());
+        return block != null && Utils.compareStrings(this.hash, block.getBlockHash());
     }
 
 
