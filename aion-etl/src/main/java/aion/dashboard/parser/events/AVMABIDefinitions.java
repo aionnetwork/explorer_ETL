@@ -93,7 +93,6 @@ public class AVMABIDefinitions {
 
             return Optional.of(Arrays.stream(lines)
                     .parallel()
-                    .filter(line -> NAIVE_EVENT_PATTERN.matcher(line).find()) // check that this line matches the expected pattern
                     .map(AVMABIDefinitions::fromLine)//find the event
                     .collect(Collectors.toList()));
         } catch (Exception e) {

@@ -1,4 +1,4 @@
-ATSTokenCreated(BigInteger indexed _totalSupply, Address _creator)
+ATSTokenCreated(BigInteger indexed totalSupply, Address indexed creator)
 AuthorizedOperator(Address indexed operator, Address tokenHolder)
 RevokedOperator(Address indexed operator, Address tokenHolder)
 Sent(Address indexed operator, Address indexed from, Address indexed to, BigInteger amount, byte[] data, byte[] operatorData)

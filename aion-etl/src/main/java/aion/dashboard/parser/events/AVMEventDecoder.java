@@ -124,7 +124,7 @@ public class AVMEventDecoder extends EventDecoder {
             for( var topicsParam: Utils.zip(topics,indexedParams)){
 
                 String topic = topicsParam._1();
-                String type = topicsParam._2().type.strip();
+                String type = Utils.sanitizeHex(topicsParam._2().type.strip());
                 AVMABIDefinitions.Parameter parameter = topicsParam._2();
 
                 builder.setName(topicsParam._2().index, topicsParam._2().name);
