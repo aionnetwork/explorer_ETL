@@ -59,22 +59,25 @@ public class AVMEventDecoder extends EventDecoder {
 
     @Override
     public Optional<ContractEvent> decodeEvent(TxLog txLog) {
-        String hash = Utils.sanitizeHex(txLog.getTopics().get(0));
-        try {//attempt to decode event and return as soon as the operation succeeds
-            if (signatureMap.containsKey(hash)) {
-                for (var signature : signatureMap.get(hash)) {
-                    var res = decodeEvent(txLog, signature);
-                    if (res.isPresent()) {
-                        return res;
+        if(!txLog.getTopics().isEmpty()) {
+            String hash = Utils.sanitizeHex(txLog.getTopics().get(0));
+            try {//attempt to decode event and return as soon as the operation succeeds
+                if (signatureMap.containsKey(hash)) {
+                    for (var signature : signatureMap.get(hash)) {
+                        var res = decodeEvent(txLog, signature);
+                        if (res.isPresent()) {
+                            return res;
+                        }
                     }
+
                 }
-
+            } catch (Exception e) {
+                // do nothing
             }
-        }catch (Exception e){
-            // do nothing
+            return Optional.empty();
+        }else {
+            return Optional.empty();
         }
-
-        return Optional.empty();
 
     }
 
