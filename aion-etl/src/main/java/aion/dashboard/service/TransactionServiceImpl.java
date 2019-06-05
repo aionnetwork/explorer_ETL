@@ -68,6 +68,8 @@ public class TransactionServiceImpl implements TransactionService {
             ps.setInt(18, transaction.getBlockYear());
             ps.setInt(19, transaction.getBlockMonth());
             ps.setInt(20, transaction.getBlockDay());
+            ps.setString(21,transaction.getType());
+
             ps.execute();
 
             con.commit();
@@ -126,6 +128,8 @@ public class TransactionServiceImpl implements TransactionService {
                 ps.setInt(18, transaction.getBlockYear());
                 ps.setInt(19, transaction.getBlockMonth());
                 ps.setInt(20, transaction.getBlockDay());
+                ps.setString(21,transaction.getType());
+
                 ps.execute();
             }
 
@@ -248,6 +252,7 @@ public class TransactionServiceImpl implements TransactionService {
                                 .setNonce(res.getString("nonce"))
                                 .setTxError(res.getString("tx_error"))
                                 .setContractAddr(res.getString("contract_addr"))
+                                .setType(res.getString("type"))
                                 .build());
 
                     }
@@ -291,6 +296,7 @@ public class TransactionServiceImpl implements TransactionService {
                             .setNonce(res.getString("nonce"))
                             .setTxError(res.getString("tx_error"))
                             .setContractAddr(res.getString("contract_addr"))
+                            .setType(res.getString("type"))
                             .build();
 
                 }
@@ -327,6 +333,7 @@ public class TransactionServiceImpl implements TransactionService {
             ps.setInt(18, transaction.getBlockYear());
             ps.setInt(19, transaction.getBlockMonth());
             ps.setInt(20, transaction.getBlockDay());
+            ps.setString(21,transaction.getType());
             ps.addBatch();
         }
 

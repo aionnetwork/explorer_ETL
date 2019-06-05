@@ -20,21 +20,16 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class GraphingTask implements Runnable {
-    private static Logger GENERAL = LoggerFactory.getLogger("logger_general");
+public final class GraphingTask extends AbstractGraphingTask<BlockDetails> {
     private static final TimeLogger TIME_LOGGER = new TimeLogger("");
-    private GraphingService graphingService = GraphingServiceImpl.getInstance();
     private AionService service;
     private ParserStateService parser_stateService;
-    private final static ZoneId UTCZoneID = ZoneId.of("UTC");
-    // consider moving these to the config in a future release
-    private final static int InitialDelay = 5;
-    private final static int DelayAtEndOfHour = 2;
 
 
 
-    private static GraphingTask Instance = new GraphingTask(AionService.getInstance());
-    private volatile ScheduledFuture future;
+
+
+    static final GraphingTask API_GRAPHING_TASK = new GraphingTask(AionService.getInstance());
 
 
     private GraphingTask(AionService service){
@@ -43,13 +38,7 @@ public class GraphingTask implements Runnable {
 
     }
 
-    public static GraphingTask getInstance() {
-        return Instance;
-    }
 
-    public ScheduledFuture getFuture() {
-        return future;
-    }
 
     @Override
     public void run() {
@@ -166,7 +155,8 @@ public class GraphingTask implements Runnable {
     }
 
 
-    private List<Graphing> compute(List<BlockDetails> blockDetails) throws SQLException {
+    @SuppressWarnings("Duplicates")
+    List<Graphing> compute(List<BlockDetails> blockDetails) throws SQLException {
         GENERAL.debug("Computing Statistics for blocks in range({}, {})", blockDetails.get(0).getNumber(),
                 blockDetails.get(blockDetails.size() - 1).getNumber());
         final BigDecimal BlocksMined = BigDecimal.valueOf(blockDetails.size());
@@ -189,7 +179,7 @@ public class GraphingTask implements Runnable {
 
         final BigDecimal averageHashPower = new BigDecimal(blockDetails.get(blockDetails.size() -1).getDifficulty())
                 .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
-        final BigDecimal ActiveAddressesCount = BigDecimal.valueOf(graphingService.countActiveAddresses(
+        final BigDecimal activeAddressesCount = BigDecimal.valueOf(graphingService.countActiveAddresses(
                 blockDetails.get(blockDetails.size() - 1).getNumber()));
 
 
@@ -251,45 +241,14 @@ public class GraphingTask implements Runnable {
         ret.add(builder.setValue(averageBlockTime).setGraphType(Graphing.GraphType.BLOCK_TIME).setDetail("").build());
         ret.add(builder.setValue(averageDifficulty).setGraphType(Graphing.GraphType.DIFFICULTY).setDetail("").build());
         ret.add(builder.setValue(averageHashPower).setGraphType(Graphing.GraphType.HASH_POWER).setDetail("").build());
-        ret.add(builder.setValue(ActiveAddressesCount).setGraphType(Graphing.GraphType.ACTIVE_ADDRESS_GROWTH).setDetail("").build());
+        ret.add(builder.setValue(activeAddressesCount).setGraphType(Graphing.GraphType.ACTIVE_ADDRESS_GROWTH).setDetail("").build());
         ret.add(builder.setValue(BlocksMined).setGraphType(Graphing.GraphType.BLOCKS_MINED).setDetail("").build());
 
         return ret;
     }
 
 
-    private void scheduleNext() {
-        LocalDateTime localNow = LocalDateTime.now();
-        ZoneId currentZone = ZoneId.systemDefault();
-        ZonedDateTime zonedNow = ZonedDateTime.of(localNow, currentZone);
 
-        ZonedDateTime ZonedFirstExecution = zonedNow.withSecond(0).plusHours(1).withMinute(DelayAtEndOfHour);
-
-        GENERAL.debug("Next execution scheduled at {}", ZonedFirstExecution.toString());
-
-        Duration duration = Duration.between(zonedNow, ZonedFirstExecution);
-        long delay = duration.getSeconds();//get the next hour in which this task should run
-
-        future = SchedulerService.getInstance().addRunOnce(this, delay, TimeUnit.SECONDS);//run the graphing service 2 minutes after the hour to allow for additional blocks to be imported
-        //this is a safe guard against running the service before all blocks have been added to the DB
-
-    }
-
-    public void scheduleNow(){
-        ZonedDateTime timeNow = ZonedDateTime.now(UTCZoneID);
-        ZonedDateTime timeNextHour = ZonedDateTime.now(UTCZoneID).plusHours(1).withMinute(DelayAtEndOfHour).withSecond(0);
-        Duration diff = Duration.between(timeNow, timeNextHour);
-
-
-        if (diff.toMinutes() <= 10 ) {
-            scheduleNext();// If the time to the next hour is less than 10 minutes schedule in the next hour
-        } else {
-            //Schedule the service to run in the background now
-            GENERAL.debug("Next execution of Graphing Task scheduled at {}", timeNow.plusMinutes(InitialDelay).toString());
-
-            future = SchedulerService.getInstance().addRunOnce(this, InitialDelay, TimeUnit.MINUTES);
-        }
-    }
 
 
     static boolean generatedThisHour(ZonedDateTime time){

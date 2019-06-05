@@ -58,6 +58,7 @@ public class DbQuery {
     public static final String AccountSelectByContractAddrAndTxID = "select * from account where transaction_hash = ? and address = ? limit 1";
     public static final String AccountCount = "select max(last_block_number) from account ";
     public static final String AccountSelectGreaterThanBlockNumber = "select * from account where last_block_number >=?";
+    public static final String AccountSelectRandom = "select * from account order by rand() limit ?";
 
     //Block
     public static final String BlockGetMaxBlockNumber ="select max(block_number) from block ";
@@ -94,6 +95,12 @@ public class DbQuery {
             "day) " +
             "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
+    public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
+
+
+    public static final String SelectFromBlockInRange = "Select * from block where block_number between ? and ?";
+
+
     //Transaction
     public static final String TransactionDeleteByBlock = "delete from transaction where block_number > ?";
     public static final String TransactionInsert = "replace into transaction(" +
@@ -116,24 +123,21 @@ public class DbQuery {
             "contract_addr," +
             "year, " +
             "month, " +
-            "day) " +
-            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "day, " +
+            "type) " +
+            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String TransactionSelectByBlockNumCountBlockNum = "select count(block_number) , block_number from transaction  where block_number > ? group by block_number";
 
 
     public static final String TransactionSelectIDByBlockNum = "select transaction_hash from transaction  where block_number > ?";
-    public static final String TransactionByBlockNum = "select transaction_hash,block_hash, block_number,block_timestamp,transaction_index," +
-            " from_addr,to_addr, nrg_consumed,nrg_price, transaction_timestamp, " +
-            " value, approx_value, transaction_log, data,nonce, tx_error,contract_addr from transaction  where block_number = ?";
+    public static final String TransactionByBlockNum = "select * from transaction  where block_number = ?";
 
-    public static final String TransactionByContractAddress = "select id,transaction_hash,block_hash, block_number,block_timestamp, transaction_index," +
-            " from_addr,to_addr, nrg_consumed,nrg_price, transaction_timestamp, approx_value, " +
-            " value,transaction_log, data,nonce, tx_error,contract_addr from transaction  where contract_addr = ?";
+    public static final String TransactionByContractAddress = "select * from transaction  where contract_addr = ?";
 
     //----------------------------token_transfer-------------------------------
 
-    public static final String TokenTransfersInsert = "insert into token_transfers( " +
+    public static final String TokenTransfersInsert = "replace into token_transfers( " +
             " to_addr," +
             " from_addr," +
             " operator_addr," +
@@ -194,8 +198,9 @@ public class DbQuery {
             "deploy_timestamp, " +
             "year, " +
             "month, " +
-            "day) " +
-            "values(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "day, " +
+            "type) " +
+            "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     public static final String ContractDelete = "delete from contract where block_number >= ?";
 
 
@@ -270,5 +275,9 @@ public class DbQuery {
             "approx_value) values (?,?,?,?,?,?,?,?)";
 
     public static String InternalTransferDelete = "delete from graphing where block_number > ?";
+
+
+    //---------------------------VerifiedContract-------------------------
+    public static final String SelectFromVerifiedContract =  "SELECT permission from verified_contract where contract_address = ?";
 
 }

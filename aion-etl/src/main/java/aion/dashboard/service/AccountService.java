@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 public interface AccountService {
 
@@ -19,6 +20,8 @@ public interface AccountService {
     long getMaxBlock() throws SQLException;
 
     List<Account> getByBlockNumber(Long BlockNumber) throws SQLException;
+
+    Optional<List<Account>> getRandomAccounts(long limit);
 
     PreparedStatement prepare(Connection con, List<Account> account) throws SQLException;
 

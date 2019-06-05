@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,6 +26,8 @@ public class ParserStateServiceImpl implements ParserStateService {
     public static final  int GRAPHING_ID = 4;
     public static final int BLOCK_MEAN_ID = 5;
     public static final int TRANSACTION_MEAN_ID =6;
+    public static final int ACCOUNT_ID=7;
+    public static final int TOKEN_ID=8;
     public static ParserStateServiceImpl getInstance() {
         return PARSER_STATE_SERVICE;
     }

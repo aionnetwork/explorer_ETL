@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class AccountServiceImpl implements AccountService {
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
@@ -131,24 +132,44 @@ public class AccountServiceImpl implements AccountService {
             PreparedStatement ps = con.prepareStatement(DbQuery.AccountSelectGreaterThanBlockNumber)) {
 
             ps.setLong(1, blockNumber);
-            List<Account> list = new ArrayList<>();
-            try (ResultSet resultSet = ps.executeQuery()) {
-                while (resultSet.next()) {
-                    list.add(new Account.AccountBuilder()
-                            .balance((resultSet.getBigDecimal("balance")))
-                            .address(resultSet.getString("address"))
-                            .contract(resultSet.getInt("contract"))
-                            .lastBlockNumber(resultSet.getLong("last_block_number"))
-                            .transactionHash(resultSet.getString("transaction_hash"))
-                            .nonce(resultSet.getString("nonce"))
-                            .build());
 
-
-                }
-            }
-
-            return list;
+            return extractResults(ps);
         }
+    }
+
+    @Override
+    public Optional<List<Account>> getRandomAccounts(long limit) {
+
+        try(Connection con=DbConnectionPool.getConnection ();
+            PreparedStatement ps = con.prepareStatement(DbQuery.AccountSelectRandom)) {
+
+            ps.setLong(1, limit);
+            List<Account> list = extractResults(ps);
+
+            return Optional.of(list);
+        }
+        catch (Exception e){
+            return Optional.empty();
+        }
+    }
+
+    private List<Account> extractResults(PreparedStatement ps) throws SQLException {
+        List<Account> list = new ArrayList<>();
+        try (ResultSet resultSet = ps.executeQuery()) {
+            while (resultSet.next()) {
+                list.add(new Account.AccountBuilder()
+                        .balance((resultSet.getBigDecimal("balance")))
+                        .address(resultSet.getString("address"))
+                        .contract(resultSet.getInt("contract"))
+                        .lastBlockNumber(resultSet.getLong("last_block_number"))
+                        .transactionHash(resultSet.getString("transaction_hash"))
+                        .nonce(resultSet.getString("nonce"))
+                        .build());
+
+
+            }
+        }
+        return list;
     }
 
     @Override

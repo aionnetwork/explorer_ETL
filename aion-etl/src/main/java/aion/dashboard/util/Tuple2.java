@@ -18,4 +18,12 @@ public class Tuple2<S,T> {
     public T _2() {
         return _2;
     }
+
+
+    @Override
+    public String toString() {
+        String type1 =_1==null ? "null" :_1.getClass().getSimpleName();
+        String type2 =_2==null ? "null": _2.getClass().getSimpleName();
+        return String.format("(element0:%s=>%s, element1:%s=>%s)", type1, _1, type2, _2);
+    }
 }

@@ -1,5 +1,8 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.Utils;
+import org.aion.api.type.BlockDetails;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Objects;
@@ -73,6 +76,22 @@ public class TokenHolders {
     public BigInteger getGranularity() {
         return granularity;
     }
+
+
+    private static final ThreadLocal<TokenBalanceBuilder> threadLocalBuilder = ThreadLocal.withInitial(TokenBalanceBuilder::new);
+
+    public static TokenHolders from(String address, BlockDetails b, Token tkn, BigInteger rawBalance){
+        return threadLocalBuilder.get()
+                .setBlockNumber(b.getNumber())
+                .setContractAddress(tkn.getContractAddress().replace("0x",""))
+                .setHolderAddress(address.replace("0x",""))
+                .setRawBalance(rawBalance.toString())
+                .setTokenDecimal(tkn.getTokenDecimal())
+                .setScaledBalance(Utils.scaleTokenValue(rawBalance,tkn.getTokenDecimal()))
+                .setTokenGranularity(tkn.getGranularity())
+                .build();
+    }
+
 
     public static class TokenBalanceBuilder {
 

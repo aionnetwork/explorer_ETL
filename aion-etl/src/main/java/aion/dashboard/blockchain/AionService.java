@@ -1,12 +1,16 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.blockchain.type.APITransaction;
 import aion.dashboard.config.Config;
 import aion.dashboard.exception.AionApiException;
 import org.aion.api.IAionAPI;
 import org.aion.api.IContract;
 import org.aion.api.sol.ISolidityArg;
 import org.aion.api.type.*;
-import org.aion.base.type.Address;
+import org.aion.base.type.AionAddress;
+import org.aion.base.type.Hash256;
+import org.aion.vm.api.interfaces.Address;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +23,7 @@ import java.util.function.Function;
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
 
-public class AionService implements AutoCloseable{
+public class AionService implements APIService{
 
 
 	private final IAionAPI api;
@@ -118,6 +122,7 @@ public class AionService implements AutoCloseable{
 		List<BlockDetails> result;
 		ApiMsg apiMsg;
 		try {
+			reconnect();
 			GENERAL.debug("Calling getBlockDetailsByRange({},{}) size: [{}]", start, end, end - start + 1);
 			apiMsg = doApiRequest(iAionApi -> iAionApi.getAdmin().getBlockDetailsByRange(start, end), api);
 
@@ -139,16 +144,10 @@ public class AionService implements AutoCloseable{
 
 	public String getBlockHashbyNumber(long blockNumber) throws AionApiException {
 		String result;
-		ApiMsg apiMsg = new ApiMsg();
 		try {
-			apiMsg.set(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+			Block b = doGetBlock(blockNumber);
+			result = b.getHash().toString();
 
-			if (apiMsg.isError()) {
-				throw new AionApiException(formatError(apiMsg));
-			} else {
-				Block b = apiMsg.getObject();
-				result = b.getHash().toString();
-			}
 
 
 		} catch (AionApiException e) {
@@ -161,10 +160,24 @@ public class AionService implements AutoCloseable{
 		return result;
 	}
 
+	private Block doGetBlock(long blockNumber) throws AionApiException {
+
+		reconnect();
+		var apiMsg =(doApiRequest(iAionApi->iAionApi.getChain().getBlockByNumber(blockNumber), api));
+
+		if (apiMsg.isError()) {
+			throw new AionApiException(formatError(apiMsg));
+		}
+
+
+		return apiMsg.getObject();
+	}
+
 	public long getBlockNumber() throws AionApiException {
 		long result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
+			reconnect();
 			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().blockNumber(), api));
 
 			if (apiMsg.isError()) {
@@ -183,6 +196,11 @@ public class AionService implements AutoCloseable{
 		return result;
 	}
 
+	@Override
+	public byte[] call(byte[] data, String from, String to) throws Exception {
+		throw new UnsupportedOperationException();
+	}
+
 	/**
 	 * Gets a contract from the chain
 	 * @param from the contracts creator
@@ -195,6 +213,7 @@ public class AionService implements AutoCloseable{
 	public IContract getContract(Address from, Address contractAddr, String abi) throws AionApiException {
 		IContract result;
 		try {
+			reconnect();
 			synchronized (MUTEX){
 				result = api.getContractController().getContractAt(from, contractAddr, abi);//no need for an
 				// async call this is basically just the construction of the contract object
@@ -227,7 +246,7 @@ public class AionService implements AutoCloseable{
 
 
 		try {
-
+			reconnect();
 			ApiMsg apiMsg = (doApiRequest(contractObj -> {
 				contractObj.newFunction(functionName);
 
@@ -283,10 +302,11 @@ public class AionService implements AutoCloseable{
 
     public BigInteger getBalance(String address) throws AionApiException {
 
+		reconnect();
 		BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
-			apiMsg.set(doApiRequest(iAionAPI -> iAionAPI.getChain().getBalance(Address.wrap(address)), api));
+			apiMsg.set(doApiRequest(iAionAPI -> iAionAPI.getChain().getBalance(AionAddress.wrap(address)), api));
 
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
@@ -306,11 +326,12 @@ public class AionService implements AutoCloseable{
 
 
     public BigInteger getNonce(String address) throws AionApiException{
-        BigInteger result;
+        reconnect();
+		BigInteger result;
 		ApiMsg apiMsg = new ApiMsg();
 		try {
 
-			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getNonce(Address.wrap(address)), api));
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getNonce(AionAddress.wrap(address)), api));
 
 			if (apiMsg.isError()) {
 				throw new AionApiException(formatError(apiMsg));
@@ -345,6 +366,7 @@ public class AionService implements AutoCloseable{
 
 		try {
 
+			reconnect();
 			apiMsg.set(doApiRequest(aionAPI -> aionAPI.getTx().compile(src), api));
 
 			if (apiMsg.isError())
@@ -367,8 +389,43 @@ public class AionService implements AutoCloseable{
 		if (api != null) api.destroyApi();
 	}
 
+	@Override
+	public APIBlock getBlock(long blockNumber) throws AionApiException {
+		try {
+			return APIBlock.from(doGetBlock(blockNumber));
+		}catch (RuntimeException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+	}
 
-	private String formatRuntimeException(RuntimeException e) {
+    @Override
+    public APITransaction getTransaction(String txHash) throws Exception {
+
+
+		ApiMsg apiMsg = new ApiMsg();
+		Transaction transaction;
+		try {
+
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getChain().getTransactionByHash(Hash256.wrap(txHash)), api));
+
+			if (apiMsg.isError()) {
+				throw new AionApiException(formatError(apiMsg));
+			} else {
+				transaction = apiMsg.getObject();
+			}
+
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in getNonce()", e);
+			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+
+		return APITransaction.from(transaction);
+    }
+
+
+    private String formatRuntimeException(RuntimeException e) {
 		return "AionService: Caught a runtime exception while reading Aionapi: EXCEPTION_MESSAGE[" + e.getMessage()+"]";
 	}
 

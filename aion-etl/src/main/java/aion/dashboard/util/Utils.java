@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -33,6 +34,14 @@ public class Utils {
         else {
             return Instant.ofEpochSecond(timestamp).atZone(UTC_ZONE_ID);
         }
+    }
+
+
+    public static String strip(String str){
+        return str.strip().replaceAll("^0*","");
+    }
+    public static  <T> T getLastRecord(List<T> list){
+        return list.get(list.size()-1);
     }
 
     public static BigDecimal toAion(BigInteger weiValue){
@@ -67,6 +76,10 @@ public class Utils {
 
     }
 
+
+    public static String sanitizeHex(String address){
+        return address.replaceFirst("^0x","");
+    }
     public static Optional<String> getValidAddress(String address){
         if (address.length() >= 64){
             String s;
@@ -152,5 +165,9 @@ public class Utils {
         } while (resultPredicate.negate().test(res));
         return res;
 
+    }
+
+    public static boolean compareStrings(String str1, String str2){
+        return strip(str1).equalsIgnoreCase(strip(str2));
     }
 }

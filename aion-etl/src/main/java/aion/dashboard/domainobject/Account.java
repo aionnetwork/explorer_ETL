@@ -1,6 +1,12 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.util.Utils;
+import org.aion.api.type.AccountDetails;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
+
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Objects;
 
 import static aion.dashboard.util.Utils.approximate;
@@ -95,9 +101,34 @@ public class Account {
         return approxBalance;
     }
 
-    public static class AccountBuilder
 
-    {
+    private static final ThreadLocal<AccountBuilder> accountBuilder = ThreadLocal.withInitial(AccountBuilder::new);
+
+    public static Account from(String address, BlockDetails blockDetails, TxDetails tx, BigDecimal balance, BigInteger nonce){
+        return accountBuilder.get()
+                .address(Utils.sanitizeHex(address))
+                .balance((balance))
+                .nonce(nonce.toString(16))
+                .lastBlockNumber(blockDetails.getNumber())
+                .contract(tx==null || tx.getContract().isEmptyAddress()? 0:1)
+                .transactionHash(tx==null?"":tx.getTxHash().toString())
+                .build();
+    }
+
+    @Override
+    public String toString() {
+        return "Account{" +
+                "lastBlockNumber=" + lastBlockNumber +
+                ", transactionHash='" + transactionHash + '\'' +
+                ", balance=" + balance +
+                ", address='" + address + '\'' +
+                ", contract=" + contract +
+                ", nonce='" + nonce + '\'' +
+                ", approxBalance=" + approxBalance +
+                '}';
+    }
+
+    public static class AccountBuilder {
         private String address;
         private String nonce;
         private BigDecimal balance;

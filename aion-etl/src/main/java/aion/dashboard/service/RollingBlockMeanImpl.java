@@ -1,6 +1,7 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
@@ -12,17 +13,18 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 
 public class RollingBlockMeanImpl implements RollingBlockMean {
-    private Deque<BlockDetails> blockHistory;
-    private Deque<StrippedTransaction> transactionHistory;
+    private Set<BlockDetails> blockHistory;
+    private Set<StrippedTransaction> transactionHistory;
     private final int blockTimeWindow;
     private final int blockMaxSize;
     private final long transactionTimeWindow;
     private final long blockcountwindow;
 
-    private class StrippedTransaction {
+    private class StrippedTransaction implements Comparable<StrippedTransaction>{
         StrippedTransaction(long timeStamp, long blockNumber, long numberTransactions) {
             this.timeStamp = timeStamp;
             this.blockNumber = blockNumber;
@@ -32,6 +34,22 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         final long timeStamp;//epochSeconds
         final long blockNumber;
         final long numberTransactions;
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(blockNumber);
+        }
+
+        @Override
+        public int compareTo(StrippedTransaction o) {
+            return Long.compare(this.blockNumber, o.blockNumber);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof StrippedTransaction
+            && this.blockNumber == ((StrippedTransaction) obj).blockNumber;
+        }
     }
 
     /**
@@ -50,24 +68,26 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         blockcountwindow = blockCountWindow;
 
         service.reconnect();
-
+        Thread.currentThread().setName("rolling-mean");
 
         this.transactionTimeWindow = transactionTimeWindow;
         this.blockMaxSize = blockMaxSize;
         this.blockTimeWindow = blockTimeWindow;
-        blockHistory = new ConcurrentLinkedDeque<>(getBlockDetailsInRange(meanPointer, dbPointer, service));
+        blockHistory = new ConcurrentSkipListSet<>(Comparator.comparingLong(BlockDetails::getNumber));
+        blockHistory.addAll(getBlockDetailsInRange(meanPointer, dbPointer, service));
         transactionHistory = getBlockDetailsInRange(transactionPointer, dbPointer, service).parallelStream()
                 .filter(b -> !b.getTxDetails().isEmpty())
                 .map(b -> new StrippedTransaction(b.getTimestamp(), b.getNumber(), b.getTxDetails().size()))
                 .sorted(Comparator.comparing(t-> t.blockNumber))
-                .collect(Collectors.toCollection(ConcurrentLinkedDeque::new));
+                .collect(Collectors.toCollection(ConcurrentSkipListSet::new));
 
 
     }
 
     private List<BlockDetails> getBlockDetailsInRange(long start, long end, AionService service) throws AionApiException {
         long startPointer = start;
-        long requestSize = (end - startPointer) <= 1000 ? start - end : 1000;
+        long maxSize = Config.getInstance().getBlockQueryRange();
+        long requestSize = (end - startPointer) <= maxSize ? start - end : maxSize;
 
         List<BlockDetails> temp = new ArrayList<>();
 
@@ -76,7 +96,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 long endPointer  = startPointer + requestSize-1 ;// get range inclusive of request pointer
                 temp.addAll(service.getBlockDetailsByRange(startPointer, endPointer));
                 startPointer =temp.get(temp.size() -1).getNumber()+1;
-                requestSize = (end - startPointer+1) <= 1000 ? end - startPointer+1: 1000;
+                requestSize = (end - startPointer+1) <= maxSize ? end - startPointer+1: maxSize;
             }
         }
         return temp;
@@ -85,15 +105,17 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     @Override
     public void add(BlockDetails blockDetails) {
-        
-        blockHistory.addFirst(blockDetails);
+        //Avoid duplicates
+
+        blockHistory.remove(blockDetails);
+        blockHistory.add(blockDetails);
 
         if (!blockDetails.getTxDetails().isEmpty()) {
-            transactionHistory.addFirst(
-                    new StrippedTransaction(blockDetails.getTimestamp(),
-                            blockDetails.getNumber(),
-                            blockDetails.getTxDetails().size())
-            );
+            var tx =new StrippedTransaction(blockDetails.getTimestamp(),
+                    blockDetails.getNumber(),
+                    blockDetails.getTxDetails().size());
+            transactionHistory.remove(tx);
+            transactionHistory.add(tx);
         }
         final long minBlock = blockDetails.getNumber() - blockMaxSize;
 
@@ -105,80 +127,12 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     }
 
-    @Override
     public synchronized void reorg(long consistentBlock) {
 
         blockHistory.removeIf(b -> b.getNumber() >= consistentBlock);
         transactionHistory.removeIf(st -> st.blockNumber>= consistentBlock);
     }
 
-    @Override
-    public Optional<List<Graphing>> compute() {
-        if (blockHistory.isEmpty()) {
-            return Optional.empty();
-        } else {
-            return doComputation(blockHistory.getFirst());
-        }
-    }//compute
-
-    private Optional<List<Graphing>> doComputation(final BlockDetails block) {
-
-        if(block.getNumber() < 1000) {
-            return Optional.empty();
-        }
-        else {
-            var endTime = block.getTimestamp();
-
-            List<BlockDetails> blockDetails = blockHistory.parallelStream()
-                    .filter(e ->
-                            block.getNumber() >= e.getNumber() && Math.abs(endTime - e.getTimestamp()) <= blockTimeWindow *60// eliminate any blocks that were after the last block
-                    )
-                    .sorted(Comparator.comparing(BlockDetails::getNumber))
-                    .collect(Collectors.toUnmodifiableList());
-            final BigDecimal blocksMined = BigDecimal.valueOf(blockDetails.size());
-            final BigDecimal averageDifficulty = blockDetails.parallelStream()
-                    .map(b -> new BigDecimal(b.getDifficulty()))//Get the difficulty of each block
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
-                    .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL64);//Find the average
-
-
-            final BigDecimal averageBlockTime = blockDetails.stream()
-                    .map(b -> BigDecimal.valueOf(b.getBlockTime()))//get the block time of each block
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the time
-                    .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL64);// find the average over the period
-
-
-            final long transactionOverTime = blockDetails.parallelStream()
-                    .mapToLong(b -> b.getTxDetails().size())// get the size of each transaction list
-                    .sum();// sum up the size of the lists
-
-
-            final BigDecimal averageHashPower = new BigDecimal(blockDetails.get(blockDetails.size() - 1).getDifficulty())
-                    .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
-
-
-            List<Graphing> ret = new ArrayList<>();
-
-
-            long timeStamp = blockDetails.get(blockDetails.size() - 1).getTimestamp() * 1000;
-
-
-            Graphing.GraphingBuilder builder = new Graphing.GraphingBuilder();
-            //Build the graphing object with the defaults
-            builder.setBlockNumber(blockDetails.get(blockDetails.size() - 1).getNumber())
-                    .setTimestamp(timeStamp);
-
-
-
-            ret.add(builder.setValue(BigDecimal.valueOf(transactionOverTime)).setGraphType(Graphing.GraphType.TRANSACTION_OVER_TIME).setDetail("").build());
-            ret.add(builder.setValue(averageBlockTime).setGraphType(Graphing.GraphType.BLOCK_TIME).setDetail("").build());
-            ret.add(builder.setValue(averageDifficulty).setGraphType(Graphing.GraphType.DIFFICULTY).setDetail("").build());
-            ret.add(builder.setValue(averageHashPower).setGraphType(Graphing.GraphType.HASH_POWER).setDetail("").build());
-            ret.add(builder.setValue(blocksMined).setGraphType(Graphing.GraphType.BLOCKS_MINED).setDetail("").build());
-
-            return Optional.of(ret);
-        }
-    }//do compute
 
     @Override
     public long getStartOfBlockWindow() {
@@ -199,20 +153,20 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                     .filter( b -> b.getNumber() == blockNumber)
                     .findAny();
 
-            if (!detailsAtNum.isPresent()) return Optional.empty();
+            if (detailsAtNum.isEmpty()) return Optional.empty();
+            else {
+                long endTime = detailsAtNum.get().getTimestamp();
 
-            long endTime = detailsAtNum.get().getTimestamp();
+                List<BlockDetails> blockDetails = blockHistory.parallelStream()
+                        .filter(e ->
+                                detailsAtNum.get().getNumber() >= e.getNumber()
+                                        && Math.abs(endTime - e.getTimestamp()) <= blockTimeWindow * 60// eliminate any blocks that were after the last block
+                        )
+                        .sorted(Comparator.comparing(BlockDetails::getNumber))
+                        .collect(Collectors.toUnmodifiableList());
 
-            List<BlockDetails> blockDetails = blockHistory.parallelStream()
-                    .filter(e ->
-                            detailsAtNum.get().getNumber() >= e.getNumber()
-                                    && Math.abs(endTime - e.getTimestamp()) <= blockTimeWindow *60// eliminate any blocks that were after the last block
-                    )
-                    .sorted(Comparator.comparing(BlockDetails::getNumber))
-                    .collect(Collectors.toUnmodifiableList());
-
-            return doMetricsComputation(blockDetails, Metrics.STABLE_ID);
-
+                return doMetricsComputation(blockDetails, Metrics.STABLE_ID);
+            }
         }
     }
 

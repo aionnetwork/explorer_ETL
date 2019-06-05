@@ -47,6 +47,7 @@ public class ContractServiceImpl implements ContractService {
                     ps.setInt(7, contract.getBlockYear());
                     ps.setInt(8, contract.getBlockMonth());
                     ps.setInt(9, contract.getBlockDay());
+                    ps.setString(10, contract.getType());
                     ps.execute();
 
                     con.commit();
@@ -85,6 +86,8 @@ public class ContractServiceImpl implements ContractService {
                         ps.setInt(7, contract.getBlockYear());
                         ps.setInt(8, contract.getBlockMonth());
                         ps.setInt(9, contract.getBlockDay());
+                        ps.setString(10, contract.getType());
+
                         ps.execute();
                     }
                 }
@@ -123,7 +126,8 @@ public class ContractServiceImpl implements ContractService {
                                 .setContractAddr(rs.getString("contract_addr"))
                                 .setContractCreatorAddr(rs.getString("contract_creator_addr"))
                                 .setContractTxHash(rs.getString("contract_tx_hash"))
-                                .setContractName(rs.getString("contract_name"));
+                                .setContractName(rs.getString("contract_name"))
+                                .setType(rs.getString("type"));
 
                         return builder.build();
                     }
@@ -158,6 +162,8 @@ public class ContractServiceImpl implements ContractService {
                 ps.setInt(7, contract.getBlockYear());
                 ps.setInt(8, contract.getBlockMonth());
                 ps.setInt(9, contract.getBlockDay());
+                ps.setString(10, contract.getType());
+
                 ps.addBatch();
             }
         }

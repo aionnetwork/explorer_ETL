@@ -1,11 +1,18 @@
 package aion.dashboard.domainobject;
 
-import java.math.BigDecimal;
-import java.time.ZonedDateTime;
-import java.util.Objects;
+import aion.dashboard.parser.events.ContractEvent;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
 
-import static aion.dashboard.util.Utils.approximate;
-import static aion.dashboard.util.Utils.getZDT;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static aion.dashboard.util.Utils.*;
 
 public class TokenTransfers {
 
@@ -96,7 +103,7 @@ public class TokenTransfers {
         if (this == o) return true;
         if (!(o instanceof TokenTransfers)) return false;
         TokenTransfers tokenTransfers = (TokenTransfers) o;
-        return getTransactionHash() == tokenTransfers.getTransactionHash() &&
+        return getTransactionHash().equals(tokenTransfers.getTransactionHash()) &&
                 getBlockNumber() == tokenTransfers.getBlockNumber() &&
                 getTransferTimestamp() == tokenTransfers.getTransferTimestamp() &&
                 Objects.equals(getToAddress(), tokenTransfers.getToAddress()) &&
@@ -126,6 +133,51 @@ public class TokenTransfers {
     public double getApproxValue() {
         return approxValue;
     }
+
+    private static ThreadLocal<TransferBuilder> builderThreadLocal =  ThreadLocal.withInitial(TransferBuilder::new);
+
+
+    static Optional<TokenTransfers> from(ContractEvent event, TxDetails tx, BlockDetails b, Token tkn){
+
+        var optionalAmount = event.getInput("amount", BigInteger.class);
+        var optionalOperator= event.getInput("operator", String.class);
+        var optionalTo = event.getInput("to", String.class);
+        var optionalFrom = event.getInput("from", String.class);
+        if (tkn !=null && optionalAmount.isPresent() && optionalOperator.isPresent() && optionalTo.isPresent() && optionalFrom.isPresent()) {
+            var rawValue = optionalAmount.get();
+            var scaledValue = scaleTokenValue(rawValue, tkn.getTokenDecimal());
+            TokenTransfers.TransferBuilder builder = builderThreadLocal.get();
+            return Optional.of(
+                    builder.setTransactionTimestamp(b.getTimestamp())
+                            .setContractAddress(event.getAddress().replace("0x",""))
+                            .setTransactionHash(tx.getTxHash().toString())
+                            .setBlockNumber(b.getNumber())
+                            .setOperator(optionalOperator.get())
+                            .setToAddress(optionalTo.get().replace("0x",""))
+                            .setFromAddress(optionalFrom.get().replace("0x",""))
+                            .setScaledTokenValue(scaledValue)
+                            .setRawValue(rawValue.toString())
+                            .setTokendecimal(tkn.getTokenDecimal())
+                            .setGranularity(new BigDecimal(tkn.getGranularity()))
+                            .build());
+
+
+        }
+        else {
+            return Optional.empty();
+        }
+    }
+
+    public static List<TokenTransfers> tokenTransfersFrom(List<ContractEvent> eventList, TxDetails tx, BlockDetails b, Token tkn){
+        return eventList.stream()
+                .filter(event -> event.getEventName().equals("Sent"))
+                .map(event -> from(event, tx,b,tkn))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+    }
+
+
 
     public static class TransferBuilder {
         private String operator;

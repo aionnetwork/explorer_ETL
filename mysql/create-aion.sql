@@ -58,8 +58,8 @@ CREATE TABLE `transaction` (
 	`from_addr` VARCHAR(64),
 	`to_addr` VARCHAR(64),
 	`nrg_consumed` BIGINT,
-  `approx_value` DOUBLE(36,18),
-  `nrg_price` BIGINT,
+  	`approx_value` DOUBLE(36,18),
+  	`nrg_price` BIGINT,
 	`transaction_timestamp` BIGINT,
 	`value` DECIMAL(64,18),
 	`transaction_log` TEXT,
@@ -70,6 +70,7 @@ CREATE TABLE `transaction` (
 	`year` SMALLINT,
 	`month` TINYINT,
 	`day` TINYINT,
+	`type` VARCHAR(8),
 	PRIMARY KEY(`transaction_hash`,`year`,`month`)
 ) ENGINE = InnoDB
 PARTITION BY RANGE(`year`)
@@ -96,7 +97,7 @@ CREATE TABLE `parser_state` (
 INSERT INTO `parser_state` VALUES(1,-1);		# to track current block head
 INSERT INTO `parser_state` VALUES(2,-1);		# to track current blockchain head
 INSERT INTO `parser_state` VALUES(3,0); 		# to track integrity check head
-INSERT INTO `parser_state` VALUES(4,1); 		# to track the current state of the graph TABLEs
+INSERT INTO `parser_state` VALUES(4,0); 		# to track the current state of the graph TABLEs
 INSERT INTO `parser_state` VALUES(5,1); 		# to track the start of the rolling window
 INSERT INTO `parser_state` VALUES(6,1); 		# to tract the start of the rolling transaction window
 
@@ -210,6 +211,7 @@ CREATE TABLE `contract` (
 	`year` SMALLINT,
 	`month` TINYINT,
 	`day` TINYINT,
+	`type` VARCHAR(8),
 	PRIMARY KEY(`contract_addr`)
 ) ENGINE = InnoDB;
 CREATE INDEX `creator_addr_contract` ON contract(`contract_creator_addr`);

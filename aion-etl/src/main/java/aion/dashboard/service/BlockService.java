@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 public interface BlockService {
 
@@ -23,4 +24,8 @@ public interface BlockService {
     List<Long> blockHashIntegrity(long startNum) throws SQLException;
 
     PreparedStatement prepare(Connection con, List<Block> blocks) throws SQLException;
+
+    Optional<List<Block>> getBlocksInTimeRange(long timestampStart, long timestampEnd);
+
+    Optional<List<Block>> getBlocksByRange(long numberStart, long numEnd );
 }

@@ -1,5 +1,6 @@
 package aion.dashboard.config;
 
+import aion.dashboard.task.AbstractGraphingTask;
 import ch.qos.logback.classic.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -62,6 +63,7 @@ public class Config {
     private long queueSize;
     private long timeOut;
     private boolean enableReports;
+    private List<String> web3Providers;
 
 
     private int BlockMaxWindowSize;
@@ -70,11 +72,17 @@ public class Config {
     private int BlockWindowStableSize;
     private boolean isTest;
     private long maxHeight;
+    private AbstractGraphingTask.TaskType taskType;
 
     private long apiTimeOut;
 
     private Level GeneralLevel;
+    private Level IntegrityCheckLevel;
     private List<String> apiConnections = new ArrayList<>();
+    private boolean enableVerifier;
+    private boolean integrityChecks;
+
+
 
 	// no configuration for logging. control it directly from logback
 	private Config() {
@@ -85,15 +93,19 @@ public class Config {
 
 			JSONObject sql = json.getJSONObject("sql");
 
+			taskType = AbstractGraphingTask.TaskType.valueOf(Optional.ofNullable(System.getenv("TASK_TYPE")).orElse("DB"));
+
             isTest = Optional.ofNullable(System.getenv("TEST")).orElse("false").equalsIgnoreCase("true");
             maxHeight = Long.parseLong(Optional.ofNullable(System.getenv("MAX_HEIGHT")).orElse("10000"));
-			sqlUsername = Optional.ofNullable(System.getenv("DB_USER")).orElse("");//sql.getString("username");
-			sqlPassword = Optional.ofNullable(System.getenv("DB_USER_PASSWORD")).orElse("");//sql.getString("password");
+			sqlUsername = Optional.ofNullable(System.getenv("DB_USER")).orElse("");
+			sqlPassword = Optional.ofNullable(System.getenv("DB_USER_PASSWORD")).orElse("");
             GeneralLevel = Level.valueOf(Optional.ofNullable(System.getenv("ETL_LOG_LEVEL")).orElse("trace").toUpperCase());
+            IntegrityCheckLevel = Level.valueOf(Optional.ofNullable(System.getenv("INTEGRITY_LEVEL")).orElse("debug").toUpperCase());
 
 
-
-
+            web3Providers = json.getJSONArray("web3").toList().stream().map(Object::toString).collect(Collectors.toList());
+            enableVerifier = json.optBoolean("enableVerifier", false);
+            integrityChecks = json.optBoolean("enableIntegrityCheck", true);
             String javaAPI = System.getenv("JAVA_API_URI");
             if(sqlUsername.length()==0) {
                 sqlUsername = sql.getString("username");
@@ -350,7 +362,28 @@ public class Config {
         return maxHeight;
     }
 
+    public AbstractGraphingTask.TaskType getTaskType() {
+        return taskType;
+    }
+
     public long getApiTimeOut() {
         return apiTimeOut;
+    }
+
+    public List<String> getWeb3Providers() {
+        return web3Providers;
+    }
+
+    public boolean isVerifierEnabled() {
+        return enableVerifier;
+    }
+
+
+    public Level getIntegrityCheckLevel() {
+        return IntegrityCheckLevel;
+    }
+
+    public boolean isIntegrityChecks() {
+        return integrityChecks;
     }
 }
