@@ -1,6 +1,6 @@
 ATSTokenCreated(BigInteger indexed totalSupply, Address indexed creator)
-AuthorizedOperator(Address indexed operator, Address tokenHolder)
-RevokedOperator(Address indexed operator, Address tokenHolder)
+AuthorizedOperator(Address indexed operator, Address indexed tokenHolder)
+RevokedOperator(Address indexed operator, Address indexed tokenHolder)
 Sent(Address indexed operator, Address indexed from, Address indexed to, BigInteger amount, byte[] data, byte[] operatorData)
 Minted(Address indexed operator, Address indexed to, BigInteger amount, byte[] data, byte[] operatorData)
 Burned(Address indexed operator, Address indexed from, BigInteger amount, byte[] fromData,byte[] operatorData)
