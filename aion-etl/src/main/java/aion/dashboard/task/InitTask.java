@@ -143,14 +143,14 @@ public final class InitTask {
             IntegrityCheckManager.getInstance().shutdown();
             Web3Service.getInstance().close();
             AionService.getInstance().close();
-            GENERAL.info("Succesfully shutdown the ETL");
+            GENERAL.info("Successfully shutdown the ETL");
 
         });
     }
 
     private static void shutdownProducer(Producer<?> producer){
         producer.stop();
-        producer.awaitTermination();
+        producer.awaitTermination(5000L);
     }
 
 }
