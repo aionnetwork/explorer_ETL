@@ -448,6 +448,22 @@ public class AionService implements APIService {
 		return APITransaction.from(transaction);
     }
 
+    public BigInteger getBlockReward(long blockNumber) throws AionApiException {
+    	try{
+    		ApiMsg msg = doApiRequest(iAionApi-> iAionApi.getChain().getBlockReward(blockNumber), api);
+    		if (msg.isError()){
+
+    			throw new AionApiException(formatError(msg));
+			}
+    		return msg.getObject();
+		}catch (AionApiException e){
+			GENERAL.debug("AionApi: threw Exception in getBlockReward()", e);
+			throw new AionApiException();
+		}catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+	}
+
 
     private String formatRuntimeException(RuntimeException e) {
 		return "AionService: Caught a runtime exception while reading Aionapi: EXCEPTION_MESSAGE[" + e.getMessage()+"]";

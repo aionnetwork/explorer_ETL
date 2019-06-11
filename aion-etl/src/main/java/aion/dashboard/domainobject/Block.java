@@ -5,11 +5,13 @@ import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.Objects;
 
 import static aion.dashboard.util.Utils.getZDT;
+import static aion.dashboard.util.Utils.toAion;
 
 public class Block {
 
@@ -39,6 +41,7 @@ public class Block {
     private int blockMonth;
     private int blockDay;
     private double approxNrgReward;
+    private BigDecimal blockReward;
 
     public int getBlockYear() {
         return blockYear;
@@ -306,7 +309,7 @@ public class Block {
     }
 
     private static final ThreadLocal<BlockBuilder> threadLocalBuilder = ThreadLocal.withInitial(BlockBuilder::new);
-    public static Block from(BlockDetails b, String lastHash, String txList, BigDecimal nrgReward){
+    public static Block from(BlockDetails b, String lastHash, String txList, BigDecimal nrgReward, BigInteger blockReward){
         return threadLocalBuilder.get()
                 .blockNumber(b.getNumber())
                 .blockTime(b.getBlockTime())
@@ -332,7 +335,17 @@ public class Block {
                 .nrgReward(nrgReward)
                 .txTrieRoot(b.getTxTrieRoot().toString())
                 .approxNrgReward(Utils.approximate(nrgReward,18))
+                .blockReward(toAion(blockReward))
                 .build();
+    }
+
+    public BigDecimal getBlockReward() {
+        return blockReward;
+    }
+
+    public Block setBlockReward(BigDecimal blockReward) {
+        this.blockReward = blockReward;
+        return this;
     }
 
     public static class BlockBuilder {
@@ -359,7 +372,12 @@ public class Block {
         String lastTransactionHash;
         BigDecimal nrgReward;
         double approxNrgReward;
+        BigDecimal blockReward;
 
+        public BlockBuilder blockReward(BigDecimal blockReward) {
+            this.blockReward = blockReward;
+            return this;
+        }
 
         public BlockBuilder approxNrgReward(double nrgReward){
             approxNrgReward = nrgReward;
@@ -503,6 +521,7 @@ public class Block {
             block.lastTransactionHash = lastTransactionHash;
             block.nrgReward = nrgReward;
             block.approxNrgReward = approxNrgReward;
+            block.blockReward = blockReward;
             return block;
         }
     }

@@ -1,5 +1,6 @@
 package aion.dashboard.parser;
 
+import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
@@ -26,10 +27,10 @@ public class Parser extends Producer<ParserBatch> {
     private final RollingBlockMean rollingBlockMean;
     private final IdleProducer<?, String> accountProd;
     private final TokenParser tokenProd;
-    private final APIService apiService;
+    private final AionService apiService;
     private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(2);
 
-    Parser(Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, APIService apiService) {
+    Parser(Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, AionService apiService) {
         super(queue);
         this.extractor = extractor;
         this.rollingBlockMean = rollingBlockMean;
@@ -69,10 +70,10 @@ public class Parser extends Producer<ParserBatch> {
 
         GENERAL.debug("Starting parser.");
         while (blockDetails.hasNext()) {
+            block = blockDetails.next();
 
             Set<String> addressesFromBlock=new HashSet<>();
             //loop through blocks
-            block = blockDetails.next();
 
             if (GENERAL.isTraceEnabled()) {
                 GENERAL.trace("Parsing block: {}. With hash: {}", block.getNumber(), block.getHash());
@@ -115,7 +116,7 @@ public class Parser extends Producer<ParserBatch> {
             var firstTxHash = Parsers.getFirstTxHash(txDetails);
 
 
-            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward));
+            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward, apiService.getBlockReward(block.getNumber())));
 
             accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty()? null: txDetails.get(0)));
 

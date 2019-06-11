@@ -6,6 +6,7 @@ import aion.dashboard.domainobject.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
 import java.util.ArrayList;
@@ -395,6 +396,7 @@ public class BlockServiceImpl implements BlockService {
             ps.setInt(24, block.getBlockYear());
             ps.setInt(25, block.getBlockMonth());
             ps.setInt(26, block.getBlockDay());
+            ps.setBigDecimal(27,block.getBlockReward());
             ps.addBatch();
         }
 
