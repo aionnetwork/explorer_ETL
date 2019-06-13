@@ -93,7 +93,7 @@ public final class InitTask {
                 .setTokenProd(tokenParser)
                 .setQueue(new ArrayBlockingQueue<>(queueSize))
                 .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
-                .setExtractor(extractor).setApiService(Web3Service.getInstance()).createParser();
+                .setExtractor(extractor).setApiService(AionService.getInstance()).createParser();
 
 
         Consumer consumer = new ConsumerBuilder().setAccountProducer(accountParser)
