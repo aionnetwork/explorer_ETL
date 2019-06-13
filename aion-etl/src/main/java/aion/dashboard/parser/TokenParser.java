@@ -56,6 +56,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     @Override
     protected List<TokenBatch> task() throws Exception {
         Thread.currentThread().setName("token-parser");
+        GENERAL.info("Starting token parser.");
         var records = getMessage();
         Set<String> holdersSet = new HashSet<>();
         TokenBatch res = new TokenBatch();
@@ -111,6 +112,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
                 atsToken = new ATSTokenImpl(contractAddr, contract.getContractType());
                 registerATSToken(contractAddr,atsToken);
                 token = atsToken.getDetails(contract).orElseThrow();
+                res.addToken(token);
             }
             else if (Parsers.isSupplyUpdate(msg.getItem())) {//The liquid supply on the token has changed
                 token = atsToken.updateDetails(contract).orElseThrow();
