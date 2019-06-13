@@ -250,6 +250,7 @@ CREATE TABLE `metrics` (
 	`end_timestamp` INT NULL,
 	`start_timestamp` INT NULL,
 	`averaged_hash_power` DECIMAL(64,10) NULL,
+	`last_block_reward` DECIMAL(64,18) NULL,
 	PRIMARY KEY(`id`)
 ) ENGINE = InnoDB;
 INSERT INTO `metrics` (id) VALUES (1);
