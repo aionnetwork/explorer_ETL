@@ -1,7 +1,6 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
-import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
@@ -81,9 +80,9 @@ public class Parser extends Producer<ParserBatch> {
 
             //Add miner
             addressesFromBlock.add(block.getMinerAddress().toString());
-
+            BigInteger blockReward = apiService.getBlockReward(block.getNumber());
             // add block to rolling mean
-            rollingBlockMean.add(block);
+            rollingBlockMean.add(block, blockReward);
 
 
             BigDecimal nrgReward = new BigDecimal(0);
@@ -116,7 +115,7 @@ public class Parser extends Producer<ParserBatch> {
             var firstTxHash = Parsers.getFirstTxHash(txDetails);
 
 
-            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward, apiService.getBlockReward(block.getNumber())));
+            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward, blockReward ));
 
             accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty()? null: txDetails.get(0)));
 
