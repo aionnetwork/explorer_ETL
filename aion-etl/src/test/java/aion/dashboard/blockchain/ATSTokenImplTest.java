@@ -1,8 +1,15 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.domainobject.Contract;
+import aion.dashboard.domainobject.Token;
+import aion.dashboard.exception.AionApiException;
+import aion.dashboard.util.Utils;
+import org.aion.api.type.BlockDetails;
+import org.aion.api.type.TxDetails;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,5 +57,36 @@ class ATSTokenImplTest {
     void getLiquidSupply() {
         System.out.println(fvmToken.getLiquidSupply());
         System.out.println(avmToken.getLiquidSupply());
+    }
+
+
+    @Test
+    void getTokenDetailsFVM() throws AionApiException {
+        AionService service = AionService.getInstance();
+
+        BlockDetails blockDetails = service.getBlockDetailsByRange(1129737L,1129737L).stream().findFirst().orElseThrow();
+        TxDetails deployedTx = blockDetails.getTxDetails().stream().filter(tx-> Utils.sanitizeHex(tx.getTxHash().toString()).equalsIgnoreCase("f42947d0c5f1533bd3f0c99d5b616f2d5283b1f61bdbc6ff4ecd42d642e757df")).findFirst().orElseThrow();
+
+        ATSTokenImpl token = new ATSTokenImpl(deployedTx.getContract().toString(), ContractType.fromByte(deployedTx.getType()));
+        Contract contract = Contract.from(blockDetails, deployedTx);
+        Optional<Token> dbToken = assertDoesNotThrow(()-> token.getDetails(contract));
+        assertNotNull(dbToken.orElse(null));
+        System.out.println(dbToken.toString());
+    }
+
+    @Test
+    void getTokenDetailsAVM() throws AionApiException {
+        AionService service = AionService.getInstance();
+
+        BlockDetails blockDetails = service.getBlockDetailsByRange(2586933,2586933).stream().findFirst().orElseThrow();
+        TxDetails deployedTx = blockDetails.getTxDetails().stream().filter(tx-> Utils.sanitizeHex(tx.getTxHash().toString()).equalsIgnoreCase("bd439e1a6b333b93ae38fdaf9dde70618caf7d79c28902c63b32658e34ff6e4e")).findFirst().orElseThrow();
+
+        ATSTokenImpl token = new ATSTokenImpl(deployedTx.getContract().toString(), ContractType.fromByte(deployedTx.getType()));
+        Contract contract = Contract.from(blockDetails, deployedTx);
+        Optional<Token> dbToken = assertDoesNotThrow(()-> token.getDetails(contract));
+        System.out.println(dbToken.toString());
+        assertNotNull(dbToken.orElse(null));
+
+
     }
 }

@@ -144,6 +144,7 @@ public class ATSTokenImpl extends ATSToken {
                 return optional;
             }
         } catch (Exception e) {
+            e.printStackTrace();
             return Optional.empty();
         }
     }
