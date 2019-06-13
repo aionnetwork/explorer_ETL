@@ -335,7 +335,7 @@ public class Block {
                 .nrgReward(nrgReward)
                 .txTrieRoot(b.getTxTrieRoot().toString())
                 .approxNrgReward(Utils.approximate(nrgReward,18))
-                .blockReward(toAion(blockReward))
+                .blockReward(new BigDecimal(blockReward))
                 .build();
     }
 
