@@ -5,6 +5,7 @@ import aion.dashboard.blockchain.interfaces.ContractHandler;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.Token;
 import aion.dashboard.domainobject.TokenHolders;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.base.type.AionAddress;
 
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import static aion.dashboard.util.Utils.granularityToTknDec;
+import static aion.dashboard.util.Utils.truncate;
 import static org.aion.api.ITx.NRG_LIMIT_CONTRACT_CREATE_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
 
@@ -131,8 +133,8 @@ public class ATSTokenImpl extends ATSToken {
                 var optional = Optional.of(Token.getBuilder().contractAddress(contract.getContractAddr())
                         .creatorAddress(contract.getContractCreatorAddr())
                         .transactionHash(contract.getContractTxHash())
-                        .name(getName())
-                        .symbol(getSymbol())
+                        .name(truncate(getName(), Utils.NAME_MAX_LENGTH))
+                        .symbol(truncate(getSymbol(), Utils.SYMBOLS_MAX_LENGTH))
                         .granularity(getGranularity())
                         .totalSupply(getTotalSupply())
                         .totalLiquidSupply(getLiquidSupply())
