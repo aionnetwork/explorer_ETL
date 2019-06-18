@@ -3,6 +3,7 @@ package aion.dashboard.task;
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.config.BuildVersion;
 import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
@@ -25,7 +26,7 @@ public final class InitTask {
         throw new UnsupportedOperationException("Cannot create an instance of: "+ InitTask.class.getSimpleName());
     }
 
-    private static final String VERSION_NUMBER = "v2.2";
+    private static final String VERSION_NUMBER = "v2.3";
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
     private static void revert(String blk) {
@@ -50,7 +51,8 @@ public final class InitTask {
     }
 
     private static void printVersion() {
-        System.out.println("Aion ETL "+ VERSION_NUMBER);
+        System.out.println("Aion ETL "+ BuildVersion.VERSION);
+        System.out.println("Built on "+ BuildVersion.BUILD_DATE);
     }
 
 
@@ -74,7 +76,7 @@ public final class InitTask {
     public static void start() throws AionApiException {
         Logger general = GENERAL;
         general.info("--------------------------------");
-        general.info("Starting ETL {}", VERSION_NUMBER);
+        general.info("Starting ETL {}", BuildVersion.VERSION);
         general.info("--------------------------------");
 
         ParserStateService ps = ParserStateServiceImpl.getInstance();
