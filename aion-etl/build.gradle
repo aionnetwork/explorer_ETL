@@ -1,3 +1,7 @@
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
 buildscript {
     repositories {
         mavenCentral()
@@ -32,7 +36,7 @@ repositories {
 
 
 group 'aion-etl'
-version = "2.3-${grgit.head().abbreviatedId}"
+version = "2.3-${grgit.head().abbreviatedId}-${DateTimeFormatter.ofPattern("hhmm-dd-MM-yyyy").format(ZonedDateTime.now( ZoneId.of("UTC")))}"
 
 gversion {
     srcDir       = "src/main/java/"           // path is relative to the sub-project by default

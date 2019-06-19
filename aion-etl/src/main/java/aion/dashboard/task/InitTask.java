@@ -51,7 +51,7 @@ public final class InitTask {
     }
 
     private static void printVersion() {
-        System.out.println("Aion ETL "+ BuildVersion.VERSION);
+        System.out.println("Aion ETL "+ BuildVersion.VERSION.replaceAll("-[0-9]{4}(-[0-9]{1,2}){2}-20[0-9]{2}", ""));
         System.out.println("Built on "+ BuildVersion.BUILD_DATE);
     }
 
