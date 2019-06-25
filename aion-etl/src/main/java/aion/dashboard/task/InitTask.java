@@ -76,7 +76,7 @@ public final class InitTask {
     public static void start() throws AionApiException {
         Logger general = GENERAL;
         general.info("--------------------------------");
-        general.info("Starting ETL {}", BuildVersion.VERSION);
+        general.info("Starting ETL {}", BuildVersion.VERSION.replaceAll("-[0-9]{4}(-[0-9]{1,2}){2}-20[0-9]{2}", ""));
         general.info("--------------------------------");
 
         ParserStateService ps = ParserStateServiceImpl.getInstance();

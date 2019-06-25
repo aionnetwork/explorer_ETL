@@ -6,7 +6,6 @@ import aion.dashboard.config.Config;
 import aion.dashboard.exception.HttpStatusException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.service.SchedulerService;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,9 +23,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class Web3ServiceImpl implements Closeable, Web3Service {
 
@@ -37,8 +37,6 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String GET_BLOCK = "eth_getBlockByNumber";
     private static final String GET_TRANSACTION_BY_HASH= "eth_getTransactionByHash";
     private static final String CALL="eth_call";
-    private final AtomicReference<String> endpoint;
-    private final AtomicInteger count;
     private final HttpHeaders httpHeaders;
     private final RestTemplate restExecutor;
     private List<String> web3Providers;
@@ -53,9 +51,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         web3Providers = Config.getInstance().getWeb3Providers();
         var es = SchedulerService.getInstance().getExecutorService();
-        future = es.scheduleWithFixedDelay(this::heartBeat, 0, 100, TimeUnit.SECONDS);
-        count = new AtomicInteger(0);
-        endpoint = new AtomicReference<>(web3Providers.get(count.get()));
+        future = es.scheduleWithFixedDelay(this::findActiveList, 0, 5, TimeUnit.SECONDS);
 
 
         restExecutor = new RestTemplateBuilder()
@@ -102,29 +98,16 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         return String.format("http://%s", provider);
     }
 
-    private void heartBeat() {
-
-        if (!ping(endpoint.get())) {
-            endpoint.set(findEndPoint(web3Providers, count.get()));
-        }
-
-
+    private void findActiveList() {
+        activeEndpoints.set(web3Providers.stream().filter(this::ping).collect(Collectors.toList()));
     }
 
-    String findEndPoint(List<String> ep, int curr) {
-        int i = (curr + 1) % web3Providers.size();
-        int size = ep.size();
-        String result = "";
-        while (!Thread.currentThread().isInterrupted() && result.equalsIgnoreCase("")) {
-            if (ping(ep.get(i))) {
-
-                result = ep.get(i);
-            }
-
-            i = (i + 1) % size;
-        }
-        return result;
+    private String getActiveEp() {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        return activeEndpoints.get().get(random.nextInt(activeEndpoints.get().size()));
     }
+
+    private final AtomicReference<List<String>> activeEndpoints = new AtomicReference<>(null);
 
     public boolean ping(String ep) {
         try {
@@ -162,7 +145,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
 
     @Override
     public long getBlockNumber() throws Exception {
-        return  executeCall(buildWeb3Call(GET_BLOCK_NUMBER), endpoint.get(), Integer.class);
+        return  executeCall(buildWeb3Call(GET_BLOCK_NUMBER), getActiveEp(), Integer.class);
     }
 
     @Override
@@ -174,18 +157,20 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     }
 
     private String executeCall(String jsonMethod) throws Web3ApiException {
-        return executeCall(jsonMethod, endpoint.get(), String.class);// perform http request with the default ep
+        return executeCall(jsonMethod, getActiveEp(), String.class);// perform http request with the default ep
     }
 
 
     private <T> T executeCall(String jsonMethod, String endpoint, Class<T> tClass) throws Web3ApiException {
+        String oldThreadName = Thread.currentThread().getName();
         validateState();
         try {
+            Thread.currentThread().setName("web-3-executor");
 
             validateArguments(jsonMethod, endpoint);// Validate the arguments
             // start the http request
             if (GENERAL.isTraceEnabled()) {
-                GENERAL.trace("Executing call: {}",jsonMethod);
+                GENERAL.trace("Executing call: {} with EP: {}",jsonMethod, endpoint);
             }
 
             HttpEntity<String> entity = new HttpEntity<>(jsonMethod, httpHeaders);
@@ -221,6 +206,9 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         } catch (Exception e) {
             throw new Web3ApiException("Failed to execute call. Method: "+jsonMethod, e);
         }
+        finally {
+            Thread.currentThread().setName(oldThreadName);
+        }
     }
 
     /**
@@ -250,17 +238,16 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     public void close() {
         future.cancel(true);
         isClosed = true;
-        endpoint.set(null);
     }
 
     @Override
     public APIBlock getBlock(long blockNumber) throws Web3ApiException {
-        return executeCall(buildWeb3Call(GET_BLOCK, blockNumber), endpoint.get(), APIBlock.class);
+        return executeCall(buildWeb3Call(GET_BLOCK, blockNumber), getActiveEp(), APIBlock.class);
     }
 
     @Override
     public APITransaction getTransaction(String txHash) throws Exception {
-        return executeCall(buildWeb3Call(GET_TRANSACTION_BY_HASH, txHash), endpoint.get(), APITransaction.class);
+        return executeCall(buildWeb3Call(GET_TRANSACTION_BY_HASH, txHash), getActiveEp(), APITransaction.class);
     }
 
 
