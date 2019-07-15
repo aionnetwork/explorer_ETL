@@ -5,10 +5,9 @@ import aion.dashboard.domainobject.Account;
 import aion.dashboard.service.AccountService;
 import aion.dashboard.util.Tuple2;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class AccountIntegrityCheck extends IntegrityCheck<Account, Tuple2<String, String>> {
@@ -26,21 +25,42 @@ public class AccountIntegrityCheck extends IntegrityCheck<Account, Tuple2<String
     protected List<Tuple2<String, String>> integrityCheck(List<Account> candidates) throws Exception {
         INTEGRITY_LOGGER.info("Starting integrity check for: {}", candidates.size());
         ArrayList<Tuple2<String, String>> res = new ArrayList<>();
+        List<Account> accountsToUpdate=new ArrayList<>();
         for (var acc : candidates){
+            boolean runUpdate = false;
             var nonce = apiService.getNonce(acc.getAddress());
             var balance = apiService.getBalance(acc.getAddress());
             if (nonce.compareTo(new BigInteger(acc.getNonce(),16))!=0){
                 res.add(new Tuple2<>(acc.toString(), "Difference found in account nonce. Expected: "+ nonce.toString(16)+", found: "+acc.getNonce() ));
+                runUpdate = true;
             }
 
-            if (balance.compareTo(acc.getBalance().toBigIntegerExact())!=0){
+            //skip the check if the account is found to be inconsistent
+            if (!runUpdate && balance.compareTo(acc.getBalance().toBigIntegerExact())!=0){
                 res.add(new Tuple2<>(acc.toString(), "Difference found in account balance. Expected: "+ balance.toString()+", found: "+acc.getBalance().toPlainString() ));
+                runUpdate = true;
+            }
+
+            if (runUpdate){
+                acc.setBalance(new BigDecimal(balance));
+                acc.setNonce(nonce.toString());
+                accountsToUpdate.add(acc);
 
             }
 
 
         }
 
+        if (!accountsToUpdate.isEmpty()) {
+            if (service.save(accountsToUpdate)) {
+                INTEGRITY_LOGGER.info("Updated accounts.");
+                accountsToUpdate.forEach(account -> INTEGRITY_LOGGER.trace("Update: {}", account.getAddress()));
+            }
+            else {
+                INTEGRITY_LOGGER.warn("Failed to update accounts.");
+            }
+
+        }
         return res;
     }
 
