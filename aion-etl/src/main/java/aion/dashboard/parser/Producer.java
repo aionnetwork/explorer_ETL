@@ -94,23 +94,17 @@ public abstract class Producer<T> implements Runnable {
         GENERAL.info("Shutdown producer thread");
     }
 
-    public final boolean awaitTermination() {
+    public final boolean awaitTermination(long timeout) {
         try{
-            while (running.get()) {
-                Utils.trySleep(100);
-            }
-            return true;
-        }finally {
             service.shutdown();
-            try {
-                service.awaitTermination(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                GENERAL.debug("Caught interrupted exception: ",e);
-            }
-            finally {
-                service.shutdownNow();
-            }
+            service.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        finally {
+            service.shutdownNow();
         }
     }
 

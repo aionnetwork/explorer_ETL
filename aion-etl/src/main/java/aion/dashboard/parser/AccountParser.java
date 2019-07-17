@@ -1,6 +1,6 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.parser.type.AccountBatch;

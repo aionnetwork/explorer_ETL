@@ -1,6 +1,7 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.RollingBlockMean;
@@ -14,7 +15,7 @@ public class ParserBuilder {
     private RollingBlockMean rollingBlockMean;
     private IdleProducer<?, String> accountProd;
     private TokenParser tokenProd;
-    private APIService apiService;
+    private AionService apiService;
 
     public ParserBuilder setExtractor(Extractor extractor) {
         this.extractor = extractor;
@@ -45,7 +46,7 @@ public class ParserBuilder {
         return new Parser(extractor, queue, rollingBlockMean, accountProd, tokenProd, apiService);
     }
 
-    public ParserBuilder setApiService(APIService apiService) {
+    public ParserBuilder setApiService(AionService apiService) {
         this.apiService = apiService;
         return this;
     }

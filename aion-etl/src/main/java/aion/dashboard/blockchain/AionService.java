@@ -1,7 +1,9 @@
 package aion.dashboard.blockchain;
 
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APITransaction;
+import aion.dashboard.blockchain.type.CallObject;
 import aion.dashboard.config.Config;
 import aion.dashboard.exception.AionApiException;
 import org.aion.api.IAionAPI;
@@ -23,7 +25,7 @@ import java.util.function.Function;
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
 
-public class AionService implements APIService{
+public class AionService implements APIService {
 
 
 	private final IAionAPI api;
@@ -197,8 +199,30 @@ public class AionService implements APIService{
 	}
 
 	@Override
-	public byte[] call(byte[] data, String from, String to) throws Exception {
-		throw new UnsupportedOperationException();
+	public byte[] call(CallObject object) throws Exception {
+		TxArgs args = object.toTxArgs();
+		final byte[] result;
+
+		ApiMsg apiMsg = new ApiMsg();
+		try {
+			reconnect();
+			apiMsg.set(doApiRequest(iAionApi-> iAionApi.getTx().call(args), api));
+
+			if (apiMsg.isError()) {
+				throw new AionApiException(formatError(apiMsg));
+			} else {
+				result = apiMsg.getObject();
+			}
+
+		} catch (AionApiException e) {
+			GENERAL.debug("AionApi: threw Exception in getBlockNumber()", e);
+			throw e;
+		} catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+
+		return result;
+
 	}
 
 	/**
@@ -423,6 +447,22 @@ public class AionService implements APIService{
 
 		return APITransaction.from(transaction);
     }
+
+    public BigInteger getBlockReward(long blockNumber) throws AionApiException {
+    	try{
+    		ApiMsg msg = doApiRequest(iAionApi-> iAionApi.getChain().getBlockReward(blockNumber), api);
+    		if (msg.isError()){
+
+    			throw new AionApiException(formatError(msg));
+			}
+    		return msg.getObject();
+		}catch (AionApiException e){
+			GENERAL.debug("AionApi: threw Exception in getBlockReward()", e);
+			throw new AionApiException();
+		}catch (NullPointerException e){
+			throw new AionApiException(formatRuntimeException(e));
+		}
+	}
 
 
     private String formatRuntimeException(RuntimeException e) {

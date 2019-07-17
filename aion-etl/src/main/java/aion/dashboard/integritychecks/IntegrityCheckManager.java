@@ -1,6 +1,6 @@
-package aion.dashboard.integrityChecks;
+package aion.dashboard.integritychecks;
 
-import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.config.Config;
 import aion.dashboard.service.*;
 import org.slf4j.Logger;

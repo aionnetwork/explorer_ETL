@@ -21,6 +21,7 @@ public class Metrics {
     private long startTimeStamp;
     private BigDecimal averageHashPower;
     private int id;
+    private BigDecimal lastBlockReward;
 
 
     //This constructor is accessed only through a builder as such it is only accessed through the vpn
@@ -36,7 +37,8 @@ public class Metrics {
                     long endTimeStamp,
                     long startTimeStamp,
                     BigDecimal averageHashPower,
-                    int id) {
+                    int id,
+                    BigDecimal lastBlockReward) {
         this.totalTransactions = totalTransactions;
         this.transactionsPerSecond = transactionsPerSecond;
         this.peakTransactionsPerBlock = peakTransactionsPerBlock;
@@ -50,6 +52,7 @@ public class Metrics {
         this.startTimeStamp = startTimeStamp;
         this.averageHashPower = averageHashPower;
         this.id = id;
+        this.lastBlockReward = lastBlockReward;
     }
 
     public BigInteger getTotalTransactions() {
@@ -104,6 +107,10 @@ public class Metrics {
         return id;
     }
 
+    public BigDecimal getLastBlockReward() {
+        return lastBlockReward;
+    }
+
     public static class MetricsBuilder{
 
         private BigInteger totalTransactions;
@@ -119,6 +126,7 @@ public class Metrics {
         private long endTimeStamp;
         private long startTimeStamp;
         private int id;
+        private BigInteger lastBlockReward;
 
 
         public MetricsBuilder setTotalTransactions(BigInteger totalTransactions) {
@@ -199,7 +207,7 @@ public class Metrics {
                         endTimeStamp,
                         startTimeStamp,
                         averageHashPower,
-                        id);
+                        id, new BigDecimal(lastBlockReward));
             }
             else throw new IllegalStateException("Failed to build metrics: " + this.toString());
         }
@@ -237,6 +245,11 @@ public class Metrics {
 
         public MetricsBuilder setId(int id) {
             this.id = id;
+            return this;
+        }
+
+        public MetricsBuilder setLastBlockReward(BigInteger lastBlockReward) {
+            this.lastBlockReward = lastBlockReward;
             return this;
         }
     }

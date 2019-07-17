@@ -1,6 +1,7 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
@@ -149,12 +150,12 @@ public class TokenTransfers {
             TokenTransfers.TransferBuilder builder = builderThreadLocal.get();
             return Optional.of(
                     builder.setTransactionTimestamp(b.getTimestamp())
-                            .setContractAddress(event.getAddress().replace("0x",""))
-                            .setTransactionHash(tx.getTxHash().toString())
+                            .setContractAddress(Utils.sanitizeHex(event.getAddress()))
+                            .setTransactionHash(Utils.sanitizeHex(tx.getTxHash().toString()))
                             .setBlockNumber(b.getNumber())
-                            .setOperator(optionalOperator.get())
-                            .setToAddress(optionalTo.get().replace("0x",""))
-                            .setFromAddress(optionalFrom.get().replace("0x",""))
+                            .setOperator(Utils.sanitizeHex(optionalOperator.get()))
+                            .setToAddress(Utils.sanitizeHex(optionalTo.get()))
+                            .setFromAddress(Utils.sanitizeHex(optionalFrom.get()))
                             .setScaledTokenValue(scaledValue)
                             .setRawValue(rawValue.toString())
                             .setTokendecimal(tkn.getTokenDecimal())

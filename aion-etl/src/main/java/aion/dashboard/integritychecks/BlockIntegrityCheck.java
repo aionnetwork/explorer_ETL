@@ -1,6 +1,6 @@
-package aion.dashboard.integrityChecks;
+package aion.dashboard.integritychecks;
 
-import aion.dashboard.blockchain.APIService;
+import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.domainobject.Block;
 import aion.dashboard.service.BlockService;
@@ -9,11 +9,7 @@ import aion.dashboard.util.Tuple2;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 public class BlockIntegrityCheck extends IntegrityCheck<Block, Tuple2<Block, APIBlock>> {
 

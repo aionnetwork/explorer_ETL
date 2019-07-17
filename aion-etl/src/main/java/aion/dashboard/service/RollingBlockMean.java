@@ -8,6 +8,7 @@ import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.AionApiException;
 import org.aion.api.type.BlockDetails;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,8 +72,9 @@ public interface RollingBlockMean {
     /**
      * Adds a new block to the moving window
      * @param blockDetails
+     * @param blockReward
      */
-    void add(BlockDetails blockDetails);
+    void add(BlockDetails blockDetails, BigInteger blockReward);
     void reorg(long consistentBlock);
 
 

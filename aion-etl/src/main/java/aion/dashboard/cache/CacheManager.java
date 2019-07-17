@@ -11,7 +11,7 @@ public abstract class CacheManager<K ,V> {
 
 
     public enum Cache{
-        CONTRACT,TOKEN;
+        CONTRACT,TOKEN, ATS_TOKEN
 
     }
 

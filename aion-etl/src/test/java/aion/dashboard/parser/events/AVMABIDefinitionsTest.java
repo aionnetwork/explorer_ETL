@@ -24,6 +24,21 @@ class AVMABIDefinitionsTest {
     }
 
     @Test
+    void fromLine1() {
+        var res = AVMABIDefinitions.fromLine("TokenSent(Address to,Address indexed from,uint128 amount)");
+        var expected = new AVMABIDefinitions.AVMEventSignature(
+                List.of(new AVMABIDefinitions.Parameter("Address", "from", true, 1)),
+                List.of(new AVMABIDefinitions.Parameter("Address", "to", false, 0), new AVMABIDefinitions.Parameter("uint128", "amount", true, 2)),
+                AVMABIDefinitions.hashstr("TokenSent"),
+                "TokenSent(Address to,Address indexed from,uint128 amount)",
+                "TokenSent");
+
+        assertEquals(expected.toString(), res.toString());
+
+        System.out.println(expected);
+    }
+
+    @Test
     void fromFile() {
         var res = AVMABIDefinitions.fromFile("contracts/avm/ATS.avm");
 

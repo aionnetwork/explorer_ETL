@@ -28,4 +28,13 @@ public class Result <T>{
     public String getJsonrpc() {
         return jsonrpc;
     }
+
+    @Override
+    public String toString() {
+        return "Result{" +
+                "result=" + result +
+                ", id=" + id +
+                ", jsonrpc='" + jsonrpc + '\'' +
+                '}';
+    }
 }

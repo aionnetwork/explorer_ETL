@@ -73,7 +73,24 @@ class EventDecoderTest {
         }
 
         if (!success) fail();
+         blocks = service.getBlockDetailsByRange(2560675,2560675);
+         tx = blocks.stream()
+                .flatMap(blk -> blk.getTxDetails().stream())
+                .filter(transaction-> Utils.sanitizeHex(transaction.getTxHash().toString()).equalsIgnoreCase("bea3d05a2d81473bfc5f0d93eea26ee7595b77d219cc8c47cc281ee6fb9b4d37"))
+                .findFirst().orElseThrow();
 
+
+        success = false;
+        for (var txlog: tx.getLogs()) {
+            var res = decoder.decodeEvent(txlog);
+            if (res.isPresent()){
+                res.ifPresent(System.out::println);
+                success=true;
+                break;
+            }
+        }
+
+        if (!success) fail();
 
     }
 

@@ -92,8 +92,9 @@ public class DbQuery {
             "transaction_hashes, " +
             "year, " +
             "month, " +
-            "day) " +
-            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "day," +
+            "block_reward) " +
+            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
 
@@ -243,23 +244,25 @@ public class DbQuery {
             " average_difficulty = ?," +
             " end_timestamp = ?," +
             " start_timestamp = ?," +
-            " averaged_hash_power = ?" +
+            " averaged_hash_power = ?," +
+            " last_block_reward = ?" +
             " where id = ?";
 
 
     public static final String MetricsDelete = "update metrics set " +
-            " total_transaction = ?," +
-            " transactions_per_second = ?," +
-            " peak_transactions_per_block = ?," +
-            " start_block = ?," +
-            " end_block = ?," +
-            " average_nrg_consumed = ?," +
-            " average_nrg_limit = ?," +
-            " averaged_block_time = ?," +
-            " average_difficulty = ?," +
-            " end_timestamp = ?," +
-            " start_timestamp = ?," +
-            " averaged_hash_power = ?";
+            " total_transaction = NULL," +
+            " transactions_per_second = NULL," +
+            " peak_transactions_per_block = NULL," +
+            " start_block = NULL," +
+            " end_block = NULL," +
+            " average_nrg_consumed = NULL," +
+            " average_nrg_limit = NULL," +
+            " averaged_block_time = NULL," +
+            " average_difficulty = NULL," +
+            " end_timestamp = NULL," +
+            " start_timestamp = NULL," +
+            " averaged_hash_power = NULL," +
+            " last_block_reward = NULL";
 
     //-----------------------------InternalTransfer-------------------
 

@@ -35,7 +35,8 @@ public class MetricsServiceImpl implements MetricsService {
             ps.setLong(10, metrics.getEndTimeStamp());
             ps.setLong(11, metrics.getStartTimeStamp());
             ps.setBigDecimal(12, metrics.getAverageHashPower());
-            ps.setInt(13, metrics.getId());
+            ps.setBigDecimal(13, metrics.getLastBlockReward());
+            ps.setInt(14, metrics.getId());
             ps.addBatch();
         }
         return ps;
@@ -44,19 +45,6 @@ public class MetricsServiceImpl implements MetricsService {
     @Override
     public PreparedStatement prepareDelete(Connection con) throws SQLException {
         PreparedStatement ps = con.prepareStatement(DbQuery.MetricsDelete);
-
-        ps.setNull(1, Types.BIGINT);
-        ps.setNull(2, Types.DECIMAL);
-        ps.setNull(3, Types.INTEGER);
-        ps.setNull(4, Types.INTEGER);
-        ps.setNull(5, Types.INTEGER);
-        ps.setNull(6, Types.DECIMAL);
-        ps.setNull(7, Types.DECIMAL);
-        ps.setNull(8, Types.DECIMAL);
-        ps.setNull(9, Types.DECIMAL);
-        ps.setNull(10, Types.INTEGER);
-        ps.setNull(11,Types.INTEGER);
-        ps.setNull(12,Types.DECIMAL);
 
         return ps;
     }

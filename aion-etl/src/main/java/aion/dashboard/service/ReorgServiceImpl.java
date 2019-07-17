@@ -1,7 +1,7 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
-import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Account;
@@ -119,6 +119,7 @@ public class ReorgServiceImpl implements ReorgService {
             }
         }
     }
+
 
     /**
      * Performs the reorg using the block service's delete method. Also saves all balances affected by the reorg.
