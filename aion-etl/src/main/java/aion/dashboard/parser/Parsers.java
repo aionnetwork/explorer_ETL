@@ -45,7 +45,7 @@ public class Parsers {
      * @return whether the block may contain the event
      */
     static boolean containsReadableEvent(byte[] bloomBytes) {
-        bloomBytes = Arrays.copyOf(bloomBytes, bloomBytes.length);// Copying byte array for sanity reasons
+        bloomBytes = Arrays.copyOf(bloomBytes, bloomBytes.length);
         Bloom bloom = new Bloom(bloomBytes);
         var avmHashes=AVMABIDefinitions.getInstance().getAllHashes().stream();
 

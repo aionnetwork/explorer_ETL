@@ -1,9 +1,12 @@
 package aion.dashboard.cache;
 
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -24,7 +27,7 @@ public class GuavaManager<K,V> extends CacheManager<K, V> {
                 .initialCapacity(this.config.getInitialSize())
                 .maximumSize(this.config.getMaxSize())
                 .recordStats()
-                .removalListener(e -> LOGGER_GENERAL.debug("Evicted key: {}. Caused by: {}",e.getKey(), e.getCause()))
+                .removalListener(GuavaManager::removalListener)
                 .build();
     }
 
@@ -44,4 +47,19 @@ public class GuavaManager<K,V> extends CacheManager<K, V> {
     }
 
 
+    private static void  removalListener(RemovalNotification removalNotification){
+        if (removalNotification.getValue() instanceof Closeable){
+            try {
+                ((Closeable) removalNotification.getValue()).close();
+                if (LOGGER_GENERAL.isTraceEnabled()) {
+                    LOGGER_GENERAL.trace("Closing shared IO");
+                }
+            } catch (Exception ex) {
+                LOGGER_GENERAL.error("Caught exception while closing the shared resource: ", ex);
+            }
+        }
+        if (LOGGER_GENERAL.isTraceEnabled()) {
+            LOGGER_GENERAL.trace("Evicted key: {}. Caused by: {}", removalNotification.getKey(), removalNotification.getCause());
+        }
+    }
 }

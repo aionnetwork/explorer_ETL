@@ -23,7 +23,8 @@ CREATE TABLE `block` (
 	`num_transactions` SMALLINT,
 	`block_time` INT,
 	`nrg_reward` DECIMAL(64,18),
-  `approx_nrg_reward` DOUBLE(36, 18),
+	`block_reward` DECIMAL(64,18),
+  	`approx_nrg_reward` DOUBLE(36, 18),
 	`transaction_hash` VARCHAR(64),
 	`transaction_hashes` TEXT,
 	`year` SMALLINT,
@@ -249,6 +250,7 @@ CREATE TABLE `metrics` (
 	`end_timestamp` INT NULL,
 	`start_timestamp` INT NULL,
 	`averaged_hash_power` DECIMAL(64,10) NULL,
+	`last_block_reward` DECIMAL(64,18) NULL,
 	PRIMARY KEY(`id`)
 ) ENGINE = InnoDB;
 INSERT INTO `metrics` (id) VALUES (1);

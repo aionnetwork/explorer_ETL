@@ -2,7 +2,6 @@ package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.config.Config;
-import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.AionApiException;
@@ -12,8 +11,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class RollingBlockMeanImpl implements RollingBlockMean {
@@ -23,7 +22,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
     private final int blockMaxSize;
     private final long transactionTimeWindow;
     private final long blockcountwindow;
-
+    private final AtomicReference<BigInteger> blockReward = new AtomicReference<>(BigInteger.ZERO);
     private class StrippedTransaction implements Comparable<StrippedTransaction>{
         StrippedTransaction(long timeStamp, long blockNumber, long numberTransactions) {
             this.timeStamp = timeStamp;
@@ -104,9 +103,8 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
 
     @Override
-    public void add(BlockDetails blockDetails) {
+    public void add(BlockDetails blockDetails, BigInteger blockReward) {
         //Avoid duplicates
-
         blockHistory.remove(blockDetails);
         blockHistory.add(blockDetails);
 
@@ -124,7 +122,8 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         long weekAgo = now - (transactionTimeWindow * 60);
 
         transactionHistory.removeIf(st -> st.timeStamp < weekAgo);
-
+        //update the block reward
+        this.blockReward.set(blockReward);
     }
 
     public synchronized void reorg(long consistentBlock) {
@@ -262,6 +261,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                         .setTotalTransactions(transactionsOver24Hrs)
                         .setTransactionsPerSecond(averageTxnsPerSecond)
                         .setId(id)
+                        .setLastBlockReward(blockReward.get())
                         .build()
         );
     }

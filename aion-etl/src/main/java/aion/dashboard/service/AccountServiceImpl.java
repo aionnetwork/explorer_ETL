@@ -70,23 +70,8 @@ public class AccountServiceImpl implements AccountService {
     public boolean save(List<Account> accounts) {
 
         try (var con = DbConnectionPool.getConnection()) {
-            try (PreparedStatement ps = con.prepareStatement(DbQuery.AccountInsert)) {
-
-                for (Account account : accounts) {
-                    Account comp = getByAddress(account.getAddress());
-                    if (comp == null || !comp.equals(account)) {
-                        ps.setString(1, account.getAddress());
-                        ps.setBigDecimal(2, account.getBalance());
-                        ps.setLong(3, account.getLastBlockNumber());
-                        ps.setInt(4, comp == null ? account.getContract() : comp.getContract());
-                        ps.setString(5, account.getNonce());
-                        ps.setString(6, comp == null || comp.getTransactionHash() == null ? account.getTransactionHash() : comp.getTransactionHash());
-                        ps.setDouble(7, account.getApproxBalance());
-
-                        ps.execute();
-                    }
-                }
-
+            try (PreparedStatement ps = prepare(con, accounts)) {
+                ps.executeBatch();
                 con.commit();
             }
             catch (SQLException e){

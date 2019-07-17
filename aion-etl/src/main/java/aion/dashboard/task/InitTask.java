@@ -2,11 +2,12 @@ package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Extractor;
-import aion.dashboard.blockchain.Web3Service;
+import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.config.BuildVersion;
 import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
-import aion.dashboard.integrityChecks.IntegrityCheckManager;
+import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
 import org.slf4j.Logger;
@@ -25,7 +26,7 @@ public final class InitTask {
         throw new UnsupportedOperationException("Cannot create an instance of: "+ InitTask.class.getSimpleName());
     }
 
-    private static final String VERSION_NUMBER = "v2.2";
+    private static final String VERSION_NUMBER = "v2.3";
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
     private static void revert(String blk) {
@@ -50,7 +51,8 @@ public final class InitTask {
     }
 
     private static void printVersion() {
-        System.out.println("Aion ETL "+ VERSION_NUMBER);
+        System.out.println("Aion ETL "+ BuildVersion.VERSION.replaceAll("-[0-9]{4}(-[0-9]{1,2}){2}-20[0-9]{2}", ""));
+        System.out.println("Built on "+ BuildVersion.BUILD_DATE);
     }
 
 
@@ -74,7 +76,7 @@ public final class InitTask {
     public static void start() throws AionApiException {
         Logger general = GENERAL;
         general.info("--------------------------------");
-        general.info("Starting ETL {}", VERSION_NUMBER);
+        general.info("Starting ETL {}", BuildVersion.VERSION.replaceAll("-[0-9]{4}(-[0-9]{1,2}){2}-20[0-9]{2}", ""));
         general.info("--------------------------------");
 
         ParserStateService ps = ParserStateServiceImpl.getInstance();
@@ -93,7 +95,7 @@ public final class InitTask {
                 .setTokenProd(tokenParser)
                 .setQueue(new ArrayBlockingQueue<>(queueSize))
                 .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
-                .setExtractor(extractor).setApiService(Web3Service.getInstance()).createParser();
+                .setExtractor(extractor).setApiService(AionService.getInstance()).createParser();
 
 
         Consumer consumer = new ConsumerBuilder().setAccountProducer(accountParser)
@@ -143,14 +145,14 @@ public final class InitTask {
             IntegrityCheckManager.getInstance().shutdown();
             Web3Service.getInstance().close();
             AionService.getInstance().close();
-            GENERAL.info("Succesfully shutdown the ETL");
+            GENERAL.info("Successfully shutdown the ETL");
 
         });
     }
 
     private static void shutdownProducer(Producer<?> producer){
         producer.stop();
-        producer.awaitTermination();
+        producer.awaitTermination(5000L);
     }
 
 }

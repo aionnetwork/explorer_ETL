@@ -47,11 +47,16 @@ public class Token {
                 "contractAddress='" + contractAddress + '\'' +
                 ", transactionHash='" + transactionHash + '\'' +
                 ", creatorAddress='" + creatorAddress + '\'' +
-                ", blockTimestamp='"+ blockTimestamp +
+                ", totalLiquidSupply=" + totalLiquidSupply +
                 ", totalSupply=" + totalSupply +
                 ", granularity=" + granularity +
+                ", tokenDecimal=" + tokenDecimal +
                 ", tokenName='" + tokenName + '\'' +
                 ", symbol='" + symbol + '\'' +
+                ", blockTimestamp=" + blockTimestamp +
+                ", blockYear=" + blockYear +
+                ", blockMonth=" + blockMonth +
+                ", blockDay=" + blockDay +
                 '}';
     }
 
@@ -189,10 +194,6 @@ public class Token {
 
 
         public Token build(){
-            if(contractAddress.equals("") || creatorAddress.equals("") || transactionHash.equals("") || name.equals("") || symbol.equals("")||
-            totalSupply.equals(BigInteger.ZERO) || totalLiquidSupply.equals(BigInteger.ZERO) || granularity.equals(BigInteger.ZERO) || timestamp<=0){
-                throw new IllegalStateException("Falsely identified a token: "+ this.toString());
-            }
             return new Token(contractAddress,  transactionHash,  creatorAddress, totalLiquidSupply,  totalSupply,  granularity, tokenDecimal, name,  symbol,  timestamp);
         }
 

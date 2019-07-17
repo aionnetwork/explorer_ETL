@@ -1,6 +1,8 @@
 package aion.dashboard.parser;
 
+import aion.dashboard.blockchain.ATSTokenImpl;
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.interfaces.ATSToken;
 import aion.dashboard.cache.CacheManager;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.ParserState;
@@ -15,7 +17,6 @@ import aion.dashboard.service.TokenService;
 import aion.dashboard.parser.events.SolABIDefinitions;
 import aion.dashboard.parser.events.ContractEvent;
 import org.aion.api.IContract;
-import org.aion.api.sol.IAddress;
 import org.aion.api.type.BlockDetails;
 import org.aion.base.type.AionAddress;
 
@@ -23,7 +24,9 @@ import java.math.BigInteger;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static aion.dashboard.util.Utils.granularityToTknDec;
 import static aion.dashboard.util.Utils.truncate;
@@ -33,12 +36,15 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     private final AionService apiService;
     private final ContractService contractService;
     private final TokenService service;
+    private final CacheManager<String, ATSToken> atsTokenCacheManager = CacheManager.getManager(CacheManager.Cache.ATS_TOKEN);
     private final CacheManager<String, Token> tokenCacheManager = CacheManager.getManager(CacheManager.Cache.TOKEN);
     private final CacheManager<String, Contract> contractCacheManager = CacheManager.getManager(CacheManager.Cache.CONTRACT);
+    private final ExecutorService workers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()*2);
 
     void registerContract(Contract contract){
         contractCacheManager.putIfAbsent(contract.getContractAddr(), contract);
     }
+
 
     public TokenParser(BlockingQueue<List<TokenBatch>> queue, BlockingQueue<List<Message<ContractEvent>>> workQueue, AionService apiService, ContractService contractService, TokenService service) {
         super(queue, workQueue);
@@ -50,6 +56,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     @Override
     protected List<TokenBatch> task() throws Exception {
         Thread.currentThread().setName("token-parser");
+        GENERAL.info("Starting token parser.");
         var records = getMessage();
         Set<String> holdersSet = new HashSet<>();
         TokenBatch res = new TokenBatch();
@@ -57,15 +64,11 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
             long lastBlockNumber =-1;
             for (var msg : records) {
                 if (GENERAL.isTraceEnabled()) {
-                    GENERAL.trace("Starting request for account: {}", getResponse(ContractEvent.class, msg.getItem()).map(ContractEvent::getAddress).orElse(""));
+                    GENERAL.trace("Starting request for token with address: {}", getResponse(ContractEvent.class, msg.getItem()).map(ContractEvent::getAddress).orElse(""));
                 }
 
-                if (msg.getItem().stream().anyMatch(ContractEvent::isAvm)){
-                    //leave empty for now
-                }
-                else {
-                    res= res.merge(readTokenEvent(msg, holdersSet));
-                }
+                res= res.merge(readTokenEvent(msg, holdersSet));
+
                 if (lastBlockNumber<msg.getBlockDetails().getNumber()){
                     lastBlockNumber=msg.getBlockDetails().getNumber();
                 }
@@ -95,29 +98,34 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
         var contractAddr = msg.getItem().get(0).getAddress();
         var res = new TokenBatch();
         try {
-
-
-            Token token = tokenCacheManager.contains(contractAddr) ?
-                    tokenCacheManager.getIfPresent(contractAddr) :
-                    service.getByContractAddr(contractAddr);
             Contract contract;
+
             if (contractCacheManager.contains(contractAddr)) contract = contractCacheManager.getIfPresent(contractAddr);
             else {
-                contract = Objects.requireNonNull(contractService.selectContractsByContractAddr(contractAddr));
+                contract = Objects.requireNonNull(contractService.selectContractsByContractAddr(contractAddr), "Failed to find the contract in the database.");
                 registerContract(contract);
             }
 
-
-            if (token == null || Parsers.isSupplyUpdate(msg.getItem())) {
-                // get token
-                token = createToken(contract);
+            ATSToken atsToken = getATSToken(contractAddr);
+            final Token token;
+            if (atsToken ==  null){// The token does not exist in the database.
+                atsToken = new ATSTokenImpl(contractAddr, contract.getContractType());
+                registerATSToken(contractAddr,atsToken);
+                token = atsToken.getDetails(contract).orElseThrow();
+                res.addToken(token);
+            }
+            else if (Parsers.isSupplyUpdate(msg.getItem())) {//The liquid supply on the token has changed
+                token = atsToken.updateDetails(contract).orElseThrow();
                 res.addToken(token);
                 updateCache(contractAddr, token, contract);
+            }
+            else {//the token is in the cache
+                token = atsToken.getDetails(contract).orElseThrow();
             }
 
 
             res.addTransfers(Parsers.getTokenTransfers(msg.getItem(), msg.getBlockDetails(), msg.getTxDetails(), token));
-            res.addHolders(getHolders(msg.getItem(), contract, token, msg.getBlockDetails(), holdersSet));
+            res.addHolders(getHolders(msg.getItem(), atsToken, msg.getBlockDetails(), holdersSet));
 
         } catch (NullPointerException e){
             GENERAL.info("Failed to load contract from the database;");
@@ -136,10 +144,8 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
         contractCacheManager.putIfAbsent(contractAddr, contract);
     }
 
-    private List<TokenHolders> getHolders(List<ContractEvent> events, Contract contract, Token token, BlockDetails b, Set<String> holdersSet) throws AionApiException {
+    private List<TokenHolders> getHolders(List<ContractEvent> events, ATSToken token, BlockDetails b, Set<String> holdersSet) throws AionApiException {
 
-        final SolABIDefinitions solAbiDefinitions = SolABIDefinitions.getInstance();
-        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), solAbiDefinitions.getJSONString(SolABIDefinitions.ATS_CONTRACT));
         List<TokenHolders> res = new ArrayList<>();
 
         for (var event : events) {
@@ -148,7 +154,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
             for (var input: inputs){
                 if(holdersSet.add(input)) {// check if the holder was previously read in this batch
-                    createHolder(input, b,token,blockChainInterface).ifPresent(res::add);
+                    createHolder(input, b,token).ifPresent(res::add);
                 }
             }
         }
@@ -157,54 +163,39 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     }
 
 
-    private Optional<TokenHolders> createHolder(String address, BlockDetails b, Token token, IContract blockChainInterface) throws AionApiException {
+    private Optional<TokenHolders> createHolder(String address, BlockDetails b, ATSToken token) throws AionApiException {
         if (!address.isBlank() && org.aion.base.util.Utils.isValidAddress(address)) {
-
-            var balance = getResponse(BigInteger.class, apiService.callContractFunction(blockChainInterface, "balanceOf", IAddress.copyFrom(address))).filter(Parsers.NUM_RESPONSE_EXISTS);
-            return balance.map(bigInteger -> (TokenHolders.from(address, b, token, bigInteger)));
+            return token.getHolderDetails(address, b);
         }
         else {
             return Optional.empty();
         }
-
     }
 
-    private Token createToken(Contract contract) throws AionApiException {
-        final SolABIDefinitions solAbiDefinitions = SolABIDefinitions.getInstance();
-        IContract blockChainInterface = apiService.getContract(AionAddress.wrap(contract.getContractCreatorAddr()), AionAddress.wrap(contract.getContractAddr()), solAbiDefinitions.getJSONString(SolABIDefinitions.ATS_CONTRACT));
+    private ATSToken getATSToken(String contractAddr) throws SQLException {
+        if (atsTokenCacheManager.contains(contractAddr)){
+            return atsTokenCacheManager.getIfPresent(contractAddr);//check the cache for the token and return if it is found
+        }
+        else {
+            var token = service.getByContractAddr(contractAddr);//otherwise check the database for the token and build the ats token
+            // if it was found
 
-
-        //get token details from the chain
-        var granularity = getResponse(BigInteger.class, apiService.callContractFunction(blockChainInterface, "granularity"))
-                .filter(Parsers.NUM_RESPONSE_EXISTS)// if the api returns 0 the token does not exist
-                .orElseThrow();
-        var name = truncate(getResponse(String.class, apiService.callContractFunction(blockChainInterface, "name"))
-                .filter(Parsers.STRING_RESPONSE_EXISTS)//if the api returns an empty string the token does not exist
-                .orElseThrow());
-        var symbol = truncate(getResponse(String.class, apiService.callContractFunction(blockChainInterface, "symbol"))
-                .filter(Parsers.STRING_RESPONSE_EXISTS)
-                .orElseThrow());
-        var totalSupply = getResponse(BigInteger.class, apiService.callContractFunction(blockChainInterface, "totalSupply"))
-                .filter(Parsers.NUM_RESPONSE_EXISTS)
-                .orElseThrow();
-        var liquidSupply = getResponse(BigInteger.class, apiService.callContractFunction(blockChainInterface, "liquidSupply"))
-                .orElseThrow();
-
-        //build the token
-        return Token.getBuilder().contractAddress(contract.getContractAddr())
-                .creatorAddress(contract.getContractCreatorAddr())
-                .transactionHash(contract.getContractTxHash())
-                .name(name)
-                .symbol(symbol)
-                .granularity(granularity)
-                .totalSupply(totalSupply)
-                .totalLiquidSupply(liquidSupply)
-                .timestamp(contract.getTimestamp())
-                .setTokenDecimal(granularityToTknDec(granularity))
-                .build();
+            if (token == null){
+                return null;
+            }
+            else {
+                Contract contract = contractCacheManager.getIfPresent(contractAddr);
+                var atsToken= new ATSTokenImpl(token,contract.getContractType());
+                registerATSToken(contractAddr,atsToken);
+                return atsToken;
+            }
+        }
     }
 
 
+    private void registerATSToken(String contractAddr, ATSToken token){
+        atsTokenCacheManager.putIfAbsent(contractAddr, token);
+    }
     private <T> Optional<T> getResponse(Class<T> clazz, List res) {
         if (res != null && !res.isEmpty() && clazz.equals(res.get(0).getClass())) {
             return Optional.ofNullable(clazz.cast(res.get(0)));
