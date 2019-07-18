@@ -3,6 +3,7 @@ package aion.dashboard.blockchain;
 import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APITransaction;
+import aion.dashboard.blockchain.type.APITransactionReceipt;
 import aion.dashboard.blockchain.type.CallObject;
 import aion.dashboard.config.Config;
 import aion.dashboard.exception.AionApiException;
@@ -448,7 +449,12 @@ public class AionService implements APIService {
 		return APITransaction.from(transaction);
     }
 
-    public BigInteger getBlockReward(long blockNumber) throws AionApiException {
+	@Override
+	public APITransactionReceipt getTransactionReceipt(String txHash) throws Exception {
+		return null;
+	}
+
+	public BigInteger getBlockReward(long blockNumber) throws AionApiException {
     	try{
     		ApiMsg msg = doApiRequest(iAionApi-> iAionApi.getChain().getBlockReward(blockNumber), api);
     		if (msg.isError()){

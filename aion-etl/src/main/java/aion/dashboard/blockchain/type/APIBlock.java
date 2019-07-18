@@ -215,6 +215,83 @@ public class APIBlock {
         return publicKey;
     }
 
+    public String getLogsBloom() {
+        return logsBloom;
+    }
+
+    public Long getTotalDifficulty() {
+        return totalDifficulty;
+    }
+
+    public String getReceiptsRoot() {
+        return receiptsRoot;
+    }
+
+    public String getExtraData() {
+        return extraData;
+    }
+
+    public Long getNrgUsed() {
+        return nrgUsed;
+    }
+
+    public List<String> getTransactions() {
+        return transactions;
+    }
+
+    public String getNonce() {
+        return nonce;
+    }
+
+    public String getMiner() {
+        return miner;
+    }
+
+    public long getDifficulty() {
+        return difficulty;
+    }
+
+    public long getNumber() {
+        return number;
+    }
+
+    public String getGasLimit() {
+        return gasLimit;
+    }
+
+    public String getGasUsed() {
+        return gasUsed;
+    }
+
+    public Long getNrgLimit() {
+        return nrgLimit;
+    }
+
+    public String getSolution() {
+        return solution;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public String getTransactionsRoot() {
+        return transactionsRoot;
+    }
+
+    public String getStateRoot() {
+        return stateRoot;
+    }
+
+    public String getParentHash() {
+        return parentHash;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+
     @Override
     public String toString() {
         return "APIBlock{" +

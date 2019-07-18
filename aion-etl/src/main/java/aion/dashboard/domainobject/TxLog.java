@@ -10,6 +10,7 @@ import org.aion.api.type.TxDetails;
 import org.json.JSONArray;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -158,8 +159,8 @@ public class TxLog {
 
         @SuppressWarnings("Duplicates")
         public TxLogBuilder setTxLog(APITransactionLog log) {
-            address = log.getAddress().toString();
-            data = log.getData().toString();
+            address = Utils.sanitizeHex(log.getAddress());
+            data = log.getData() == null? "": log.getData();
             JSONArray jsonArray = new JSONArray(log.getTopics());
             topics = jsonArray.toString();
             index = log.getLogIndex();
@@ -176,7 +177,7 @@ public class TxLog {
         }
 
         public TxLogBuilder setTo(String to) {
-            this.to = to;
+            this.to = Objects.isNull(to) ? "": to;
             return this;
         }
 

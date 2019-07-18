@@ -37,6 +37,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String GET_BLOCK = "eth_getBlockByNumber";
     private static final String GET_TRANSACTION_BY_HASH= "eth_getTransactionByHash";
     private static final String CALL="eth_call";
+    private static final String GET_TRANSACTION_RECEIPT = "eth_getTransactionReceipt";
     private final HttpHeaders httpHeaders;
     private final RestTemplate restExecutor;
     private List<String> web3Providers;
@@ -99,10 +100,21 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     }
 
     private void findActiveList() {
-        activeEndpoints.set(web3Providers.stream().filter(this::ping).collect(Collectors.toList()));
+        synchronized (activeEndpoints) {
+            activeEndpoints.set(web3Providers.stream().filter(this::ping).collect(Collectors.toList()));
+            activeEndpoints.notifyAll();
+        }
     }
-
     private String getActiveEp() {
+        synchronized (activeEndpoints) {
+            while (activeEndpoints.get() == null && !Thread.currentThread().isInterrupted()) {
+                try {
+                    activeEndpoints.wait();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
         ThreadLocalRandom random = ThreadLocalRandom.current();
         return activeEndpoints.get().get(random.nextInt(activeEndpoints.get().size()));
     }
@@ -248,6 +260,11 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     @Override
     public APITransaction getTransaction(String txHash) throws Exception {
         return executeCall(buildWeb3Call(GET_TRANSACTION_BY_HASH, txHash), getActiveEp(), APITransaction.class);
+    }
+
+    @Override
+    public APITransactionReceipt getTransactionReceipt(String txHash) throws Exception {
+        return executeCall(buildWeb3Call(GET_TRANSACTION_RECEIPT, txHash), getActiveEp(), APITransactionReceipt.class);
     }
 
 

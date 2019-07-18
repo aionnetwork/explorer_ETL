@@ -2,6 +2,7 @@ package aion.dashboard.blockchain.interfaces;
 
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APITransaction;
+import aion.dashboard.blockchain.type.APITransactionReceipt;
 import aion.dashboard.blockchain.type.CallObject;
 import aion.dashboard.exception.Web3ApiException;
 
@@ -19,4 +20,5 @@ public interface APIService extends AutoCloseable {
 
     APIBlock getBlock(long blockNumber) throws Exception;
     APITransaction getTransaction(String txHash) throws Exception;
+    APITransactionReceipt getTransactionReceipt(String txHash) throws  Exception;
 }

@@ -310,5 +310,5 @@ public class DbQuery {
             " start," +
             " end) values (?, ?, ?, ?, ?)";
 
-    public static final String SelectFromUpdateState = "Select * from update state where id = ?";
+    public static final String SelectFromUpdateState = "Select * from update_state where table_id = ?";
 }

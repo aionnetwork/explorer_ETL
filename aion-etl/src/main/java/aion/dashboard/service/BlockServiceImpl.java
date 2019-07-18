@@ -203,7 +203,8 @@ public class BlockServiceImpl implements BlockService {
              PreparedStatement psDeleteTokenBalances = con.prepareStatement(DbQuery.TokenHoldersDeleteByBlockNumber);
              PreparedStatement psDeleteGraphing = con.prepareStatement(DbQuery.GraphingDelete);
              PreparedStatement psDeleteMetric = MetricsServiceImpl.getInstance().prepareDelete(con);
-             PreparedStatement psInternalTransferService = InternalTransferServiceImpl.getInstance().prepareDelete(con, blockNumber)
+             PreparedStatement psInternalTransferService = InternalTransferServiceImpl.getInstance().prepareDelete(con, blockNumber);
+             PreparedStatement psTxLog = TxLogServiceImpl.getInstance().prepareDelete(con, blockNumber);
         ) {
 
 
@@ -244,7 +245,7 @@ public class BlockServiceImpl implements BlockService {
                 psDeleteTransfers.setLong(1, blockNumber);
                 psDeleteTransfers.execute();
 
-
+                psTxLog.execute();
                 //---Parser State----
                 ParserState.ParserStateBuilder builder = new ParserState.ParserStateBuilder();
                 List<ParserState> statesToUpdate = new ArrayList<>();

@@ -10,6 +10,7 @@ import aion.dashboard.exception.AionApiException;
 import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
+import aion.dashboard.update.UpdateManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +107,7 @@ public final class InitTask {
                 .setService(new ReorgServiceImpl(AionService.getInstance(),ps, Web3Service.getInstance()))
                 .createConsumer();
 
-
+        UpdateManager.getInstance().start();
 
         List<Producer> producers = new ArrayList<>();
         producers.add(tokenParser);
