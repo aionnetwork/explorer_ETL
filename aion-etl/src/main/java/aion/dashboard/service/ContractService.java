@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.DoubleStream;
 
 public interface ContractService {
 
@@ -27,4 +29,5 @@ public interface ContractService {
     PreparedStatement prepare(Connection con, List<Contract> contracts) throws SQLException;
 
 
+    Optional<Contract> findContract(String addr);
 }

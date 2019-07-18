@@ -1,5 +1,6 @@
 package aion.dashboard.service;
 
+import aion.dashboard.cache.CacheManager;
 import aion.dashboard.db.DbConnectionPool;
 import aion.dashboard.db.DbQuery;
 import aion.dashboard.domainobject.Contract;
@@ -12,11 +13,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class ContractServiceImpl implements ContractService {
 
     private static final ContractServiceImpl Instance = new ContractServiceImpl();
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
+    private static final CacheManager<String,Contract> CONTRACT_CACHE = CacheManager.getManager(CacheManager.Cache.CONTRACT);
 
 
     private ContractServiceImpl() {
@@ -171,5 +174,16 @@ public class ContractServiceImpl implements ContractService {
         return ps;
     }
 
-
+    public Optional<Contract> findContract(String contractAddress) {
+        if (CONTRACT_CACHE.contains(contractAddress)) return Optional.of(CONTRACT_CACHE.getIfPresent(contractAddress));
+        else {
+            try {
+                Contract contract = Objects.requireNonNull(this.selectContractsByContractAddr(contractAddress));
+                CONTRACT_CACHE.putIfAbsent(contractAddress, contract);
+                return Optional.of(contract);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+    }
 }
