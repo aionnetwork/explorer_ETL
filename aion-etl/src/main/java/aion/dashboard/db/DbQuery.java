@@ -283,4 +283,32 @@ public class DbQuery {
     //---------------------------VerifiedContract-------------------------
     public static final String SelectFromVerifiedContract =  "SELECT permission from verified_contract where contract_address = ?";
 
+
+
+    //---------------------------TxLog------------------------------------
+    public static final String InsertTxLog = "Replace into tx_log (" +
+            "transaction_hash, " +
+            "log_index, " +
+            "block_number, " +
+            "block_timestamp, " +
+            "topics, " +
+            "data, " +
+            "contract_addr, " +
+            "from_addr, " +
+            "to_addr, " +
+            "contract_type) values(?,?,?,?,?,?,?,?,?,?)";
+
+    public static final String DeleteTxLogByBlockNumber = "delete from tx_log where block_number > ?";
+
+
+
+    //---------------------------UpdateState-------------------------------
+
+    public static final String InsertUpdateState = "Replace into update_state (table_id, " +
+            " table_name," +
+            " run_update," +
+            " start," +
+            " end) values (?, ?, ?, ?, ?)";
+
+    public static final String SelectFromUpdateState = "Select * from update state where id = ?";
 }

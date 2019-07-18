@@ -16,6 +16,7 @@ public class ParserBatch extends AbstractBatch{
     private List<Metrics> metrics;
     private ParserState blockChainState;
     private List<ParserState> meanStates;
+    private List<TxLog> logs;
 
 
 
@@ -27,6 +28,7 @@ public class ParserBatch extends AbstractBatch{
         this.state = null;
         this.metrics = Collections.synchronizedList(new ArrayList<>());
         this.events = new ArrayList<>();
+        this.logs = new ArrayList<>();
     }
 
     public List<Block> getBlocks() {
@@ -53,6 +55,10 @@ public class ParserBatch extends AbstractBatch{
     public ParserBatch setState(ParserState state) {
         this.state = state;
         return this;
+    }
+
+    public List<TxLog> getLogs() {
+        return logs;
     }
 
     public List<Event> getEvents() {
@@ -103,5 +109,9 @@ public class ParserBatch extends AbstractBatch{
 
     public List<ParserState> getMeanStates() {
         return meanStates;
+    }
+
+    public boolean addTxLogs(List<TxLog> logs){
+        return this.logs.addAll(logs);
     }
 }

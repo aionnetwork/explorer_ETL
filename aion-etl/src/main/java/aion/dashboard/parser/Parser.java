@@ -1,6 +1,7 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.cache.CacheManager;
 import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
@@ -107,7 +108,7 @@ public class Parser extends Producer<ParserBatch> {
                 }
 
                 batchObject.addTx(Transaction.from(tx, block));
-
+                batchObject.addTxLogs(TxLog.logsFrom(block, tx));
                 Parsers.parseEvents(batchObject, block, tokenMessages, canRead, tx);
             }
 
@@ -153,10 +154,11 @@ public class Parser extends Producer<ParserBatch> {
 
 
     private void registerContracts(Contract contract1){
-        EventDecoder.register(contract1);
+        CONTRACT_CACHE.putIfAbsent(contract1.getContractAddr(),contract1);
         tokenProd.registerContract(contract1);
     }
 
+    private static final CacheManager<String,Contract> CONTRACT_CACHE = CacheManager.getManager(CacheManager.Cache.CONTRACT);
 
     @Override
     protected void doReset() {

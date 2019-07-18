@@ -18,6 +18,7 @@ public class BlockWriter implements WriteTask<ParserBatch> {
     private ParserStateService parserStateService;
     private EventService eventService;
     private MetricsService metricsService;
+    private TxLogService txLogService;
 
     public BlockWriter(BlockService blockService, TransactionService transactionService, InternalTransferService transferService, ContractService contractService, ParserStateService parserStateService, EventService eventService, MetricsService metricsService) {
         this.blockService = blockService;
@@ -31,7 +32,7 @@ public class BlockWriter implements WriteTask<ParserBatch> {
 
     public BlockWriter() {
         metricsService = MetricsServiceImpl.getInstance();
-
+        txLogService = TxLogServiceImpl.getInstance();
         blockService = BlockServiceImpl.getInstance();
         transactionService = TransactionServiceImpl.getInstance();
         transferService = InternalTransferServiceImpl.getInstance();
@@ -53,7 +54,8 @@ public class BlockWriter implements WriteTask<ParserBatch> {
                  var con = (contractService.prepare(connection, record.getContracts()));
                  var parser = (parserStateService.prepare(connection, states));
                  var event = (eventService.prepare(connection, record.getEvents()));
-                 var metrics = metricsService.prepare(connection, record.getMetrics())
+                 var metrics = metricsService.prepare(connection, record.getMetrics());
+                 var txLog = txLogService.prepare(connection, record.getLogs())
             ) {
                 block.executeBatch();
                 tx.executeBatch();
@@ -62,6 +64,7 @@ public class BlockWriter implements WriteTask<ParserBatch> {
                 parser.executeBatch();
                 event.executeBatch();
                 metrics.executeBatch();
+                txLog.executeBatch();
                 connection.commit();
             } catch (Exception e) {
                 connection.rollback();

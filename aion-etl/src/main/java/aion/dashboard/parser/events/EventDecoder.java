@@ -29,7 +29,7 @@ public abstract class EventDecoder {
      */
     public static EventDecoder decoderFor(String contractAddress) {
         try {
-            final ContractType contractType= findContract(Utils.sanitizeHex(contractAddress))
+            final ContractType contractType= service.findContract(Utils.sanitizeHex(contractAddress))
                     .map(Contract::getContractType)
                     .orElse(ContractType.DEFAULT);
 

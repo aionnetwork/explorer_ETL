@@ -272,3 +272,32 @@ CREATE INDEX `internal_transfer_block_number` on internal_transfer(`block_number
 CREATE INDEX `internal_transfer_block_timestamp` on internal_transfer(`block_timestamp`);
 CREATE INDEX `internal_transfer_from` on internal_transfer(`from_addr`);
 CREATE INDEX `internal_transfer_to` on internal_transfer(`to_addr`);
+
+
+CREATE TABLE `tx_log` (
+    transaction_hash varchar(64),
+    log_index int,
+    block_number bigint(64),
+    block_timestamp bigint,
+    topics text,
+    data text,
+    contract_addr varchar(64),
+    from_addr varchar(64),
+    to_addr varchar(64),
+    contract_type varchar(8),
+    primary key (transaction_hash, log_index)
+) engine = InnoDB;
+
+create index tx_log_block_timestamp_index on tx_log(block_timestamp);
+create index tx_log_block_number_index on tx_log(block_number);
+create index tx_log_contract_addr_index on tx_log(contract_addr);
+create index tx_log_from_addr_index on tx_log(from_addr);
+create index tx_log_to_addr_index on tx_log(to_addr);
+
+create table update_state (
+    table_id int primary key ,
+    table_name varchar(40),
+    run_update bool,
+    start bigint,
+    end bigint
+);

@@ -102,7 +102,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
             if (contractCacheManager.contains(contractAddr)) contract = contractCacheManager.getIfPresent(contractAddr);
             else {
-                contract = Objects.requireNonNull(contractService.selectContractsByContractAddr(contractAddr), "Failed to find the contract in the database.");
+                contract = contractService.findContract(contractAddr).orElseThrow( () -> new NullPointerException("Failed to find the contract in the database."));
                 registerContract(contract);
             }
 
