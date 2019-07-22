@@ -32,7 +32,7 @@ public class UpdateStateServiceImpl implements UpdateStateService {
                             UpdateState.builder().setEnd(resultSet.getLong("end"))
                             .setStart(resultSet.getLong("start"))
                             .setId(resultSet.getInt("table_id"))
-                            .setTableName("table_name")
+                            .setTableName(resultSet.getString("table_name"))
                             .setRunUpdate(resultSet.getBoolean("run_update"))
                             .createUpdateState()
                     );
