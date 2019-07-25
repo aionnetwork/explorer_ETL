@@ -145,9 +145,9 @@ public class TxLog {
 
         @SuppressWarnings("Duplicates")
         public TxLogBuilder setTxLog(org.aion.api.type.TxLog log) {
-            address = log.getAddress().toString();
-            data = log.getData().toString();
-            JSONArray jsonArray = new JSONArray(log.getTopics());
+            address = Utils.sanitizeHex(log.getAddress().toString());
+            data = Utils.sanitizeHex(log.getData().toString());
+            JSONArray jsonArray = new JSONArray(log.getTopics().stream().map(Utils::sanitizeHex).collect(Collectors.toList()));
             topics = jsonArray.toString();
 
             contractType = ContractServiceImpl.getInstance()
@@ -160,8 +160,8 @@ public class TxLog {
         @SuppressWarnings("Duplicates")
         public TxLogBuilder setTxLog(APITransactionLog log) {
             address = Utils.sanitizeHex(log.getAddress());
-            data = log.getData() == null? "": log.getData();
-            JSONArray jsonArray = new JSONArray(log.getTopics());
+            data = Utils.sanitizeHex(log.getData());
+            JSONArray jsonArray = new JSONArray(log.getTopics().stream().map(Utils::sanitizeHex).collect(Collectors.toList()));
             topics = jsonArray.toString();
             index = log.getLogIndex();
             contractType = ContractServiceImpl.getInstance()
@@ -172,12 +172,12 @@ public class TxLog {
         }
 
         public TxLogBuilder setFrom(String from) {
-            this.from = from;
+            this.from = Utils.sanitizeHex(from);
             return this;
         }
 
         public TxLogBuilder setTo(String to) {
-            this.to = Objects.isNull(to) ? "": to;
+            this.to = Utils.sanitizeHex(to);
             return this;
         }
 
