@@ -103,7 +103,7 @@ public class DbQuery {
 
 
     //Transaction
-    public static final String TransactionDeleteByBlock = "delete from transaction where block_number > ?";
+    public static final String TransactionDeleteByBlock = "delete from transaction where block_number >= ?";
     public static final String TransactionInsert = "replace into transaction(" +
             "transaction_hash," +
             "block_hash," +
