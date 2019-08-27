@@ -51,16 +51,16 @@ public class Consumer {
 
 
     public void start() {
-        workers.submit(this::consumeBlocks);
-        workers.submit(this::consumeTokens);
-        workers.submit(this::consumeAccounts);
         workers.scheduleWithFixedDelay(() -> {
             try {
                 this.reorg();
             } catch (Exception e) {
                 GENERAL.warn("The reorg failed with the exception: ",e);
             }
-        }, 100, 10, TimeUnit.SECONDS);
+        }, 0, 10, TimeUnit.SECONDS);
+        workers.submit(this::consumeBlocks);
+        workers.submit(this::consumeTokens);
+        workers.submit(this::consumeAccounts);
     }
 
 
@@ -82,10 +82,11 @@ public class Consumer {
         }
     }
 
-    private <T extends AbstractBatch> void doWrites(Iterator<T> record, WriteTask<T> writer) throws Exception {
+    private <T extends AbstractBatch> void doWrites(Producer<T> producer, WriteTask<T> writer) throws Exception {
         lockDBWrite();
+        var record = producer.peek();
         try {
-            while (record.hasNext()) {
+            while (record!=null && record.hasNext()) {
                 var batch = record.next();
                 GENERAL.debug("Attempting to write batch with block number: {}", batch.getState().getBlockNumber());
                 try {
@@ -122,9 +123,9 @@ public class Consumer {
     private <T extends AbstractBatch> void load(Producer<T> producer, WriteTask<T> writeTask) {
         while (keepRunning(producer)) {
             try {
-                var message = getMessage(producer);
+                getMessage(producer);
 
-                doWrites(message, writeTask);
+                doWrites(producer, writeTask);
                 producer.consume();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
