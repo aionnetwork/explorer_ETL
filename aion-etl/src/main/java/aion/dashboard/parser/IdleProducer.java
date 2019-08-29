@@ -1,6 +1,7 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.parser.type.Message;
+import aion.dashboard.parser.type.TokenBatch;
 import aion.dashboard.util.Utils;
 
 import java.util.List;
@@ -22,12 +23,21 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
         this.workQueue = workQueue;
     }
 
-
+    public int workQueueSize(){
+        return workQueue.size();
+    }
 
     public void submitAll(List<Message<T>> messages){
         workQueue.add(messages);
     }
 
+    protected final List<S> task() throws Exception {
+        List<Message<T>> records = getMessage();
+        final List<S> tokenBatches = doTask(records);
+        consumeMessage();
+        return tokenBatches;
+    }
+    protected abstract List<S> doTask(List<Message<T>> messages) throws Exception;
     @Override
     public void doReset(){
         workQueue.clear();
@@ -36,7 +46,7 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
         shouldReset.compareAndSet(true, false);
     }
 
-    protected List<Message<T>> consumeMessage(){
+    private List<Message<T>> consumeMessage(){
         return workQueue.poll();
     }
 

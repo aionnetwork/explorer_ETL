@@ -33,9 +33,8 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
 
 
     @Override
-    protected List<AccountBatch> task() throws Exception {
+    protected List<AccountBatch> doTask(List<Message<String>> messages) throws Exception {
         Thread.currentThread().setName("account-parser");
-        List<Message<String>> messages = getMessage();
         GENERAL.debug("Starting account parser.");
         long maxBlockNumber=-1;
         Set<String> addresses= new HashSet<>();
@@ -66,7 +65,6 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
         }
 
         batch.setState(new ParserState(ParserStateServiceImpl.DB_ID, BigInteger.valueOf(maxBlockNumber)));
-        consumeMessage();
         return List.of(batch);
     }
 

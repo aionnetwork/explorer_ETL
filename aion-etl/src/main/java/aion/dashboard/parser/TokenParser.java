@@ -54,45 +54,38 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     }
 
     @Override
-    protected List<TokenBatch> task() throws Exception {
+    protected List<TokenBatch> doTask(List<Message<ContractEvent>> records) throws SQLException, AionApiException {
         Thread.currentThread().setName("token-parser");
         GENERAL.info("Starting token parser.");
-        var records = getMessage();
         Set<String> holdersSet = new HashSet<>();
         TokenBatch res = new TokenBatch();
-        if (!records.isEmpty()) {
-            long lastBlockNumber =-1;
-            for (var msg : records) {
-                if (GENERAL.isTraceEnabled()) {
-                    GENERAL.trace("Starting request for token with address: {}", getResponse(ContractEvent.class, msg.getItem()).map(ContractEvent::getAddress).orElse(""));
-                }
-
-                res= res.merge(readTokenEvent(msg, holdersSet));
-
-                if (lastBlockNumber<msg.getBlockDetails().getNumber()){
-                    lastBlockNumber=msg.getBlockDetails().getNumber();
-                }
+        long lastBlockNumber = -1;
+        for (var msg : records) {
+            if (GENERAL.isTraceEnabled()) {
+                GENERAL.trace("Starting request for token with address: {}", getResponse(ContractEvent.class, msg.getItem()).map(ContractEvent::getAddress).orElse(""));
             }
 
-            List<TokenBatch> ret;
+            res = res.merge(readTokenEvent(msg, holdersSet));
 
-            if (res.getTokenHolders().isEmpty() && res.getTokens().isEmpty() && res.getTransfers().isEmpty()){
-                ret = Collections.emptyList();
-                GENERAL.error("Failed to transform the event at: {}", lastBlockNumber);
-            }else {
-                res.setState(new ParserState.ParserStateBuilder()
-                        .blockNumber(BigInteger.valueOf(lastBlockNumber))
-                        .id(ParserStateServiceImpl.DB_ID).build());
-                ret=Collections.singletonList(res);
+            if (lastBlockNumber < msg.getBlockDetails().getNumber()) {
+                lastBlockNumber = msg.getBlockDetails().getNumber();
             }
-            consumeMessage();
-            return ret;
-        } else {
-            return Collections.emptyList();
         }
 
+        List<TokenBatch> ret;
 
+        if (res.getTokenHolders().isEmpty() && res.getTokens().isEmpty() && res.getTransfers().isEmpty()) {
+            ret = Collections.emptyList();
+            GENERAL.error("Failed to transform the event at: {}", lastBlockNumber);
+        } else {
+            res.setState(new ParserState.ParserStateBuilder()
+                    .blockNumber(BigInteger.valueOf(lastBlockNumber))
+                    .id(ParserStateServiceImpl.DB_ID).build());
+            ret = Collections.singletonList(res);
+        }
+        return ret;
     }
+
 
     private TokenBatch readTokenEvent(Message<ContractEvent> msg, Set<String> holdersSet) throws SQLException, AionApiException {
         var contractAddr = msg.getItem().get(0).getAddress();
