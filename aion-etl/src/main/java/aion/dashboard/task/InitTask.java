@@ -89,46 +89,59 @@ public final class InitTask {
         Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
 
         TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
-
+        InternalTransactionParser itxProducer= new InternalTransactionParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), Web3Service.getInstance());
         AccountParser accountParser = new AccountParser(new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), new LinkedBlockingQueue<>());
 
         Parser parser = new ParserBuilder().setAccountProd(accountParser)
                 .setTokenProd(tokenParser)
                 .setQueue(new ArrayBlockingQueue<>(queueSize))
                 .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
+                .setInternalTransactionProducer(itxProducer)
                 .setExtractor(extractor).setApiService(AionService.getInstance()).createParser();
 
-
+        //create an instance of the write process
+        //this process must have an instance of each producer
+        //and the write strategy to be used with the output of each process
+        //TODO replace this implementation with a list of tuple based approach so that configuration of this class can be achieved dynamically
+        //TODO but for now this works
         Consumer consumer = new ConsumerBuilder().setAccountProducer(accountParser)
                 .setBlockProducer(parser).setTokenProducer(tokenParser)
                 .setAccountWriter(new AccountWriter())
                 .setBlockWriter(new BlockWriter())
                 .setTokenWriter(new TokenWriter())
+                .setInternalTransactionWriter(new InternalTransactionWriter())
+                .setInternalTransactionBatchProducer(itxProducer)
                 .setService(new ReorgServiceImpl(AionService.getInstance(),ps, Web3Service.getInstance()))
                 .createConsumer();
 
         UpdateManager.getInstance().start();
 
+        //creation of list of producers to be shutdown at the end of execution
         List<Producer> producers = new ArrayList<>();
         producers.add(tokenParser);
         producers.add(accountParser);
+        producers.add(itxProducer);
 
-
+        //start all background processes
         IntegrityCheckManager.getInstance().startAll();
         extractor.start();
         parser.start();
         tokenParser.start();
         accountParser.start();
         consumer.start();
+        itxProducer.start();
 
-
+        //Start the graphing process
         AbstractGraphingTask task = AbstractGraphingTask.getInstance(Config.getInstance().getTaskType());
         task.scheduleNow();
 
-
+        //Create the shutdown hook
         Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task));
     }
 
+    /*
+
+     */
     private static Thread buildShutdownHook(Extractor extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task) {
         return new Thread(()->{
             Thread.currentThread().setName("shutdown-hook");
@@ -153,7 +166,7 @@ public final class InitTask {
 
     private static void shutdownProducer(Producer<?> producer){
         producer.stop();
-        producer.awaitTermination(5000L);
+        producer.awaitTermination(20000L);
     }
 
 }

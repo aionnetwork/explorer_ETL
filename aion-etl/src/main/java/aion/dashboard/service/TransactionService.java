@@ -22,4 +22,6 @@ public interface TransactionService {
     Transaction getTransactionByContractAddress(String contractAddress) throws SQLException;
 
     PreparedStatement prepare(Connection con, List<Transaction> transactions) throws SQLException;
+
+    PreparedStatement prepareInternalTransactionUpdate(Connection con, String transactionHash, int count) throws SQLException;
 }

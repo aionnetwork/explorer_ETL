@@ -127,6 +127,9 @@ public class DbQuery {
             "day, " +
             "type) " +
             "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+    public static final String TransactionUpdateInternalTransactions = "Update transaction set " +
+            "internal_transaction_count = ?" +
+            " where transaction_hash = ?";
 
     public static final String TransactionSelectByBlockNumCountBlockNum = "select count(block_number) , block_number from transaction  where block_number > ? group by block_number";
 
@@ -279,6 +282,27 @@ public class DbQuery {
 
     public static String InternalTransferDelete = "delete from graphing where block_number > ?";
 
+    //---------------------------InternalTransactions---------------------
+
+    public static String InsertInternalTransaction = "replace into internal_transaction(" +
+            "transaction_hash, " +
+            "internal_transaction_index, " +
+            "nrg_price, " +
+            "nrg_limit, " +
+            "data, " +
+            "rejected, " +
+            "kind, " +
+            "from_addr, " +
+            "to_addr, " +
+            "nonce, " +
+            "block_number, " +
+            "value, " +
+            "timestamp," +
+            "contract_address) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+
+    public static final String DeleteFromInternalTransaction = "Delete from internal transaction where block_number>=?";
+
+    public static final String DeleteOneFromInternalTransaction = "Delete from internal_transaction where block_number=?";
 
     //---------------------------VerifiedContract-------------------------
     public static final String SelectFromVerifiedContract =  "SELECT permission from verified_contract where contract_address = ?";

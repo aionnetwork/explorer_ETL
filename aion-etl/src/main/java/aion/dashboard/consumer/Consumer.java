@@ -1,10 +1,7 @@
 package aion.dashboard.consumer;
 
 import aion.dashboard.parser.Producer;
-import aion.dashboard.parser.type.AbstractBatch;
-import aion.dashboard.parser.type.AccountBatch;
-import aion.dashboard.parser.type.ParserBatch;
-import aion.dashboard.parser.type.TokenBatch;
+import aion.dashboard.parser.type.*;
 import aion.dashboard.service.ReorgService;
 import aion.dashboard.util.Utils;
 import org.slf4j.Logger;
@@ -27,7 +24,9 @@ public class Consumer {
     private final WriteTask<ParserBatch> blockWriter;
     private final WriteTask<AccountBatch> accountWriter;
     private final WriteTask<TokenBatch> tokenWriter;
+    private final WriteTask<InternalTransactionBatch> internalTransactionWriterWriteTask;
     private final ReorgService service;
+    private final Producer<InternalTransactionBatch> internalTransactionProducer;
     private final ReadWriteLock dbLock = new ReentrantReadWriteLock();
     private final ScheduledExecutorService workers = Executors.newScheduledThreadPool(4);
     private AtomicBoolean stopRunning = new AtomicBoolean(false);
@@ -38,7 +37,8 @@ public class Consumer {
              WriteTask<ParserBatch> blockWriter,
              WriteTask<AccountBatch> accountWriter,
              WriteTask<TokenBatch> tokenWriter,
-             ReorgService service) {
+             WriteTask<InternalTransactionBatch> internalTransactionWriterWriteTask,
+             ReorgService service, Producer<InternalTransactionBatch> internalTransactionProducer) {
 
         this.blockProducer = blockProducer;
         this.tokenProducer = tokenProducer;
@@ -46,7 +46,9 @@ public class Consumer {
         this.blockWriter = blockWriter;
         this.accountWriter = accountWriter;
         this.tokenWriter = tokenWriter;
+        this.internalTransactionWriterWriteTask = internalTransactionWriterWriteTask;
         this.service = service;
+        this.internalTransactionProducer = internalTransactionProducer;
     }
 
 
@@ -61,6 +63,7 @@ public class Consumer {
         workers.submit(this::consumeBlocks);
         workers.submit(this::consumeTokens);
         workers.submit(this::consumeAccounts);
+        workers.submit(this::consumeItx);
     }
 
 
@@ -101,6 +104,13 @@ public class Consumer {
         }
     }
 
+
+    private void consumeItx(){
+        Thread.currentThread().setName("itx-loader");
+        load(internalTransactionProducer, internalTransactionWriterWriteTask);
+        GENERAL.info("Ended Internal transaction loader");
+    }
+
     private void consumeAccounts() {
         Thread.currentThread().setName("accounts-loader");
         load(accountProducer, accountWriter);
@@ -131,6 +141,7 @@ public class Consumer {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 GENERAL.error("Failed to load blocks due to exception:  ",e);
+                e.printStackTrace();
             }
         }
     }

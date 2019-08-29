@@ -2,7 +2,6 @@ package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.cache.CacheManager;
-import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.parser.type.Message;
@@ -28,15 +27,17 @@ public class Parser extends Producer<ParserBatch> {
     private final IdleProducer<?, String> accountProd;
     private final TokenParser tokenProd;
     private final AionService apiService;
+    private final InternalTransactionParser internalTransactionProducer;
     private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(2);
 
-    Parser(Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, AionService apiService) {
+    Parser(Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, AionService apiService, InternalTransactionParser internalTransactionProducer) {
         super(queue);
         this.extractor = extractor;
         this.rollingBlockMean = rollingBlockMean;
         this.accountProd = accountProd;
         this.tokenProd = tokenProd;
         this.apiService = apiService;
+        this.internalTransactionProducer = internalTransactionProducer;
     }
 
     @Override
@@ -67,7 +68,7 @@ public class Parser extends Producer<ParserBatch> {
         BlockDetails block = null;
         List<Message<String>> accountsMessages=new ArrayList<>();
         List<Message<ContractEvent>> tokenMessages = new ArrayList<>();
-
+        List<Message<Void>> internalTxMessages = new ArrayList<>();
         GENERAL.debug("Starting parser.");
         while (blockDetails.hasNext()) {
             block = blockDetails.next();
@@ -119,6 +120,7 @@ public class Parser extends Producer<ParserBatch> {
             batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward, blockReward ));
 
             accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty()? null: txDetails.get(0)));
+            internalTxMessages.add(new Message<>(null, block, null));
 
         }
 
@@ -130,6 +132,9 @@ public class Parser extends Producer<ParserBatch> {
 
         if (!tokenMessages.isEmpty()) {
             tokenProd.submitAll(tokenMessages);
+        }
+        if (!internalTxMessages.isEmpty()){
+            internalTransactionProducer.submitAll(internalTxMessages);
         }
         if (lastBlockNumber >= 0) {
             //run these operation asynchronously

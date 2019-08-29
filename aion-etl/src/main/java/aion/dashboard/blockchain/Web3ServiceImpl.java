@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import java.io.Closeable;
 import java.math.BigInteger;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -38,6 +39,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String GET_TRANSACTION_BY_HASH= "eth_getTransactionByHash";
     private static final String CALL="eth_call";
     private static final String GET_TRANSACTION_RECEIPT = "eth_getTransactionReceipt";
+    private static final String GET_INTERNAL_TRANSACTION = "eth_getInternalTransactionsByHash";
     private final HttpHeaders httpHeaders;
     private final RestTemplate restExecutor;
     private List<String> web3Providers;
@@ -105,6 +107,14 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
             activeEndpoints.notifyAll();
         }
     }
+
+    public void setWeb3Providers(List<String> web3Providers) {
+        synchronized (activeEndpoints) {
+            this.web3Providers = web3Providers;
+            findActiveList();
+        }
+    }
+
     private String getActiveEp() {
         synchronized (activeEndpoints) {
             while (activeEndpoints.get() == null && !Thread.currentThread().isInterrupted()) {
@@ -128,6 +138,17 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
             return res.equalsIgnoreCase("pong");
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    @Override
+    public List<APIInternalTransaction> getInternalTransaction(String transactionHash) throws Web3ApiException {
+        try{
+            var internalTransactions =
+                    executeCall(buildWeb3Call(GET_INTERNAL_TRANSACTION, transactionHash), getActiveEp(), APIInternalTransactionResponse.class);
+            return internalTransactions.getInternalTransactions();
+        }catch (NoSuchElementException e){
+            throw new IllegalStateException("Transaction is pending");
         }
     }
 
@@ -215,7 +236,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
                 // throw if not 200
                 throw new HttpStatusException(responseEntity.getStatusCode());
             }
-        } catch (Exception e) {
+        } catch (HttpStatusException e) {
             throw new Web3ApiException("Failed to execute call. Method: "+jsonMethod, e);
         }
         finally {

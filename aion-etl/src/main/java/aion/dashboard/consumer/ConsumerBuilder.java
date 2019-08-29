@@ -2,6 +2,7 @@ package aion.dashboard.consumer;
 
 import aion.dashboard.parser.Producer;
 import aion.dashboard.parser.type.AccountBatch;
+import aion.dashboard.parser.type.InternalTransactionBatch;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.parser.type.TokenBatch;
 import aion.dashboard.service.ReorgService;
@@ -13,7 +14,20 @@ public class ConsumerBuilder {
     private WriteTask<ParserBatch> blockWriter;
     private WriteTask<AccountBatch> accountWriter;
     private WriteTask<TokenBatch> tokenWriter;
+    private WriteTask<InternalTransactionBatch> internalTransactionWriter;
+    private Producer<InternalTransactionBatch> internalTransactionBatchProducer;
     private ReorgService service;
+
+
+    public ConsumerBuilder setInternalTransactionBatchProducer(Producer<InternalTransactionBatch> internalTransactionBatchProducer) {
+        this.internalTransactionBatchProducer = internalTransactionBatchProducer;
+        return this;
+    }
+
+    public ConsumerBuilder setInternalTransactionWriter(WriteTask<InternalTransactionBatch> internalTransactionWriter) {
+        this.internalTransactionWriter = internalTransactionWriter;
+        return this;
+    }
 
     public ConsumerBuilder setBlockProducer(Producer<ParserBatch> blockProducer) {
         this.blockProducer = blockProducer;
@@ -51,6 +65,6 @@ public class ConsumerBuilder {
     }
 
     public Consumer createConsumer() {
-        return new Consumer(blockProducer, tokenProducer, accountProducer, blockWriter, accountWriter, tokenWriter, service);
+        return new Consumer(blockProducer, tokenProducer, accountProducer, blockWriter, accountWriter, tokenWriter,internalTransactionWriter, service, internalTransactionBatchProducer);
     }
 }

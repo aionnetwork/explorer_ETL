@@ -72,6 +72,7 @@ CREATE TABLE `transaction` (
 	`month` TINYINT,
 	`day` TINYINT,
 	`type` VARCHAR(8),
+	`internal_transaction_count` SMALLINT DEFAULT 0,
 	PRIMARY KEY(`transaction_hash`,`year`,`month`)
 ) ENGINE = InnoDB
 PARTITION BY RANGE(`year`)
@@ -272,6 +273,35 @@ CREATE INDEX `internal_transfer_block_number` on internal_transfer(`block_number
 CREATE INDEX `internal_transfer_block_timestamp` on internal_transfer(`block_timestamp`);
 CREATE INDEX `internal_transfer_from` on internal_transfer(`from_addr`);
 CREATE INDEX `internal_transfer_to` on internal_transfer(`to_addr`);
+
+
+create table internal_transaction
+(
+	transaction_hash           varchar(64) not null,
+	internal_transaction_index int         not null,
+	nrg_price                  decimal     not null,
+	nrg_limit                  decimal     not null,
+	data                       mediumtext  not null,
+	rejected                   boolean     not null,
+	kind                       varchar(16) not null,
+	from_addr                  varchar(64) not null,
+	to_addr                    varchar(64) not null,
+	nonce                      decimal     not null,
+	block_number               bigint      not null,
+	value                      decimal     not null,
+	timestamp                  bigint      not null,
+	contract_address		   varchar(64) not null,
+	primary key (transaction_hash, internal_transaction_index)
+);
+
+create index internal_transaction_block_number_index
+	on internal_transaction (block_number);
+
+create index internal_transaction_from_addr_index
+	on internal_transaction (from_addr);
+
+create index internal_transaction_to_addr_index
+	on internal_transaction (to_addr);
 
 
 CREATE TABLE `tx_log` (

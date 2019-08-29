@@ -340,4 +340,13 @@ public class TransactionServiceImpl implements TransactionService {
         return ps;
 
     }
+
+    @Override
+    public PreparedStatement prepareInternalTransactionUpdate(Connection con, String transactionHash, int count) throws SQLException {
+
+        PreparedStatement ps = con.prepareStatement(DbQuery.TransactionUpdateInternalTransactions);
+        ps.setInt(1, count);
+        ps.setString(2, transactionHash);
+        return ps;
+    }
 }
