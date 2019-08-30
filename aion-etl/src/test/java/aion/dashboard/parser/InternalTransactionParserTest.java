@@ -11,9 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,5 +62,22 @@ class InternalTransactionParserTest {
         assertTimeout(Duration.ofSeconds(60), ()-> Utils.awaitResult(parser::workQueueSize, i-> i==0));
         var results = parser.peek();
         assertFalse(results.hasNext());
+    }
+
+    @Test
+    void testPerformance() throws AionApiException {
+        long timeToComplete = 500;
+        parser.stop();
+        for (long i = 1_300_000; i< 1_400_000;){
+            List<Message<Void>> messages = new ArrayList<>();
+            var blockDetails = service.getBlockDetailsByRange(i, i+999);
+            for (var blockDetail : blockDetails){
+                messages.add(new Message<>(null, blockDetail, null));
+            }
+            i+=1000;
+            parser.submitAll(messages);
+        }
+        parser.start();
+        assertTimeout(Duration.ofSeconds(timeToComplete), ()-> Utils.awaitResult(parser::workQueueSize, i-> i==0));
     }
 }

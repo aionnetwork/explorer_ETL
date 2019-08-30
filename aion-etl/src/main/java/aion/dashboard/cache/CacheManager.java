@@ -11,8 +11,10 @@ public abstract class CacheManager<K ,V> {
 
 
     public enum Cache{
-        CONTRACT,TOKEN, ATS_TOKEN
-
+        CONTRACT,
+        TOKEN,
+        ATS_TOKEN,
+        CONTRACT_EXISTS
     }
 
     private static final EnumMap<Cache, CacheManager> CACHEMAP = new EnumMap<>(Cache.class);

@@ -20,7 +20,7 @@ public class ContractServiceImpl implements ContractService {
     private static final ContractServiceImpl Instance = new ContractServiceImpl();
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private static final CacheManager<String,Contract> CONTRACT_CACHE = CacheManager.getManager(CacheManager.Cache.CONTRACT);
-
+    private static final CacheManager<String,Boolean> CONTRACT_EXISTS_CACHE = CacheManager.getManager(CacheManager.Cache.CONTRACT_EXISTS);
 
     private ContractServiceImpl() {
         if (Instance != null) throw new IllegalStateException("Instance already exists");
@@ -184,6 +184,17 @@ public class ContractServiceImpl implements ContractService {
             } catch (Exception e) {
                 return Optional.empty();
             }
+        }
+    }
+    public boolean contractExists(String contractAddr){
+        if (CONTRACT_EXISTS_CACHE.contains(contractAddr)){
+            return CONTRACT_EXISTS_CACHE.getIfPresent(contractAddr);
+        }
+        else {
+            boolean ret = findContract(contractAddr).isPresent();
+            CONTRACT_EXISTS_CACHE.putIfAbsent(contractAddr, ret);
+            return ret;
+
         }
     }
 }

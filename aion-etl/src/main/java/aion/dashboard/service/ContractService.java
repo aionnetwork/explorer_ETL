@@ -28,6 +28,6 @@ public interface ContractService {
 
     PreparedStatement prepare(Connection con, List<Contract> contracts) throws SQLException;
 
-
+    boolean contractExists(String contractAddr);
     Optional<Contract> findContract(String addr);
 }
