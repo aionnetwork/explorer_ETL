@@ -28,6 +28,8 @@ public class ParserStateServiceImpl implements ParserStateService {
     public static final int TRANSACTION_MEAN_ID =6;
     public static final int ACCOUNT_ID=7;
     public static final int TOKEN_ID=8;
+    public static final int INTERNAL_TX_ID=9;
+
     public static ParserStateServiceImpl getInstance() {
         return PARSER_STATE_SERVICE;
     }

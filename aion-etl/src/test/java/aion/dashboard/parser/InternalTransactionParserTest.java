@@ -1,29 +1,35 @@
 package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.util.Utils;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 
 class InternalTransactionParserTest {
-    private InternalTransactionParser parser = new InternalTransactionParser(new LinkedBlockingDeque<>(), new LinkedBlockingDeque<>(), Web3Service.getInstance());
+    private AccountParser spiedAccountParser = Mockito.spy(new AccountParser(new LinkedBlockingDeque<>(), Web3ServiceImpl.getInstance(), new LinkedBlockingDeque<>()));
+    private InternalTransactionParser parser = new InternalTransactionParser(new LinkedBlockingDeque<>(), new LinkedBlockingDeque<>(), Web3Service.getInstance(), spiedAccountParser);
 
     private AionService service = AionService.getInstance();
 
     @BeforeEach
     void setUp(){
         parser.start();
+        Mockito.doNothing().when(spiedAccountParser).submitAll(any());
     }
     @AfterEach
     void tearDown(){

@@ -1,17 +1,21 @@
 package aion.dashboard.consumer;
 
+import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.parser.Producer;
 import aion.dashboard.parser.type.*;
+import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.ReorgService;
 import aion.dashboard.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -30,6 +34,7 @@ public class Consumer {
     private final ReadWriteLock dbLock = new ReentrantReadWriteLock();
     private final ScheduledExecutorService workers = Executors.newScheduledThreadPool(4);
     private AtomicBoolean stopRunning = new AtomicBoolean(false);
+    private AtomicReference<BigInteger> DB_HEIGHT = new AtomicReference<>(BigInteger.ZERO);
 
     Consumer(Producer<ParserBatch> blockProducer,
              Producer<TokenBatch> tokenProducer,
@@ -91,6 +96,7 @@ public class Consumer {
         try {
             while (record!=null && record.hasNext()) {
                 var batch = record.next();
+                checkpoint(batch.getState());// pause execution if this is a token, account or itx consumer
                 GENERAL.debug("Attempting to write batch with block number: {}", batch.getState().getBlockNumber());
                 try {
                     writer.write(batch);
@@ -98,9 +104,19 @@ public class Consumer {
                     GENERAL.warn("Caught exception: ", e);
                     throw e;
                 }
+                if (batch.getState().getId() == ParserStateServiceImpl.DB_ID){
+                    DB_HEIGHT.set(batch.getState().getBlockNumber());//signal the new DB height
+                }
             }
         }finally {
             unlockDBWrite();
+        }
+    }
+
+    private void checkpoint(ParserState state) {
+        while (state.getId() != ParserStateServiceImpl.DB_ID &&
+                state.getBlockNumber().compareTo(DB_HEIGHT.get()) > 0) {// ensure that the main chain is stored first
+            if (!Utils.trySleep(50)) Thread.currentThread().interrupt();
         }
     }
 

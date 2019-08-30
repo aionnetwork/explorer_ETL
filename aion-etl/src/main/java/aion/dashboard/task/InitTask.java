@@ -89,8 +89,8 @@ public final class InitTask {
         Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
 
         TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
-        InternalTransactionParser itxProducer= new InternalTransactionParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), Web3Service.getInstance());
         AccountParser accountParser = new AccountParser(new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), new LinkedBlockingQueue<>());
+        InternalTransactionParser itxProducer= new InternalTransactionParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), Web3Service.getInstance(), accountParser);
 
         Parser parser = new ParserBuilder().setAccountProd(accountParser)
                 .setTokenProd(tokenParser)

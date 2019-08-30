@@ -80,7 +80,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
         } else {
             res.setState(new ParserState.ParserStateBuilder()
                     .blockNumber(BigInteger.valueOf(lastBlockNumber))
-                    .id(ParserStateServiceImpl.DB_ID).build());
+                    .id(ParserStateServiceImpl.TOKEN_ID).build());
             ret = Collections.singletonList(res);
         }
         return ret;

@@ -64,7 +64,7 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
             future.get();
         }
 
-        batch.setState(new ParserState(ParserStateServiceImpl.DB_ID, BigInteger.valueOf(maxBlockNumber)));
+        batch.setState(new ParserState(ParserStateServiceImpl.ACCOUNT_ID, BigInteger.valueOf(maxBlockNumber)));
         return List.of(batch);
     }
 
