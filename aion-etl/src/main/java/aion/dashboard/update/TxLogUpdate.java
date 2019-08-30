@@ -26,8 +26,7 @@ import java.util.stream.LongStream;
 public class TxLogUpdate extends UpdateTask<TxLog> {
     private final APIService service;
     private final TxLogService txLogService = TxLogServiceImpl.getInstance();
-    private final UpdateStateService updateStateService = UpdateStateServiceImpl.getInstance();
-    private final ExecutorService workers = Executors.newFixedThreadPool(Math.max(Runtime.getRuntime().availableProcessors(), 2));
+    private final ExecutorService workers = Executors.newFixedThreadPool(2);
 
     protected TxLogUpdate(APIService service) {
         super(1);

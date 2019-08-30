@@ -22,6 +22,7 @@ public class UpdateManager {
     private UpdateManager(){
         updateTasks = new ArrayList<>();
         updateTasks.add(new TxLogUpdate(Web3ServiceImpl.getInstance()));
+        updateTasks.add(new InternalTransactionUpdate(Web3ServiceImpl.getInstance()));
         executors = Executors.newFixedThreadPool(updateTasks.size());
     }
 

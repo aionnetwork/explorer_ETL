@@ -12,7 +12,7 @@ public abstract class UpdateTask<T> implements Runnable{
 
 
     private final int id;
-    private final UpdateStateServiceImpl stateService = UpdateStateServiceImpl.getInstance();
+    protected final UpdateStateServiceImpl updateStateService = UpdateStateServiceImpl.getInstance();
     private UpdateState state;
     protected static final Logger GENERAL= LoggerFactory.getLogger("logger_general");
     protected UpdateTask(int id){
@@ -25,7 +25,7 @@ public abstract class UpdateTask<T> implements Runnable{
     protected abstract void writeUpdate(UpdateState state, List<T> ts) throws Exception;
 
     private UpdateState getState () {
-        return stateService.find(id).orElse(null);
+        return updateStateService.find(id).orElse(null);
     }
 
 
@@ -36,7 +36,7 @@ public abstract class UpdateTask<T> implements Runnable{
             Thread.currentThread().setName("update-"+state.getTableName());
 
             while (state.isRunUpdate() && state.getEnd() >= state.getStart()){
-
+                GENERAL.info("updating block {}", state.getStart());
 
                 final var blockNumber = state.getStart();
                 var res = readForBlock(blockNumber, blockNumber + 999);
