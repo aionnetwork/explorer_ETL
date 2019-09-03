@@ -6,6 +6,7 @@ import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.parser.type.AccountBatch;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.service.ParserStateServiceImpl;
+import org.aion.base.util.Utils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -43,7 +44,7 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
         for (var msg: messages){
 
             for( String address : msg.getItem()){
-                if (addresses.add(address)) {// add the messages to the set so that we avoid making duplicate api calls
+                if (address !=null && address.length() >= 64 && addresses.add(address)) {// add the messages to the set so that we avoid making duplicate api calls
                     if (GENERAL.isTraceEnabled()) {
                         GENERAL.trace("Starting request for account: {}", address);
                     }
