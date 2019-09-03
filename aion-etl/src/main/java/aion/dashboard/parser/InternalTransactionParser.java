@@ -41,7 +41,7 @@ public class InternalTransactionParser extends IdleProducer<InternalTransactionB
     ParserState.ParserStateBuilder psBuilder=new ParserState.ParserStateBuilder();
 
     @Override
-    protected List<InternalTransactionBatch> doTask(List<Message<Void>> messages) throws Web3ApiException {
+    protected List<InternalTransactionBatch> doTask(List<Message<Void>> messages) throws Web3ApiException, InterruptedException {
         Thread.currentThread().setName("itx-parser");
         GENERAL.info("Starting internal transaction parser");
         InternalTransactionBatch batch = new InternalTransactionBatch();

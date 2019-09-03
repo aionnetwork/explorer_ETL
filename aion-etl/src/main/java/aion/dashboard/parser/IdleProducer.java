@@ -27,8 +27,8 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
         return workQueue.size();
     }
 
-    public void submitAll(List<Message<T>> messages){
-        workQueue.add(messages);
+    public void submitAll(List<Message<T>> messages) throws InterruptedException {
+        workQueue.put(messages);
     }
 
     protected final List<S> task() throws Exception {

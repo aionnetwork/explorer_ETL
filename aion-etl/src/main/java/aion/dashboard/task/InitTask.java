@@ -88,9 +88,11 @@ public final class InitTask {
         int queueSize = config.getQueueSize()<Integer.MAX_VALUE ? (int)config.getQueueSize(): 100;
         Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
 
-        TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), AionService.getInstance(), contractService,tokenService);
-        AccountParser accountParser = new AccountParser(new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), new LinkedBlockingQueue<>());
-        InternalTransactionParser itxProducer= new InternalTransactionParser(new ArrayBlockingQueue<>(queueSize), new LinkedBlockingDeque<>(), Web3Service.getInstance(), accountParser);
+        //Note: Use size restricted queues to prevent the parsers from being overwhelmed by a faster producer and to also
+        //mininimize the size of a potential failure
+        TokenParser tokenParser= new TokenParser(new ArrayBlockingQueue<>(queueSize), new ArrayBlockingQueue<>(queueSize), AionService.getInstance(), contractService,tokenService);
+        AccountParser accountParser = new AccountParser(new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), new ArrayBlockingQueue<>(queueSize));
+        InternalTransactionParser itxProducer= new InternalTransactionParser(new ArrayBlockingQueue<>(queueSize), new ArrayBlockingQueue<>(queueSize), Web3Service.getInstance(), accountParser);
 
         Parser parser = new ParserBuilder().setAccountProd(accountParser)
                 .setTokenProd(tokenParser)

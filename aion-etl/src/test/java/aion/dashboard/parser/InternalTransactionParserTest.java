@@ -27,7 +27,7 @@ class InternalTransactionParserTest {
     private AionService service = AionService.getInstance();
 
     @BeforeEach
-    void setUp(){
+    void setUp() throws InterruptedException {
         parser.start();
         Mockito.doNothing().when(spiedAccountParser).submitAll(any());
     }
@@ -37,7 +37,7 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseOne() throws AionApiException {
+    void testParseOne() throws AionApiException, InterruptedException {
         var blockDetails = service.getBlockDetailsByRange(3671014,3671014);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
@@ -51,7 +51,7 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseEmptyTx() throws AionApiException {
+    void testParseEmptyTx() throws AionApiException, InterruptedException {
         var blockDetails = service.getBlockDetailsByRange(778366,778366);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
@@ -61,7 +61,7 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseEmptyBlock() throws AionApiException{
+    void testParseEmptyBlock() throws AionApiException, InterruptedException {
         var blockDetails = service.getBlockDetailsByRange(778367,778367);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
@@ -71,7 +71,7 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testPerformance() throws AionApiException {
+    void testPerformance() throws AionApiException, InterruptedException {
         long timeToComplete = 500;
         parser.stop();
         for (long i = 1_300_000; i< 1_400_000;){
