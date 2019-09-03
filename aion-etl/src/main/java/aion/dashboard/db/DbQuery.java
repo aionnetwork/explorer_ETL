@@ -194,7 +194,7 @@ public class DbQuery {
 
     //----------------------------contract------------------------------------
 
-    public static final String ContractInsert = "insert into contract (contract_addr, " +
+    public static final String ContractInsert = "replace into contract (contract_addr, " +
             "contract_name, " +
             "contract_creator_addr, " +
             "contract_tx_hash, " +
@@ -203,8 +203,9 @@ public class DbQuery {
             "year, " +
             "month, " +
             "day, " +
-            "type) " +
-            "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "type, " +
+            "internal) " +
+            "values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     public static final String ContractDelete = "delete from contract where block_number >= ?";
 
 

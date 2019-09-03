@@ -2,6 +2,7 @@ package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.blockchain.type.APIInternalTransaction;
+import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.InternalTransaction;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.Web3ApiException;
@@ -65,8 +66,12 @@ public class InternalTransactionParser extends IdleProducer<InternalTransactionB
                                 message.getBlockDetails().getTimestamp()
                         );
                         batch.addInternalTransaction(from);
+                        if (itx.getContractAddress() != null && !itx.getContractAddress().isEmpty()){
+                            batch.addContract(Contract.from(message.getBlockDetails(), itx, tx.getTxHash().toString()));
+                        }
+                        accountsInBlock.add(from.getFromAddr());
                         accountsInBlock.add(from.getToAddr());
-                        accountsInBlock.add(from.getToAddr());
+                        accountsInBlock.add(from.getContractAddress() == null? "": from.getContractAddress());
                     }
                 }
             }

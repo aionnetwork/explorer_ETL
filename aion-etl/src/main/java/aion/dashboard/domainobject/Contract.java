@@ -1,6 +1,8 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APIInternalTransaction;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
@@ -21,9 +23,10 @@ public class Contract {
     private int blockMonth;
     private int blockDay;
     private ContractType type;
+    private boolean isInternal;
 
 
-    private Contract(String contractAddr, String contractName, String contractCreatorAddr, String contractTxHash, long blockNumber, long timestamp, ContractType type) {
+    private Contract(String contractAddr, String contractName, String contractCreatorAddr, String contractTxHash, long blockNumber, long timestamp, ContractType type, boolean isInternal) {
         this.contractAddr = contractAddr;
         this.contractName = contractName;
         this.contractCreatorAddr = contractCreatorAddr;
@@ -31,6 +34,7 @@ public class Contract {
         this.blockNumber = blockNumber;
         this.timestamp = timestamp;
         this.type = type;
+        this.isInternal = isInternal;
         var zdt = getZDT(timestamp);
         blockYear  = zdt.getYear();
         blockMonth = zdt.getMonthValue();
@@ -94,6 +98,11 @@ public class Contract {
     public ContractType getContractType(){
         return type;
     }
+
+    public boolean isInternal() {
+        return isInternal;
+    }
+
     private static final ThreadLocal<ContractBuilder> builder = ThreadLocal.withInitial(ContractBuilder::new);
     public static Contract from(BlockDetails b, TxDetails tx){
         return builder.get()
@@ -103,8 +112,24 @@ public class Contract {
                 .setContractCreatorAddr(tx.getFrom().toString())
                 .setContractAddr(tx.getContract().toString())
                 .setContractTxHash(tx.getTxHash().toString())
-                .setContractName("").build();
+                .setContractName("")
+                .setInternal(false)
+                .build();
     }
+
+    public static Contract from(BlockDetails b, APIInternalTransaction apiInternalTransaction, String contractTxHash){
+        return builder.get()
+                .setType(ContractType.AVM.byteType)
+                .setBlockNumber(b.getNumber())
+                .setTimestamp(b.getTimestamp())
+                .setContractCreatorAddr(Utils.sanitizeHex(apiInternalTransaction.getFrom()))
+                .setContractAddr(Utils.sanitizeHex(apiInternalTransaction.getContractAddress()))
+                .setContractTxHash(Utils.sanitizeHex(contractTxHash))
+                .setContractName("")
+                .setInternal(true)
+                .build();
+    }
+
 
     public static class ContractBuilder {
 
@@ -115,6 +140,7 @@ public class Contract {
         private long blockNumber;//The block in which the contract was deployed
         private long timestamp;
         private ContractType type;
+        private boolean isInternal;
 
 
         public ContractBuilder setContractAddr(String contractAddr) {
@@ -143,7 +169,7 @@ public class Contract {
         }
 
         public Contract build() {
-            return new Contract(contractAddr, contractName, contractCreatorAddr, contractTxHash, blockNumber, timestamp, type);
+            return new Contract(contractAddr, contractName, contractCreatorAddr, contractTxHash, blockNumber, timestamp, type, isInternal);
         }
 
         public ContractBuilder setTimestamp(long timestamp) {
@@ -158,6 +184,11 @@ public class Contract {
 
         public ContractBuilder setType(String type){
             this.type = ContractType.fromType(type);
+            return this;
+        }
+
+        public ContractBuilder setInternal(boolean internal) {
+            isInternal = internal;
             return this;
         }
     }

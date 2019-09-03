@@ -214,6 +214,7 @@ CREATE TABLE `contract` (
 	`month` TINYINT,
 	`day` TINYINT,
 	`type` VARCHAR(8),
+	`internal` boolean,
 	PRIMARY KEY(`contract_addr`)
 ) ENGINE = InnoDB;
 CREATE INDEX `creator_addr_contract` ON contract(`contract_creator_addr`);
@@ -279,8 +280,8 @@ create table internal_transaction
 (
 	transaction_hash           varchar(64) not null,
 	internal_transaction_index int         not null,
-	nrg_price                  decimal     not null,
-	nrg_limit                  decimal     not null,
+	nrg_price                  decimal(32)     not null,
+	nrg_limit                  decimal(32)      not null,
 	data                       mediumtext  not null,
 	rejected                   boolean     not null,
 	kind                       varchar(16) not null,
@@ -288,7 +289,7 @@ create table internal_transaction
 	to_addr                    varchar(64) not null,
 	nonce                      decimal     not null,
 	block_number               bigint      not null,
-	value                      decimal     not null,
+	value                      decimal(40)      not null,
 	timestamp                  bigint      not null,
 	contract_address		   varchar(64) not null,
 	primary key (transaction_hash, internal_transaction_index)
@@ -302,6 +303,9 @@ create index internal_transaction_from_addr_index
 
 create index internal_transaction_to_addr_index
 	on internal_transaction (to_addr);
+
+create index internal_transaction_contract_address_uindex
+	on internal_transaction (contract_address);
 
 
 CREATE TABLE `tx_log` (

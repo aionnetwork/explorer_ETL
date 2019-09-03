@@ -4,10 +4,7 @@ import aion.dashboard.db.DbConnectionPool;
 import aion.dashboard.domainobject.InternalTransaction;
 import aion.dashboard.parser.type.AbstractBatch;
 import aion.dashboard.parser.type.InternalTransactionBatch;
-import aion.dashboard.service.InternalTransactionService;
-import aion.dashboard.service.InternalTransactionServiceImpl;
-import aion.dashboard.service.TransactionService;
-import aion.dashboard.service.TransactionServiceImpl;
+import aion.dashboard.service.*;
 
 import java.sql.Connection;
 import java.util.*;
@@ -16,6 +13,7 @@ public class InternalTransactionWriter implements WriteTask<InternalTransactionB
 
     private final InternalTransactionService internalTransactionService = InternalTransactionServiceImpl.getInstance();
     private final TransactionService transactionService = TransactionServiceImpl.getInstance();
+    private final ContractService contractService = ContractServiceImpl.getInstance();
 
     @Override
     public void write(InternalTransactionBatch records) throws Exception {
@@ -33,7 +31,8 @@ public class InternalTransactionWriter implements WriteTask<InternalTransactionB
         }
 
         try(Connection connection = DbConnectionPool.getConnection()){
-            try (var psInternalTx = internalTransactionService.prepare(connection, records.getInternalTransactions())){
+            try (var psInternalTx = internalTransactionService.prepare(connection, records.getInternalTransactions());
+                 var psContract = contractService.prepare(connection, records.getContracts())){
 
                 for (var entry: internalTransactionMap.entrySet()){
                     try(var psTxUpdate = transactionService.prepareInternalTransactionUpdate(connection, entry.getKey(), entry.getValue().size())){
@@ -45,6 +44,7 @@ public class InternalTransactionWriter implements WriteTask<InternalTransactionB
                         psDelete.execute();
                     }
                 }
+                psContract.executeBatch();
                 psInternalTx.executeBatch();
                 connection.commit();
             }
