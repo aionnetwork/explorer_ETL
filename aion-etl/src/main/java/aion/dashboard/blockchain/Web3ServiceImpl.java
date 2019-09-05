@@ -7,7 +7,6 @@ import aion.dashboard.exception.HttpStatusException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.service.SchedulerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aion.util.bytes.ByteUtil;
 import org.slf4j.Logger;
@@ -19,14 +18,10 @@ import org.springframework.web.client.RestTemplate;
 import java.io.Closeable;
 import java.math.BigInteger;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class Web3ServiceImpl implements Closeable, Web3Service {
@@ -40,6 +35,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String CALL="eth_call";
     private static final String GET_TRANSACTION_RECEIPT = "eth_getTransactionReceipt";
     private static final String GET_INTERNAL_TRANSACTION = "eth_getInternalTransactionsByHash";
+    private static final String GET_BLOCK_DETAILS = "ops_getBlockDetailsByNumber";
     private final HttpHeaders httpHeaders;
     private final RestTemplate restExecutor;
     private List<String> web3Providers;
@@ -47,7 +43,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private boolean isClosed = false;
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
-
+    private final ExecutorService asyncRequestExecutor = Executors.newFixedThreadPool(Math.max(2, Runtime.getRuntime().availableProcessors()));
 
     private Web3ServiceImpl() {
         httpHeaders = new HttpHeaders();
@@ -61,13 +57,11 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
                 .setReadTimeout(Duration.ofMillis(10_000L))
                 .setConnectTimeout(Duration.ofMillis(10_000L))
                 .build();
-
     }
 
 
     private static ObjectMapper configuredMapper(){
         ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.USE_LONG_FOR_INTS, true);
         return mapper;
     }
 
@@ -116,8 +110,9 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     }
 
     private String getActiveEp() {
-        synchronized (activeEndpoints) {
-            while (activeEndpoints.get() == null && !Thread.currentThread().isInterrupted()) {
+        synchronized (activeEndpoints) {// we can synchronize on a non final variable since we
+            // need the list to be always up to date
+            while (activeEndpoints.get() == null && !Thread.currentThread().isInterrupted()) {// wait for the active endpoints to be set
                 try {
                     activeEndpoints.wait();
                 } catch (InterruptedException e) {
@@ -126,7 +121,12 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
             }
         }
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        return activeEndpoints.get().get(random.nextInt(activeEndpoints.get().size()));
+        if (!activeEndpoints.get().isEmpty()){
+            return activeEndpoints.get().get(random.nextInt(activeEndpoints.get().size()));
+        }else {//indicate that there are no available providers
+            GENERAL.warn("Failed to connect to any web3 providers.");
+            throw new IllegalStateException("Cannot reach any web3 providers");
+        }
     }
 
     private final AtomicReference<List<String>> activeEndpoints = new AtomicReference<>(null);
@@ -150,6 +150,55 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
         }catch (NoSuchElementException e){
             throw new IllegalStateException("Transaction is pending");
         }
+    }
+
+    @Override
+    public APIBlockDetails getBlockDetails(long blockNumber) throws Web3ApiException {
+        return executeCall(buildWeb3Call(GET_BLOCK_DETAILS, blockNumber), getActiveEp(), APIBlockDetails.class);
+    }
+
+    @Override
+    public List<APIBlockDetails> getBlockDetailsInRange(long start, long end) throws Web3ApiException {
+        try {
+            GENERAL.info("Calling {} for blocks: ({},{})", GET_BLOCK_DETAILS, start, end);
+            if (end - start + 1 < 20) {//avoid using the thread pool if there are only a few requests
+                ArrayList<APIBlockDetails> results = new ArrayList<>();
+                for (long i = start; i <= end; i++) {
+                    results.add(getBlockDetails(i));
+                }
+                return results;
+            }
+            else {
+                //This will be used to collect all the results
+                CompletableFuture<Collection<APIBlockDetails>> futureResult = CompletableFuture.supplyAsync(LinkedBlockingQueue::new);
+                for (long j = start; j <= end; j++) {
+                    long i = j;
+                    //execute the request async
+                    CompletableFuture<APIBlockDetails> apiBlockDetailsCompletableFuture = supplyAsync(() -> {
+                        try {
+                            return getBlockDetails(i);
+                        } catch (Web3ApiException e) {
+                            GENERAL.error("Caught exception while executing tasks asynchronously: ", e);
+                            throw new RuntimeException(e);
+                        }
+                    });
+                    //collect the result when it completes
+                    futureResult = futureResult.thenCombine(apiBlockDetailsCompletableFuture, (blockingQueue, block) -> {
+                        blockingQueue.add(block);
+                        return blockingQueue;
+                    });
+                }
+                //join everything
+                return List.copyOf(futureResult.join());
+            }
+        }catch (Exception e){
+            GENERAL.error("Caught exception in range {} to {}", start, end);
+            throw new Web3ApiException();
+        }
+    }
+
+    private <T> CompletableFuture<T> supplyAsync(Supplier<T> task ){
+        return CompletableFuture.supplyAsync(task, asyncRequestExecutor);
     }
 
     public BigInteger getBalance(String account) throws Web3ApiException {

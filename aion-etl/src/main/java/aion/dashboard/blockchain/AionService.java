@@ -26,6 +26,7 @@ import java.util.function.Function;
 import static org.aion.api.ITx.NRG_LIMIT_TX_MAX;
 import static org.aion.api.ITx.NRG_PRICE_MIN;
 
+@Deprecated
 public class AionService implements APIService {
 
 
@@ -53,6 +54,7 @@ public class AionService implements APIService {
 
 	}
 
+	@Deprecated
 	public void reconnect() throws AionApiException {
 
 		if (isConnected())
@@ -120,7 +122,7 @@ public class AionService implements APIService {
 
 	}
 
-
+	@Deprecated
     public List<BlockDetails> getBlockDetailsByRange(long start, long end) throws AionApiException {
 		List<BlockDetails> result;
 		ApiMsg apiMsg;
@@ -176,6 +178,7 @@ public class AionService implements APIService {
 		return apiMsg.getObject();
 	}
 
+	@Deprecated
 	public long getBlockNumber() throws AionApiException {
 		long result;
 		ApiMsg apiMsg = new ApiMsg();
@@ -199,6 +202,7 @@ public class AionService implements APIService {
 		return result;
 	}
 
+	@Deprecated
 	@Override
 	public byte[] call(CallObject object) throws Exception {
 		TxArgs args = object.toTxArgs();
@@ -234,7 +238,7 @@ public class AionService implements APIService {
 	 * @return the contract object
 	 * @throws AionApiException thrown if the contract could not be retrieved or does not exist
 	 */
-
+	@Deprecated
 	public IContract getContract(Address from, Address contractAddr, String abi) throws AionApiException {
 		IContract result;
 		try {
@@ -267,6 +271,7 @@ public class AionService implements APIService {
 	 * @return
 	 * @throws AionApiException Thrown if the api failed to call the function
 	 */
+	@Deprecated
 	public List<Object> callContractFunction(IContract contract, String functionName, ISolidityArg... args) throws AionApiException {
 
 
@@ -349,7 +354,7 @@ public class AionService implements APIService {
 
 	}
 
-
+	@Deprecated
     public BigInteger getNonce(String address) throws AionApiException{
         reconnect();
 		BigInteger result;
@@ -384,6 +389,7 @@ public class AionService implements APIService {
      * @return ABI
      * @throws AionApiException If the compilation fails
      */
+    @Deprecated
     public CompileResponse compileResponse(String src, String contractName) throws AionApiException {
 
         Map<String, CompileResponse> compileResponse;
@@ -423,6 +429,7 @@ public class AionService implements APIService {
 		}
 	}
 
+	@Deprecated
     @Override
     public APITransaction getTransaction(String txHash) throws Exception {
 
@@ -449,11 +456,13 @@ public class AionService implements APIService {
 		return APITransaction.from(transaction);
     }
 
+    @Deprecated
 	@Override
 	public APITransactionReceipt getTransactionReceipt(String txHash) throws Exception {
 		return null;
 	}
 
+	@Deprecated
 	public BigInteger getBlockReward(long blockNumber) throws AionApiException {
     	try{
     		ApiMsg msg = doApiRequest(iAionApi-> iAionApi.getChain().getBlockReward(blockNumber), api);

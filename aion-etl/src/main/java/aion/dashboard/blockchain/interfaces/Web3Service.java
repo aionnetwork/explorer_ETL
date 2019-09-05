@@ -1,6 +1,7 @@
 package aion.dashboard.blockchain.interfaces;
 
 import aion.dashboard.blockchain.Web3ServiceImpl;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.blockchain.type.APIInternalTransaction;
 import aion.dashboard.exception.Web3ApiException;
 
@@ -19,7 +20,8 @@ public interface Web3Service extends APIService {
     BigInteger getNonceAt(String address, long blockNumber) throws Web3ApiException;
     boolean ping(String ep);
     List<APIInternalTransaction> getInternalTransaction(String transactionHash) throws Web3ApiException;
-
+    APIBlockDetails getBlockDetails(long blockNumber) throws Web3ApiException;
+    List<APIBlockDetails> getBlockDetailsInRange(long start, long end) throws Web3ApiException;
 
 
 }

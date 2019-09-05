@@ -91,10 +91,12 @@
         <appender-ref ref="appenderasync_analytics"/>
     </logger>
     <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-    <logger name="logger_general" level="trace" additivity="false">
+    <logger name="logger_general" level="off" additivity="false">
         <appender-ref ref="appenderasync_file"/>
-        <appender-ref ref="appenderasync_console"/>
         <!--all error-level logs trigger email-->
         <!--appender-ref ref="appender_email"/-->
+    </logger>
+    <logger name="logger_test" level="off" additivity="false">
+        <appender-ref ref="appenderasync_console"/>
     </logger>
 </configuration>
