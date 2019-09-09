@@ -1,81 +1,69 @@
 package aion.dashboard.blockchain;
 
-import aion.dashboard.exception.AionApiException;
+import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.parser.Producer;
 import aion.dashboard.service.ParserStateService;
 import aion.dashboard.util.Utils;
-import org.aion.api.type.BlockDetails;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-@Deprecated
-public final class Extractor extends Producer<BlockDetails>{
-
-    private AionService apiService;
+public class Web3Extractor extends Producer<APIBlockDetails> {
+    private Web3Service apiService;
     private ParserStateService parserStateService;
     private AtomicLong ptr;
     private final int requestSize;
-    private static final int MAX_RQ_SIZE=1000;
+    private static final int MAX_RQ_SIZE=10_000;
 
 
-    public Extractor(AionService apiService, ParserStateService parserStateService, BlockingQueue<List<BlockDetails>> queue){
-        this(apiService, parserStateService, queue, (long) MAX_RQ_SIZE);
+    public Web3Extractor(Web3Service apiService, ParserStateService parserStateService, BlockingQueue<List<APIBlockDetails>> queue){
+        this(apiService, parserStateService, queue, MAX_RQ_SIZE);
     }
 
 
-    public Extractor(AionService apiService, ParserStateService parserStateService, BlockingQueue<List<BlockDetails>> queue, long requestSize) {
+    public Web3Extractor(Web3Service apiService, ParserStateService parserStateService, BlockingQueue<List<APIBlockDetails>> queue, long requestSize) {
         super(queue);
         this.apiService = apiService;
         this.parserStateService = parserStateService;
-        this.requestSize = (int) Math.min(requestSize, (long) MAX_RQ_SIZE);
+        this.requestSize = (int) Math.min(requestSize, MAX_RQ_SIZE);
         this.ptr = new AtomicLong(getPointer());
-
     }
-
-
 
     private long getPointer(){
         return parserStateService.readDBState().getBlockNumber().longValue();
     }
 
     @Override
-    protected List<BlockDetails> task() throws Exception {
+    protected List<APIBlockDetails> task() throws Exception {
         Thread.currentThread().setName("extractor");
 
         try {
-            List<BlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
+            List<APIBlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
 
             if (GENERAL.isTraceEnabled()) {
                 records.forEach(blk-> GENERAL.trace("Retrieved block with block_number: {}", blk.getNumber()));
             }
             ptr.set(Utils.getLastRecord(records).getNumber());
             return records;
-        } catch (AionApiException e){
-            apiService.reconnect();
+        } catch (Web3ApiException e){
+            GENERAL.error("Failed to retrieve blocks at block number {}.", ptr.get());
             throw e;
         }
     }
 
     @Override
     protected void doReset() {
-
         ptr.set(getPointer());
         queue.clear();
-
         shouldReset.compareAndSet(true, false);
-
     }
 
-
-
-    private List<BlockDetails> getBlocks(long start, int num ) throws AionApiException, InterruptedException {
+    private List<APIBlockDetails> getBlocks(long start, int num ) throws Exception {
         while (apiService.getBlockNumber() < start)Thread.sleep(500);
-
         long end = Math.min(start + num - 1, apiService.getBlockNumber());
-        return apiService.getBlockDetailsByRange(start, end);
+        return apiService.getBlockDetailsInRange(start, end);
     }
-
-
 }
