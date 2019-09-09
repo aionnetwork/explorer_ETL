@@ -113,6 +113,15 @@ class Web3ServiceImplTest {
         assertThrows(Web3ApiException.class, ()-> web3Service.getBlockDetailsInRange(-100,0));
     }
 
+    @Test
+    public void getAccountDetails() throws Web3ApiException {
+        var accountState = web3Service.getAccountDetails("0000000000000000000000000000000000000000000000000000000000000000");
+        var accountBalance = web3Service.getBalanceAt("0000000000000000000000000000000000000000000000000000000000000000", accountState.getBlockNumber());
+        var accountNonce = web3Service.getNonceAt("0000000000000000000000000000000000000000000000000000000000000000", accountState.getBlockNumber());
+
+        assertEquals(accountBalance, accountState.getBalance());
+        assertEquals(accountNonce, accountState.getNonce());
+    }
 
     private long runInRange(long runNumber, long start, long num) throws Web3ApiException {
         long end = num + start;

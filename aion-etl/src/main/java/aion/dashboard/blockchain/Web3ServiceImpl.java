@@ -36,6 +36,8 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
     private static final String GET_TRANSACTION_RECEIPT = "eth_getTransactionReceipt";
     private static final String GET_INTERNAL_TRANSACTION = "eth_getInternalTransactionsByHash";
     private static final String GET_BLOCK_DETAILS = "ops_getBlockDetailsByNumber";
+    private static final String GET_ACCOUNT_DETAILS = "ops_getAccountState";
+
     private final HttpHeaders httpHeaders;
     private final RestTemplate restExecutor;
     private List<String> web3Providers;
@@ -195,6 +197,11 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
             GENERAL.error("Caught exception in range {} to {}", start, end);
             throw new Web3ApiException();
         }
+    }
+
+    @Override
+    public APIAccountDetails getAccountDetails(String address) throws Web3ApiException {
+        return executeCall(buildWeb3Call(GET_ACCOUNT_DETAILS, address), getActiveEp(), APIAccountDetails.class);
     }
 
     private <T> CompletableFuture<T> supplyAsync(Supplier<T> task ){

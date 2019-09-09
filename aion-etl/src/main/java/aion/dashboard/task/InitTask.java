@@ -7,6 +7,7 @@ import aion.dashboard.config.BuildVersion;
 import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
 import aion.dashboard.exception.AionApiException;
+import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
@@ -33,7 +34,7 @@ public final class InitTask {
     private static void revert(String blk) {
 
         ParserStateServiceImpl ps = ParserStateServiceImpl.getInstance();
-        ReorgServiceImpl reorgService = new ReorgServiceImpl(AionService.getInstance(), ps, Web3Service.getInstance());
+        ReorgServiceImpl reorgService = new ReorgServiceImpl( ps, Web3Service.getInstance());
         long blknum = Long.parseLong(blk) + 1;
         try {
             reorgService.performReorg(blknum);
@@ -43,10 +44,11 @@ public final class InitTask {
             String message = "unable to delete the blocks in the database.";
 
             GENERAL.error("Revert failed: {}", message);
-        } catch (AionApiException e) {
+        } catch (Web3ApiException e) {
             String message = "unable to reach the API.";
-
             GENERAL.error("Revert failed: {}", message);
+        } catch (Exception e){
+            GENERAL.error("Unexpected error: ",e);
         }
 
     }
@@ -113,7 +115,7 @@ public final class InitTask {
                 .setTokenWriter(new TokenWriter())
                 .setInternalTransactionWriter(new InternalTransactionWriter())
                 .setInternalTransactionBatchProducer(itxProducer)
-                .setService(new ReorgServiceImpl(AionService.getInstance(),ps, Web3Service.getInstance()))
+                .setService(new ReorgServiceImpl(ps, Web3Service.getInstance()))
                 .createConsumer();
 
         UpdateManager.getInstance().start();

@@ -1,5 +1,6 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIAccountDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.AccountDetails;
 import org.aion.api.type.BlockDetails;
@@ -110,6 +111,17 @@ public class Account {
                 .balance((balance))
                 .nonce(nonce.toString(16))
                 .lastBlockNumber(blockDetails.getNumber())
+                .contract(tx==null || tx.getContract().isEmptyAddress()? 0:1)
+                .transactionHash(tx==null?"":tx.getTxHash().toString())
+                .build();
+    }
+
+    public static Account from(TxDetails tx, APIAccountDetails accountDetails){
+        return accountBuilder.get()
+                .address(Utils.sanitizeHex(accountDetails.getAddress()))
+                .balance(new BigDecimal(accountDetails.getBalance()))
+                .nonce(accountDetails.getNonce().toString(16))
+                .lastBlockNumber(accountDetails.getBlockNumber())
                 .contract(tx==null || tx.getContract().isEmptyAddress()? 0:1)
                 .transactionHash(tx==null?"":tx.getTxHash().toString())
                 .build();

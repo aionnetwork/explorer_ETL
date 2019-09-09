@@ -1,14 +1,12 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.interfaces.APIService;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.parser.type.AccountBatch;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.service.ParserStateServiceImpl;
-import org.aion.base.util.Utils;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,12 +15,12 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 public class AccountParser extends IdleProducer<AccountBatch, String> {
-    private final APIService service;
+    private final Web3Service service;
     private final ExecutorService apiExecutor;
 
     public AccountParser(
             BlockingQueue<List<AccountBatch>> queue,
-            APIService service,
+            Web3Service service,
             BlockingQueue<List<Message<String>>> workQueue
     ) {
         super(queue, workQueue);
@@ -71,11 +69,7 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
 
     private Account getAccount(Message<String> msg, String address) {
         try {
-            return Account.from(address,
-                    msg.getBlockDetails(),
-                    msg.getTxDetails(),
-                    new BigDecimal(service.getBalance(address)),
-                    service.getNonce(address));
+            return Account.from(msg.getTxDetails(), service.getAccountDetails(address));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

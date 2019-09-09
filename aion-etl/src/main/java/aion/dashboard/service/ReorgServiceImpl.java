@@ -1,15 +1,17 @@
 package aion.dashboard.service;
 
+import aion.dashboard.blockchain.ATSTokenImpl;
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.interfaces.ATSToken;
 import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.blockchain.type.APIAccountDetails;
 import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.cache.CacheManager;
 import aion.dashboard.config.Config;
-import aion.dashboard.domainobject.Account;
-import aion.dashboard.domainobject.Block;
-import aion.dashboard.domainobject.Token;
-import aion.dashboard.domainobject.TokenHolders;
+import aion.dashboard.domainobject.*;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.ReorganizationLimitExceededException;
+import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.task.AbstractGraphingTask;
 import aion.dashboard.parser.events.SolABIDefinitions;
 import aion.dashboard.util.TimeLogger;
@@ -36,20 +38,18 @@ public class ReorgServiceImpl implements ReorgService {
 
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private final Web3Service web3Service;
-
+    private final CacheManager<String, ATSToken> atsTokenCacheManager = CacheManager.getManager(CacheManager.Cache.ATS_TOKEN);
     private TokenHoldersService tokenHoldersService;
     private ParserStateService stateService;
-    private AionService borrowedAionService;
     private AccountService accountService;
     private BlockService blockService;
     private long reorgLimit;
 
-    public ReorgServiceImpl(AionService aionService, ParserStateService stateService, Web3Service web3Service) {
+    public ReorgServiceImpl(ParserStateService stateService, Web3Service web3Service) {
         this.web3Service = web3Service;
         accountService = AccountServiceImpl.getInstance();
         blockService = BlockServiceImpl.getInstance();
         tokenHoldersService = TokenHoldersServiceImpl.getInstance();
-        this.borrowedAionService = aionService;
         this.stateService = stateService;
 
         reorgLimit = Config.getInstance().getBlockReorgLimit();
@@ -57,8 +57,7 @@ public class ReorgServiceImpl implements ReorgService {
 
     @Override
     public boolean reorg() throws Exception {
-        if (!borrowedAionService.isConnected()) borrowedAionService.reconnect();
-        long blkChainPointer = borrowedAionService.getBlockNumber();
+        long blkChainPointer = web3Service.getBlockNumber();
         long dbPointer = stateService.readDBState().getBlockNumber().longValue();
         long consistentBlockPointer;
         if (dbPointer == -1) {
@@ -128,7 +127,7 @@ public class ReorgServiceImpl implements ReorgService {
      * @throws SQLException
      * @throws AionApiException
      */
-    public boolean performReorg(long consistentBlock) throws SQLException, AionApiException {
+    public boolean performReorg(long consistentBlock) throws Exception {
 
         GENERAL.debug("Starting Reorg...");
 
@@ -165,35 +164,30 @@ public class ReorgServiceImpl implements ReorgService {
         return true;
     }
 
-    private List<TokenHolders> getTokenBalances(List<TokenHolders> tokenHolders) throws SQLException, AionApiException {
+    private List<TokenHolders> getTokenBalances(List<TokenHolders> tokenHolders) throws Exception {
         Set<String> tokensContractAddr = tokenHolders.stream().map(TokenHolders::getContractAddress).collect(Collectors.toSet());
-        Map<String, IContract> contracts = new HashMap<>();
-        Map<String, Token> tokenMap = new HashMap<>();
-
 
         for (var contractAddr : tokensContractAddr) {
-            Token token = TokenServiceImpl.getInstance().getByContractAddr(contractAddr);
-            tokenMap.put(contractAddr, token);
-            contracts.put(contractAddr, borrowedAionService.getContract(AionAddress.wrap(token.getCreatorAddress()),
-                    AionAddress.wrap(token.getContractAddress()),
-                    SolABIDefinitions.getInstance().getJSONString(SolABIDefinitions.ATS_CONTRACT)));
+            if (!atsTokenCacheManager.contains(contractAddr)){
+                Token token = TokenServiceImpl.getInstance().getByContractAddr(contractAddr);
+                Contract contract = ContractServiceImpl.getInstance().findContract(contractAddr).orElseThrow();
+                atsTokenCacheManager.putIfAbsent(contractAddr, new ATSTokenImpl(token, contract.getContractType()));
+            }
         }
 
         List<TokenHolders> res = new ArrayList<>();
 
         for (var tknBalance: tokenHolders){
             try {
-                borrowedAionService.reconnect();
-                BigDecimal balance = new BigDecimal( (BigInteger) borrowedAionService
-                        .callContractFunction(contracts.get(tknBalance.getContractAddress()), "balanceOf", IAddress.copyFrom(tknBalance.getHolderAddress())).get(0))
-                        .divide(new BigDecimal(tokenMap.get(tknBalance.getContractAddress()).getGranularity()), MathContext.DECIMAL128);
-
+                ATSToken atsToken = atsTokenCacheManager.getIfPresent(tknBalance.getContractAddress());
+                BigInteger balance = atsToken.getBalance(tknBalance.getHolderAddress());
+                Token token = atsToken.details();
                 res.add(new TokenHolders.TokenBalanceBuilder()
-                        .setBlockNumber(borrowedAionService.getBlockNumber())
-                        .setRawBalance(balance.toPlainString())
-                        .setScaledBalance(balance.scaleByPowerOfTen(-1 * tokenMap.get(tknBalance.getContractAddress()).getTokenDecimal()))
-                        .setTokenGranularity(tokenMap.get(tknBalance.getContractAddress()).getGranularity())
-                        .setTokenDecimal(tokenMap.get(tknBalance.getContractAddress()).getTokenDecimal())
+                        .setBlockNumber(web3Service.getBlockNumber())
+                        .setRawBalance(balance.toString())
+                        .setScaledBalance(new BigDecimal(balance).scaleByPowerOfTen(-1 * token.getTokenDecimal()))
+                        .setTokenGranularity(token.getGranularity())
+                        .setTokenDecimal(token.getTokenDecimal())
                         .setHolderAddress(tknBalance.getHolderAddress())
                         .setContractAddress(tknBalance.getContractAddress())
                         .build());
@@ -209,18 +203,18 @@ public class ReorgServiceImpl implements ReorgService {
 
     }
 
-    private List<Account> getAccountDetails(final List<Account> accounts) throws AionApiException {
+    private List<Account> getAccountDetails(final List<Account> accounts) throws Web3ApiException {
         List<Account> res = new ArrayList<>();
-
-
         Account.AccountBuilder accountBuilder = new Account.AccountBuilder();
         for (var bal: accounts) {//get updated accounts for these accounts
+            APIAccountDetails details = web3Service.getAccountDetails(bal.getAddress());
+
             accountBuilder.address(bal.getAddress())
                     .contract(bal.getContract())
-                    .lastBlockNumber(borrowedAionService.getBlockNumber())
-                    .balance(new BigDecimal(borrowedAionService.getBalance(bal.getAddress())))
+                    .lastBlockNumber(details.getBlockNumber())
+                    .balance(new BigDecimal(details.getBalance()))
                     .transactionHash(bal.getTransactionHash())
-                    .nonce(borrowedAionService.getNonce(bal.getAddress()).toString(16));
+                    .nonce(details.getNonce().toString(16));
             res.add(accountBuilder.build());
         }
 

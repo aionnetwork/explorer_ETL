@@ -10,6 +10,6 @@ public interface ReorgService {
 
     boolean reorg() throws Exception;
 
-    boolean performReorg(long consistentBlock) throws SQLException, AionApiException;
+    boolean performReorg(long consistentBlock) throws Exception;
 
 }

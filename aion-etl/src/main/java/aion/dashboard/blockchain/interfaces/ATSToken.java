@@ -5,8 +5,10 @@ import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.Token;
 import aion.dashboard.domainobject.TokenHolders;
 import org.aion.api.type.BlockDetails;
+import org.aion.base.type.AionAddress;
 
 import java.io.Closeable;
+import java.math.BigInteger;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,10 +50,16 @@ public abstract class ATSToken implements AutoCloseable {
      */
     public abstract Optional<Token> getDetails(Contract contract);
 
+    public Token details(){
+        return token;
+    }
+
     public final Optional<Token> updateDetails(Contract contract){
         setToken(null);
         return getDetails(contract);
     }
+
+    public abstract BigInteger getBalance(String address) ;
 
     public void close(){
         checkState();

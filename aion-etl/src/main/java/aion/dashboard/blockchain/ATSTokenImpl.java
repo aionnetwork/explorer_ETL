@@ -71,7 +71,8 @@ public class ATSTokenImpl extends ATSToken {
         return type.equals(ContractType.DEFAULT) ? "string" : String.class.getSimpleName();
     }
 
-    BigInteger getBalance(String address) {
+    @Override
+    public BigInteger getBalance(String address) {
         return (BigInteger) executeContractCall(balanceOfFunc(), uintType(), AionAddress.wrap(address)).orElseThrow();
     }
 
