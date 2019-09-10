@@ -1,7 +1,9 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.blockchain.type.APITransactionLog;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.cache.CacheManager;
 import aion.dashboard.service.ContractServiceImpl;
 import aion.dashboard.util.Utils;
@@ -53,6 +55,13 @@ public class TxLog {
                 .collect(Collectors.toList());
     }
 
+    public static List<TxLog> logsFrom(APIBlockDetails blockDetails, APITxDetails txDetails) {
+        List<APITransactionLog> logs = txDetails.getLogs();
+        return IntStream.range(0, logs.size())
+                .mapToObj(i -> logFrom(blockDetails, txDetails, logs.get(i), i))
+                .collect(Collectors.toList());
+    }
+
     public static ThreadLocal<TxLogBuilder> getBuilder() {
         return builder;
     }
@@ -68,6 +77,17 @@ public class TxLog {
                 .setTo(Utils.sanitizeHex(tx.getTo().toString()))
                 .build();
 
+    }
+
+    private static TxLog logFrom(APIBlockDetails apiBlockDetails, APITxDetails apiTxDetails, APITransactionLog apiTransactionLog, int index){
+        return builder().setBlockNumber(apiBlockDetails.getNumber())
+                .setBlockTimestamp(apiBlockDetails.getTimestamp())
+                .setFrom(Utils.sanitizeHex((apiTxDetails.getFrom())))
+                .setTransactionHash(Utils.sanitizeHex(apiTxDetails.getTransactionHash()))
+                .setTxLog(apiTransactionLog)
+                .setIndex(index)
+                .setTo(Utils.sanitizeHex(apiTxDetails.getTo()))
+                .build();
     }
 
     public String getTransactionHash() {

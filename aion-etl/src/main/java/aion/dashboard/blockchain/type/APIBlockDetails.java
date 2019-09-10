@@ -247,7 +247,6 @@ public class APIBlockDetails {
         private String antiParentHash;
         private int blockTime;
         private String txTrieRoot;
-        private String bloom;
         private BigInteger blockReward;
         private String gasLimit;
         private String gasUsed;
@@ -260,11 +259,6 @@ public class APIBlockDetails {
 
         public Builder setTxTrieRoot(String txTrieRoot) {
             this.txTrieRoot = txTrieRoot;
-            return this;
-        }
-
-        public Builder setBloom(String bloom) {
-            this.bloom = bloom;
             return this;
         }
 
@@ -360,8 +354,8 @@ public class APIBlockDetails {
             return this;
         }
 
-        public Builder setSize(String size) {
-            this.size = longFromHexString(size);
+        public Builder setSize(long size) {
+            this.size = size;
             return this;
         }
 

@@ -1,5 +1,6 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 
@@ -80,7 +81,20 @@ public class TokenHolders {
 
     private static final ThreadLocal<TokenBalanceBuilder> threadLocalBuilder = ThreadLocal.withInitial(TokenBalanceBuilder::new);
 
+    @Deprecated
     public static TokenHolders from(String address, BlockDetails b, Token tkn, BigInteger rawBalance){
+        return threadLocalBuilder.get()
+                .setBlockNumber(b.getNumber())
+                .setContractAddress(tkn.getContractAddress().replace("0x",""))
+                .setHolderAddress(address.replace("0x",""))
+                .setRawBalance(rawBalance.toString())
+                .setTokenDecimal(tkn.getTokenDecimal())
+                .setScaledBalance(Utils.scaleTokenValue(rawBalance,tkn.getTokenDecimal()))
+                .setTokenGranularity(tkn.getGranularity())
+                .build();
+    }
+
+    public static TokenHolders from(String address, APIBlockDetails b, Token tkn, BigInteger rawBalance){
         return threadLocalBuilder.get()
                 .setBlockNumber(b.getNumber())
                 .setContractAddress(tkn.getContractAddress().replace("0x",""))

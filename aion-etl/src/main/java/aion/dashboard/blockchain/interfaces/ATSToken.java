@@ -1,6 +1,7 @@
 package aion.dashboard.blockchain.interfaces;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.Token;
 import aion.dashboard.domainobject.TokenHolders;
@@ -42,7 +43,7 @@ public abstract class ATSToken implements AutoCloseable {
      * @param holderAddress the holder's balance to be queried
      * @return the token holder information found from the blockchain
      */
-    public abstract Optional<TokenHolders> getHolderDetails(String holderAddress, BlockDetails blockDetails);
+    public abstract Optional<TokenHolders> getHolderDetails(String holderAddress, APIBlockDetails blockDetails);
 
     /**
      * @return the details for this token

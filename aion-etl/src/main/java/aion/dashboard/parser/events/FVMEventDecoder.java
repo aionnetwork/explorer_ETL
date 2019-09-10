@@ -1,8 +1,8 @@
 package aion.dashboard.parser.events;
 
+import aion.dashboard.blockchain.type.APITransactionLog;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.ContractAbiEntry;
-import org.aion.api.type.TxLog;
 
 import java.util.*;
 
@@ -30,7 +30,7 @@ public class FVMEventDecoder extends EventDecoder {
     }
 
     @Override
-    public Optional<ContractEvent> decodeEvent(TxLog txLog) {
+    public Optional<ContractEvent> decodeEvent(APITransactionLog txLog) {
         if (txLog.getTopics().isEmpty() || !entryMap.containsKey(Utils.sanitizeHex(txLog.getTopics().get(0)))){
             return Optional.empty();
         }else {

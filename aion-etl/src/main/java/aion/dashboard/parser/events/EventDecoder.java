@@ -1,6 +1,7 @@
 package aion.dashboard.parser.events;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APITransactionLog;
 import aion.dashboard.cache.CacheManager;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.exception.InvalidContractException;
@@ -75,6 +76,6 @@ public abstract class EventDecoder {
         CONTRACT_CACHE.putIfAbsent(contract.getContractAddr().replaceFirst("0x",""), contract);
     }
 
-    public abstract Optional<ContractEvent> decodeEvent(TxLog txLog);
+    public abstract Optional<ContractEvent> decodeEvent(APITransactionLog txLog);
 
 }

@@ -144,6 +144,9 @@ public abstract class Producer<T> implements Runnable {
         return (!Thread.currentThread().isInterrupted() && !shouldStop.get());
     }
 
+    public int queueSize(){
+        return queue.size();
+    }
     private static class ResetException extends Exception {
 
     }

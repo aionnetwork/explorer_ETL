@@ -1,5 +1,6 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
@@ -309,6 +310,7 @@ public class Block {
     }
 
     private static final ThreadLocal<BlockBuilder> threadLocalBuilder = ThreadLocal.withInitial(BlockBuilder::new);
+   @Deprecated
     public static Block from(BlockDetails b, String lastHash, String txList, BigDecimal nrgReward, BigInteger blockReward){
         return threadLocalBuilder.get()
                 .blockNumber(b.getNumber())
@@ -336,6 +338,37 @@ public class Block {
                 .txTrieRoot(b.getTxTrieRoot().toString())
                 .approxNrgReward(Utils.approximate(nrgReward,18))
                 .blockReward(new BigDecimal(blockReward))
+                .build();
+    }
+
+
+    public static Block from(APIBlockDetails b, String lastHash, String txList, BigDecimal nrgReward){
+        return threadLocalBuilder.get()
+                .blockNumber(b.getNumber())
+                .blockTime(b.getBlockTime())
+                .blockHash(Utils.sanitizeHex(b.getHash()))
+                .minerAddress(Utils.sanitizeHex(b.getMiner()))
+                .parentHash(Utils.sanitizeHex(b.getParentHash()))
+                .receiptTxRoot(Utils.sanitizeHex(b.getReceiptsRoot()))
+                .stateRoot(Utils.sanitizeHex(b.getStateRoot()))
+                .extraData(Utils.sanitizeHex(b.getExtraData()))
+                .nonce(Utils.sanitizeHex(b.getNonce()))
+                .bloom(Utils.sanitizeHex(b.getBloom()))
+                .solution(Utils.sanitizeHex(b.getSolution()))
+                .difficulty(b.getDifficulty())
+                .totalDifficulty(b.getTotalDifficulty())
+                .nrgConsumed(b.getNrgUsed())
+                .nrgLimit(b.getNrgLimit())
+                .blockSize(b.getSize())
+                .blockTimestamp(b.getTimestamp())
+                .numTransactions(b.getTxDetails().size())
+                .blockTime((b.getBlockTime()))
+                .transactionHash(Utils.sanitizeHex(lastHash))
+                .transactionList(txList)
+                .nrgReward(nrgReward)
+                .txTrieRoot(Utils.sanitizeHex(b.getTxTrieRoot()))
+                .approxNrgReward(Utils.approximate(nrgReward,18))
+                .blockReward(new BigDecimal(b.getBlockReward()))
                 .build();
     }
 

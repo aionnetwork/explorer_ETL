@@ -1,11 +1,13 @@
 package aion.dashboard.parser.events;
 
+import aion.dashboard.blockchain.type.APITransactionLog;
 import aion.dashboard.exception.DecodeException;
 import org.aion.api.sol.ISolidityArg;
 import org.aion.api.sol.impl.*;
 import org.aion.api.type.ContractAbiEntry;
 import org.aion.api.type.ContractAbiIOParam;
 import org.aion.api.type.TxLog;
+import org.aion.base.util.ByteArrayWrapper;
 import org.aion.util.bytes.ByteUtil;
 import org.aion.crypto.HashUtil;
 import org.slf4j.Logger;
@@ -107,7 +109,7 @@ public class ContractEvents {
      * @param contractAbiEntry
      * @return
      */
-    public static Optional<ContractEvent> decodeEventLog(TxLog txLog, ContractAbiEntry contractAbiEntry) throws DecodeException {
+    public static Optional<ContractEvent> decodeEventLog(APITransactionLog txLog, ContractAbiEntry contractAbiEntry) throws DecodeException {
         if (txLog.getTopics().get(0).replace("0x", "").equals(contractAbiEntry.getHashed().replace("0x", ""))) {
             try {
                 ContractEvent.ContractEventBuilder builder = ContractEvent.builder();
@@ -263,19 +265,20 @@ public class ContractEvents {
                     }
                     int[] offsets = getOffsets(args);
                     int count = 0;
+                    ByteArrayWrapper data = ByteArrayWrapper.wrap(ByteUtil.hexStringToBytes(txLog.getData()));
                     for (int i = 0; i < args.size(); i++) {
                         ISolidityArg arg = args.get(i);
                         int offset = offsets[count];
                         int index = zippedNonIndexedParam.get(i).x;
                         count++;
                         if (arg.isType("address"))
-                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
+                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, data)));
                         else if (arg.isType("uint") || arg.isType("int")) {
-                            inputs.set(index, arg.decode(offset, txLog.getData()));
-                        } else if (arg.decode(offset, txLog.getData()) instanceof byte[]) {
-                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, txLog.getData())));
+                            inputs.set(index, arg.decode(offset, data));
+                        } else if (arg.decode(offset, data) instanceof byte[]) {
+                            inputs.set(index, ByteUtil.toHexString((byte[]) arg.decode(offset, data)));
                         } else
-                            inputs.set(index, arg.decode(offset, txLog.getData()));
+                            inputs.set(index, arg.decode(offset, data));
                     }
 
                 }

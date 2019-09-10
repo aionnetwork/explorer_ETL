@@ -4,6 +4,7 @@ import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.exception.AionApiException;
+import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.util.Utils;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +25,7 @@ class InternalTransactionParserTest {
     private AccountParser spiedAccountParser = Mockito.spy(new AccountParser(new LinkedBlockingDeque<>(), Web3ServiceImpl.getInstance(), new LinkedBlockingDeque<>()));
     private InternalTransactionParser parser = new InternalTransactionParser(new LinkedBlockingDeque<>(), new LinkedBlockingDeque<>(), Web3Service.getInstance(), spiedAccountParser);
 
-    private AionService service = AionService.getInstance();
+    private Web3Service service = Web3Service.getInstance();
 
     @BeforeEach
     void setUp() throws InterruptedException {
@@ -37,8 +38,8 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseOne() throws AionApiException, InterruptedException {
-        var blockDetails = service.getBlockDetailsByRange(3671014,3671014);
+    void testParseOne() throws AionApiException, InterruptedException, Web3ApiException {
+        var blockDetails = service.getBlockDetailsInRange(3671014,3671014);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
         assertTimeout(Duration.ofSeconds(60), ()-> Utils.awaitResult(parser::peek, Iterator::hasNext));
@@ -51,8 +52,8 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseEmptyTx() throws AionApiException, InterruptedException {
-        var blockDetails = service.getBlockDetailsByRange(778366,778366);
+    void testParseEmptyTx() throws AionApiException, InterruptedException, Web3ApiException {
+        var blockDetails = service.getBlockDetailsInRange(778366,778366);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
         assertTimeout(Duration.ofSeconds(60), ()-> Utils.awaitResult(parser::workQueueSize, i-> i==0));
@@ -61,8 +62,8 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testParseEmptyBlock() throws AionApiException, InterruptedException {
-        var blockDetails = service.getBlockDetailsByRange(778367,778367);
+    void testParseEmptyBlock() throws AionApiException, InterruptedException, Web3ApiException {
+        var blockDetails = service.getBlockDetailsInRange(778367,778367);
 
         parser.submitAll(Collections.singletonList(new Message<Void>(null, blockDetails.get(0), null)));
         assertTimeout(Duration.ofSeconds(60), ()-> Utils.awaitResult(parser::workQueueSize, i-> i==0));
@@ -71,12 +72,12 @@ class InternalTransactionParserTest {
     }
 
     @Test
-    void testPerformance() throws AionApiException, InterruptedException {
+    void testPerformance() throws AionApiException, InterruptedException, Web3ApiException {
         long timeToComplete = 500;
         parser.stop();
         for (long i = 1_300_000; i< 1_400_000;){
             List<Message<Void>> messages = new ArrayList<>();
-            var blockDetails = service.getBlockDetailsByRange(i, i+999);
+            var blockDetails = service.getBlockDetailsInRange(i, i+999);
             for (var blockDetail : blockDetails){
                 messages.add(new Message<>(null, blockDetail, null));
             }

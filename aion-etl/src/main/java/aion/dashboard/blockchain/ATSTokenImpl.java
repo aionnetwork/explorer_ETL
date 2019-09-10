@@ -2,6 +2,7 @@ package aion.dashboard.blockchain;
 
 import aion.dashboard.blockchain.interfaces.ATSToken;
 import aion.dashboard.blockchain.interfaces.ContractHandler;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.domainobject.Contract;
 import aion.dashboard.domainobject.Token;
 import aion.dashboard.domainobject.TokenHolders;
@@ -154,7 +155,7 @@ public class ATSTokenImpl extends ATSToken {
 
 
     @Override
-    public Optional<TokenHolders> getHolderDetails(String holderAddress, BlockDetails b) {
+    public Optional<TokenHolders> getHolderDetails(String holderAddress, APIBlockDetails b) {
         checkState();
         try {
             return Optional.ofNullable(TokenHolders.from(holderAddress, b, token, getBalance(holderAddress)));

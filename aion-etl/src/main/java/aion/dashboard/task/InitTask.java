@@ -2,6 +2,8 @@ package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Extractor;
+import aion.dashboard.blockchain.Web3Extractor;
+import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.config.BuildVersion;
 import aion.dashboard.config.Config;
@@ -76,7 +78,7 @@ public final class InitTask {
         }
     }
 
-    public static void start() throws AionApiException {
+    public static void start() throws Web3ApiException {
         Logger general = GENERAL;
         general.info("--------------------------------");
         general.info("Starting ETL {}", BuildVersion.VERSION.replaceAll("-[0-9]{4}(-[0-9]{1,2}){2}-20[0-9]{2}", ""));
@@ -88,7 +90,7 @@ public final class InitTask {
 
         Config config = Config.getInstance();
         int queueSize = config.getQueueSize()<Integer.MAX_VALUE ? (int)config.getQueueSize(): 100;
-        Extractor extractor = new Extractor(AionService.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
+        Web3Extractor extractor = new Web3Extractor(Web3Service.getInstance(),ps, new ArrayBlockingQueue<>(queueSize),config.getBlockQueryRange());
 
         //Note: Use size restricted queues to prevent the parsers from being overwhelmed by a faster producer and to also
         //mininimize the size of a potential failure
@@ -99,9 +101,9 @@ public final class InitTask {
         Parser parser = new ParserBuilder().setAccountProd(accountParser)
                 .setTokenProd(tokenParser)
                 .setQueue(new ArrayBlockingQueue<>(queueSize))
-                .setRollingBlockMean(RollingBlockMean.init(ps, AionService.getInstance()))
+                .setRollingBlockMean(RollingBlockMean.init(ps, Web3ServiceImpl.getInstance()))
                 .setInternalTransactionProducer(itxProducer)
-                .setExtractor(extractor).setApiService(AionService.getInstance()).createParser();
+                .setExtractor(extractor).setApiService(Web3ServiceImpl.getInstance()).createParser();
 
         //create an instance of the write process
         //this process must have an instance of each producer
@@ -146,7 +148,7 @@ public final class InitTask {
     /*
 
      */
-    private static Thread buildShutdownHook(Extractor extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task) {
+    private static Thread buildShutdownHook(Producer extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task) {
         return new Thread(()->{
             Thread.currentThread().setName("shutdown-hook");
             GENERAL.info("Shutting down the ETL.");

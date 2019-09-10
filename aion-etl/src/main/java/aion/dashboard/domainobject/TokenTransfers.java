@@ -1,5 +1,7 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.parser.events.ContractEvent;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
@@ -169,6 +171,38 @@ public class TokenTransfers {
         }
     }
 
+    static Optional<TokenTransfers> from(ContractEvent event, APITxDetails tx, APIBlockDetails b, Token tkn){
+
+        var optionalAmount = event.getInput("amount", BigInteger.class);
+        var optionalOperator= event.getInput("operator", String.class);
+        var optionalTo = event.getInput("to", String.class);
+        var optionalFrom = event.getInput("from", String.class);
+        if (tkn !=null && optionalAmount.isPresent() && optionalOperator.isPresent() && optionalTo.isPresent() && optionalFrom.isPresent()) {
+            var rawValue = optionalAmount.get();
+            var scaledValue = scaleTokenValue(rawValue, tkn.getTokenDecimal());
+            TokenTransfers.TransferBuilder builder = builderThreadLocal.get();
+            return Optional.of(
+                    builder.setTransactionTimestamp(b.getTimestamp())
+                            .setContractAddress(Utils.sanitizeHex(event.getAddress()))
+                            .setTransactionHash(Utils.sanitizeHex(tx.getTransactionHash()))
+                            .setBlockNumber(b.getNumber())
+                            .setOperator(Utils.sanitizeHex(optionalOperator.get()))
+                            .setToAddress(Utils.sanitizeHex(optionalTo.get()))
+                            .setFromAddress(Utils.sanitizeHex(optionalFrom.get()))
+                            .setScaledTokenValue(scaledValue)
+                            .setRawValue(rawValue.toString())
+                            .setTokendecimal(tkn.getTokenDecimal())
+                            .setGranularity(new BigDecimal(tkn.getGranularity()))
+                            .build());
+
+
+        }
+        else {
+            return Optional.empty();
+        }
+    }
+
+    @Deprecated
     public static List<TokenTransfers> tokenTransfersFrom(List<ContractEvent> eventList, TxDetails tx, BlockDetails b, Token tkn){
         return eventList.stream()
                 .filter(event -> event.getEventName().equals("Sent"))
@@ -178,7 +212,14 @@ public class TokenTransfers {
                 .collect(Collectors.toList());
     }
 
-
+    public static List<TokenTransfers> tokenTransfersFrom(List<ContractEvent> eventList, APITxDetails tx, APIBlockDetails b, Token tkn){
+        return eventList.stream()
+                .filter(event -> event.getEventName().equals("Sent"))
+                .map(event -> from(event, tx,b,tkn))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+    }
 
     public static class TransferBuilder {
         private String operator;

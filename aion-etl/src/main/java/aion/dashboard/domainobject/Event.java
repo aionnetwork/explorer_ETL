@@ -1,6 +1,9 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 import org.json.JSONArray;
@@ -117,9 +120,55 @@ public class Event {
         }
 
     }
+
+    static Optional<Event> from(ContractEvent contractEvent, APIBlockDetails b, APITxDetails tx){
+        JSONArray inputList = new JSONArray();
+        JSONArray paramList = new JSONArray();
+        final EventBuilder eventBuilder = threadLocalBuilder.get().setName(contractEvent.getEventName())
+                .setContractAddr(contractEvent.getAddress())
+                .setTimestamp(b.getTimestamp())
+                .setBlockNumber(b.getNumber())
+                .setTransactionHash(Utils.sanitizeHex(tx.getTransactionHash()));
+
+        List<String> names = contractEvent.getNames();
+        List<String> types = contractEvent.getTypes();
+        List<Object> inputs = contractEvent.getInputs();
+
+        if (names.stream().noneMatch(s -> s.isBlank()||s.isEmpty())
+                && types.stream().noneMatch(s -> s.isBlank()||s.isEmpty()) ) {// sanitize any bad events
+
+
+            for (int i = 0; i < names.size(); i++) {
+                paramList.put(types.get(i) + " " + names.get(i));
+                inputList.put(inputs.get(i));
+            }
+            eventBuilder.setInputList(inputList.toString())
+                    .setParameterList(paramList.toString());
+
+            if (GENERAL.isTraceEnabled()) {
+                GENERAL.trace("Built event: {}", contractEvent);
+            }
+
+            return Optional.ofNullable(eventBuilder.build());
+        }else {
+            return Optional.empty();
+        }
+
+    }
+
+
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
 
+    @Deprecated
     public static List<Event> eventsFrom(List<ContractEvent> events, BlockDetails b, TxDetails tx){
+        return events.stream()
+                .map(event -> from(event, b, tx))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toList());
+    }
+
+    public static List<Event> eventsFrom(List<ContractEvent> events, APIBlockDetails b, APITxDetails tx){
         return events.stream()
                 .map(event -> from(event, b, tx))
                 .filter(Optional::isPresent)

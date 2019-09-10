@@ -1,6 +1,9 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITransactionLog;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
@@ -203,6 +206,32 @@ public class Transaction {
     }
 
     private static final ThreadLocal<TransactionBuilder> builderThreadLocal = ThreadLocal.withInitial(TransactionBuilder::new);
+
+    public static Transaction from(APITxDetails tx, APIBlockDetails b){
+        return builderThreadLocal.get()
+                .setType(tx.getType())
+                .setTransactionHash(Utils.sanitizeHex(tx.getTransactionHash()))
+                .setApproxValue(Utils.approximate(tx.getValue(), 18))
+                .setBlockHash(Utils.sanitizeHex(b.getHash()))
+                .setBlockNumber(b.getNumber())
+                .setBlockTimestamp(b.getTimestamp())
+                .setTransactionIndex(tx.getTransactionIndex())
+                .setFromAddr(Utils.sanitizeHex(tx.getFrom()))
+                .setToAddr(Utils.sanitizeHex(tx.getTo()))
+                .setNrgConsumed(tx.getNrgUsed().longValue())
+                .setNrgPrice(tx.getNrgPrice().longValue())
+                .setData(Utils.sanitizeHex(tx.getInput()))
+                .setTransactionTimestamp(tx.getTimestamp())
+                .setValue(new BigDecimal(tx.getValue()))
+                .setTransactionLog(buildLogFromWeb3(tx.getLogs()))
+                .setNonce(Long.toHexString(tx.getNonce()))
+                .setTxError(tx.getError())
+                .setContractAddr(Utils.sanitizeHex(tx.getContractAddress()))
+                .build();
+    }
+
+
+    @Deprecated
     public static Transaction from(TxDetails tx, BlockDetails b){
         return builderThreadLocal.get()
                 .setType(tx.getType())
@@ -240,6 +269,28 @@ public class Transaction {
             }
             txLogObject.put("address", txLog.getAddress().toString());
             txLogObject.put("data", txLog.getData());
+
+
+            txLogObject.put("topics", topicsArr);
+            txLogs.put(txLogObject);
+
+
+        }
+        return txLogs.toString();
+    }
+
+    private static String buildLogFromWeb3(List<APITransactionLog> logs){
+        JSONArray txLogs = new JSONArray();
+        for (var txLog : logs) {
+
+            JSONObject txLogObject = new JSONObject();
+            JSONArray topicsArr = new JSONArray();
+
+            for (var topic : txLog.getTopics()){
+                topicsArr.put(Utils.sanitizeHex(topic));
+            }
+            txLogObject.put("address", Utils.sanitizeHex(txLog.getAddress()));
+            txLogObject.put("data", Utils.sanitizeHex(txLog.getData()));
 
 
             txLogObject.put("topics", topicsArr);

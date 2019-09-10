@@ -86,6 +86,7 @@ public class InternalTransfer {
 
     }
 
+    @Deprecated
     public static List<InternalTransfer> transfersFrom(List<ContractEvent> eventList, TxDetails tx, BlockDetails b){
 
         return IntStream.range(0, eventList.size())

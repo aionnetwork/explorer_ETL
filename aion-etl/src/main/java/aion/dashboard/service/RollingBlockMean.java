@@ -1,11 +1,15 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.blockchain.type.APIBlock;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.AionApiException;
+import aion.dashboard.exception.Web3ApiException;
 import org.aion.api.type.BlockDetails;
 
 import java.math.BigInteger;
@@ -28,7 +32,7 @@ public interface RollingBlockMean {
      * @return an instance of the rolling mean
      * @throws AionApiException
      */
-    static RollingBlockMean init(long blkPointer,long transactionMeanPointer,long dbPointer, AionService service) throws AionApiException {
+    static RollingBlockMean init(long blkPointer,long transactionMeanPointer,long dbPointer, Web3Service service) throws Web3ApiException {
         Config config = Config.getInstance();
 
         long transactionTimeWindow = config.getTransactionWindowSize() * 60L; // in minutes
@@ -47,7 +51,7 @@ public interface RollingBlockMean {
                 blockCountWindow);
     }
 
-    static RollingBlockMean init(ParserStateService psService, AionService apiService) throws AionApiException {
+    static RollingBlockMean init(ParserStateService psService, Web3Service apiService) throws Web3ApiException {
         Config config = Config.getInstance();
 
         long transactionTimeWindow = config.getTransactionWindowSize() * 60L; // in minutes
@@ -65,20 +69,13 @@ public interface RollingBlockMean {
                 transactionTimeWindow,
                 blockCountWindow);
     }
-
-
-
-
     /**
      * Adds a new block to the moving window
      * @param blockDetails
      * @param blockReward
      */
-    void add(BlockDetails blockDetails, BigInteger blockReward);
+    void add(APIBlockDetails apiBlock);
     void reorg(long consistentBlock);
-
-
-
     long getStartOfBlockWindow();
     long getStartOfTransactionWindow();
 

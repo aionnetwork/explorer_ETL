@@ -1,5 +1,7 @@
 package aion.dashboard.parser.type;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITxDetails;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
@@ -12,10 +14,10 @@ public class Message<T> {
 
 
     private final List<T> item;// The item to be consumed
-    private final BlockDetails blockDetails;// details from this api request
-    private final TxDetails txDetails;// tx detail from this api request
+    private final APIBlockDetails blockDetails;// details from this api request
+    private final APITxDetails txDetails;// tx detail from this api request
 
-    public Message(List<T> item, BlockDetails blockDetails, TxDetails txDetails){
+    public Message(List<T> item, APIBlockDetails blockDetails, APITxDetails txDetails){
 
         this.item = item;
         this.blockDetails = blockDetails;
@@ -27,11 +29,11 @@ public class Message<T> {
         return item;
     }
 
-    public BlockDetails getBlockDetails() {
+    public APIBlockDetails getBlockDetails() {
         return blockDetails;
     }
 
-    public TxDetails getTxDetails() {
+    public APITxDetails getTxDetails() {
         return txDetails;
     }
 

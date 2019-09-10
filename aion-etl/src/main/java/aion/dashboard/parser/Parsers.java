@@ -1,5 +1,8 @@
 package aion.dashboard.parser;
 
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITransactionLog;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.parser.events.EventDecoder;
 import aion.dashboard.exception.DecodeException;
@@ -56,14 +59,14 @@ public class Parsers {
                 .anyMatch(entry -> BloomFilter.containsEvent(bloom, entry));
     }
 
-    static List<ContractEvent> readEvents(List<TxLog> logs){
-        return logs.stream().map(log -> EventDecoder.decoderFor(log.getAddress().toString()).decodeEvent(log))// Attempt to decode this element in the txlog
+    static List<ContractEvent> readEvents(List<APITransactionLog> logs){
+        return logs.stream().map(log -> EventDecoder.decoderFor(log.getAddress()).decodeEvent(log))// Attempt to decode this element in the txlog
                 .filter(Optional::isPresent)
                 .map(Optional::get)//Get the decoded event
                 .collect(Collectors.toList());// return the result
     }
 
-    private static Optional<ContractEvent> readEvent(TxLog log){
+    private static Optional<ContractEvent> readEvent(APITransactionLog log){
         List<ContractAbiEntry> entries = SolABIDefinitions.getInstance().getAllEvents();// get the events that can be decoded
         for (var entry : entries) {
             try {
@@ -82,8 +85,8 @@ public class Parsers {
         return Optional.empty();// else return nothing
     }
 
-    static Optional<Contract> readContract(TxDetails tx, BlockDetails b) {
-        if (tx.getContract() == null || tx.getContract().isEmptyAddress()) {
+    static Optional<Contract> readContract(APITxDetails tx, APIBlockDetails b) {
+        if (aion.dashboard.util.Utils.sanitizeHex(tx.getContractAddress()).isEmpty()) {
             return Optional.empty();
         } else {
 
@@ -144,30 +147,28 @@ public class Parsers {
                 .collect(Collectors.toList());
     }
 
-    static String getFirstTxHash(List<TxDetails> txDetails) {
+    static String getFirstTxHash(List<APITxDetails> txDetails) {
         //If no tx are found in this block return an empty string
         //Otherwise find the last tx and return the hash
         //This should probably be removed in a future release
-        return txDetails.isEmpty() ? "" : txDetails.get(0).getTxHash().toString();
+        return txDetails.isEmpty() ? "" : txDetails.get(0).getTransactionHash();
     }
 
-    static Collection<String> accFromTransaction(TxDetails transaction) {
+    static Collection<String> accFromTransaction(APITxDetails transaction) {
         Set<String> addresses = new HashSet<>();
 
-        if (transaction.getContract() !=null &&!transaction.getContract().isEmptyAddress()) {
-            addresses.add(transaction.getContract().toString());
+        if (!aion.dashboard.util.Utils.sanitizeHex(transaction.getContractAddress()).isEmpty()) {
+            addresses.add(transaction.getContractAddress());
         }
 
-        if (!transaction.getTo().isEmptyAddress()) {
-            addresses.add(transaction.getTo().toString());
+        if (!aion.dashboard.util.Utils.sanitizeHex(transaction.getTo()).isEmpty()) {
+            addresses.add(transaction.getTo());
         }
-
-
-        addresses.add(transaction.getFrom().toString());
+        addresses.add(transaction.getFrom());
 
 
         for (var log : transaction.getLogs()) {
-            addresses.add(log.getAddress().toString());
+            addresses.add(log.getAddress());
 
             for (var topic : log.getTopics()) {
                 if (Utils.isValidAddress(topic)) {
@@ -196,18 +197,13 @@ public class Parsers {
         return Arrays.stream(params).map(param -> event.getInput(param, String.class)).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
     }
 
-    static void parseEvents(ParserBatch batchObject, BlockDetails block, List<Message<ContractEvent>> tokenMessages, boolean canRead, TxDetails tx) {
+    static void parseEvents(ParserBatch batchObject, APIBlockDetails block, List<Message<ContractEvent>> tokenMessages, boolean canRead, APITxDetails tx) {
         if (canRead) {
             //Attempt to do fun stuff with the events
             List<ContractEvent> events = readEvents(tx.getLogs());
 
             batchObject.addEvents(Event.eventsFrom(events, block, tx));
-
-
-            if (containsInternalTransfer(events)) {
-                //Attempt Read internal transfers
-                batchObject.addTransfers(readInternalTransfer(events, tx, block));
-            } else if (containsTokenEvent(events)) {
+            if (containsTokenEvent(events)) {
                 tokenMessages.add(new Message<>(events, block, tx));
             }
 

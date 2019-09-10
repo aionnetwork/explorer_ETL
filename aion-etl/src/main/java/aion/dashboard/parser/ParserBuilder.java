@@ -2,6 +2,8 @@ package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.Extractor;
+import aion.dashboard.blockchain.Web3Extractor;
+import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.RollingBlockMean;
 
@@ -9,15 +11,15 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 public class ParserBuilder {
-    private Extractor extractor;
+    private Web3Extractor extractor;
     private BlockingQueue<List<ParserBatch>> queue;
     private RollingBlockMean rollingBlockMean;
     private IdleProducer<?, String> accountProd;
     private TokenParser tokenProd;
-    private AionService apiService;
+    private Web3Service apiService;
     private InternalTransactionParser internalTransactionProducer;
 
-    public ParserBuilder setExtractor(Extractor extractor) {
+    public ParserBuilder setExtractor(Web3Extractor extractor) {
         this.extractor = extractor;
         return this;
     }
@@ -46,7 +48,7 @@ public class ParserBuilder {
         return new Parser(extractor, queue, rollingBlockMean, accountProd, tokenProd, apiService, internalTransactionProducer);
     }
 
-    public ParserBuilder setApiService(AionService apiService) {
+    public ParserBuilder setApiService(Web3Service apiService) {
         this.apiService = apiService;
         return this;
     }

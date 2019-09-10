@@ -6,6 +6,7 @@ import org.aion.util.bytes.ByteUtil;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Objects;
 
 import static aion.dashboard.util.Utils.*;
 
@@ -14,13 +15,12 @@ public class APITxDetails {
 
     private String blockHash;
     private BigInteger nrgPrice;
-    private String logsBloom;
+
     private BigInteger nrgUsed;
     private String contractAddress;
     private int transactionIndex;
     private String transactionHash;
     private long blockNumber;
-    private String root;
     private String from;
     private String to;
     private List<APITransactionLog> logs;
@@ -28,32 +28,29 @@ public class APITxDetails {
     private String input;
     private long timestamp;
     private String error;
-    private BigInteger nonce;
+    private long nonce;
     private byte type;
     private BigInteger value;
     private boolean hasInternalTransactions;
     private long nrgLimit;
 
     public APITxDetails(Builder builder) {
-        blockHash = builder.blockHash;
-        nrgPrice = builder.nrgPrice;
-        logsBloom = builder.logsBloom;
-        nrgUsed = builder.nrgUsed;
+        blockHash = Objects.requireNonNull(builder.blockHash);
+        nrgPrice = Objects.requireNonNull(builder.nrgPrice);
+        nrgUsed = Objects.requireNonNull(builder.nrgUsed);
         contractAddress = builder.contractAddress == null ? "" : builder.contractAddress;
         transactionIndex = builder.transactionIndex;
-        transactionHash = builder.transactionHash;
+        transactionHash = Objects.requireNonNull( builder.transactionHash);
         blockNumber = builder.blockNumber;
-        root = builder.root;
-        from = builder.from;
-        to = builder.to;
-        logs = builder.logs;
-        status = builder.status;
-        input = builder.input;
+        from = Objects.requireNonNull(builder.from);
+        to = Objects.requireNonNull(builder.to);
+        logs = Objects.requireNonNull(builder.logs);
+        input = Objects.requireNonNull(builder.input);
         timestamp = builder.timestamp;
-        error = builder.error;
-        nonce = builder.nonce;
+        error = Objects.requireNonNull(builder.error);
+        nonce = Objects.requireNonNull(builder.nonce);
         type  = builder.type;
-        value = builder.value;
+        value = Objects.requireNonNull(builder.value);
         hasInternalTransactions = builder.hasInternalTransactions;
         nrgLimit = builder.nrg;
     }
@@ -67,10 +64,6 @@ public class APITxDetails {
 
     public BigInteger getNrgPrice() {
         return nrgPrice;
-    }
-
-    public String getLogsBloom() {
-        return logsBloom;
     }
 
     public BigInteger getNrgUsed() {
@@ -91,10 +84,6 @@ public class APITxDetails {
 
     public long getBlockNumber() {
         return blockNumber;
-    }
-
-    public String getRoot() {
-        return root;
     }
 
 
@@ -127,7 +116,7 @@ public class APITxDetails {
         return error;
     }
 
-    public BigInteger getNonce() {
+    public long getNonce() {
         return nonce;
     }
 
@@ -167,7 +156,7 @@ public class APITxDetails {
         private String input;
         private long timestamp;
         private String error;
-        private BigInteger nonce;
+        private long nonce;
         private byte type;
         private BigInteger value;
         private boolean hasInternalTransactions;
@@ -217,8 +206,8 @@ public class APITxDetails {
             return this;
         }
 
-        public Builder setTransactionIndex(String transactionIndex) {
-            this.transactionIndex = intFromHexString(transactionIndex);
+        public Builder setTransactionIndex(int transactionIndex) {
+            this.transactionIndex = transactionIndex;
             return this;
         }
 
@@ -302,8 +291,8 @@ public class APITxDetails {
             return this;
         }
 
-        public Builder setNonce(String nonce) {
-            this.nonce = bigIntegerFromHex(nonce);
+        public Builder setNonce(long nonce) {
+            this.nonce = nonce;
             return this;
         }
 

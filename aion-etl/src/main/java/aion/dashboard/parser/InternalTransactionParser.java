@@ -24,12 +24,6 @@ public class InternalTransactionParser extends IdleProducer<InternalTransactionB
     private final AccountParser accountParser;
     private final ContractService contractService = ContractServiceImpl.getInstance();
     private final Pattern bridgeTransferAddress = Pattern.compile("^0+200$");
-    private boolean isPossibleContractCall(TxDetails tx){
-        String toAddr = Utils.sanitizeHex(tx.getTo().toString());
-        return !tx.getLogs().isEmpty() ||
-                contractService.contractExists(toAddr) ||
-                bridgeTransferAddress.matcher(toAddr).find();
-    }
 
     public InternalTransactionParser(BlockingQueue<List<InternalTransactionBatch>> queue,
                                      BlockingQueue<List<Message<Void>>> workQueue,
@@ -50,8 +44,8 @@ public class InternalTransactionParser extends IdleProducer<InternalTransactionB
         for(var message: messages){
             Set<String> accountsInBlock = new HashSet<>();
             for (var tx: message.getBlockDetails().getTxDetails()){
-                if(isPossibleContractCall(tx)) {
-                    List<APIInternalTransaction> internalTransactions = web3Service.getInternalTransaction(tx.getTxHash().toString());
+                if(tx.hasInternalTransactions()) {
+                    List<APIInternalTransaction> internalTransactions = web3Service.getInternalTransaction(tx.getTransactionHash());
 
                     if (GENERAL.isTraceEnabled()) {
                         GENERAL.trace("Found an internal transaction at block number {}", message.getBlockDetails().getNumber());
@@ -60,14 +54,14 @@ public class InternalTransactionParser extends IdleProducer<InternalTransactionB
                     for (int i = 0; i < internalTransactions.size(); i++) {
                         APIInternalTransaction itx = internalTransactions.get(i);
                         InternalTransaction from = InternalTransaction.from(itx,
-                                tx.getTxHash().toString(),
+                                tx.getTransactionHash(),
                                 i,
                                 message.getBlockDetails().getNumber(),
                                 message.getBlockDetails().getTimestamp()
                         );
                         batch.addInternalTransaction(from);
                         if (itx.getContractAddress() != null && !itx.getContractAddress().isEmpty()){
-                            batch.addContract(Contract.from(message.getBlockDetails(), itx, tx.getTxHash().toString()));
+                            batch.addContract(Contract.from(message.getBlockDetails(), itx, tx.getTransactionHash()));
                         }
                         accountsInBlock.add(from.getFromAddr());
                         accountsInBlock.add(from.getToAddr());

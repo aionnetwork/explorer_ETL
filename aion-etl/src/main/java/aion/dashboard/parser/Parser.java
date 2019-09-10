@@ -1,16 +1,21 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.AionService;
+import aion.dashboard.blockchain.Web3Extractor;
+import aion.dashboard.blockchain.interfaces.Web3Service;
+import aion.dashboard.blockchain.type.APIBlockDetails;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.cache.CacheManager;
-import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.RollingBlockMean;
 import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
+import org.aion.util.bytes.ByteUtil;
+import org.aion.zero.impl.core.BloomFilter;
 import org.json.JSONArray;
 
 import java.math.BigDecimal;
@@ -22,15 +27,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Parser extends Producer<ParserBatch> {
-    private final Extractor extractor;
+    private final Web3Extractor extractor;
     private final RollingBlockMean rollingBlockMean;
     private final IdleProducer<?, String> accountProd;
     private final TokenParser tokenProd;
-    private final AionService apiService;
+    private final Web3Service apiService;
     private final InternalTransactionParser internalTransactionProducer;
     private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(2);
 
-    Parser(Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, AionService apiService, InternalTransactionParser internalTransactionProducer) {
+    Parser(Web3Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, Web3Service apiService, InternalTransactionParser internalTransactionProducer) {
         super(queue);
         this.extractor = extractor;
         this.rollingBlockMean = rollingBlockMean;
@@ -62,10 +67,10 @@ public class Parser extends Producer<ParserBatch> {
         }
     }
 
-    private ParserBatch parseBlk(Iterator<BlockDetails> blockDetails) throws Exception {
+    private ParserBatch parseBlk(Iterator<APIBlockDetails> blockDetails) throws Exception {
         ParserBatch batchObject = new ParserBatch();
 
-        BlockDetails block = null;
+        APIBlockDetails block = null;
         List<Message<String>> accountsMessages=new ArrayList<>();
         List<Message<ContractEvent>> tokenMessages = new ArrayList<>();
         List<Message<Void>> internalTxMessages = new ArrayList<>();
@@ -81,19 +86,18 @@ public class Parser extends Producer<ParserBatch> {
             }
 
             //Add miner
-            addressesFromBlock.add(block.getMinerAddress().toString());
-            BigInteger blockReward = apiService.getBlockReward(block.getNumber());
+            addressesFromBlock.add(block.getMiner());
             // add block to rolling mean
-            rollingBlockMean.add(block, blockReward);
+            rollingBlockMean.add(block);
 
 
             BigDecimal nrgReward = new BigDecimal(0);
             JSONArray array = new JSONArray();
-            final List<TxDetails> txDetails = block.getTxDetails();
-            var canRead = Parsers.containsReadableEvent(block.getBloom().toBytes());
+            final List<APITxDetails> txDetails = block.getTxDetails();
+            var canRead = Parsers.containsReadableEvent(ByteUtil.hexStringToBytes(block.getBloom()));
             //loop through the transactions
             for (var tx : txDetails) {
-                array.put(tx.getTxHash().toString());
+                array.put(Utils.sanitizeHex(tx.getTransactionHash()));
 
                 final Optional<Contract> contract = Parsers.readContract(tx, block);
                 contract.ifPresent(contract1 -> {
@@ -103,9 +107,8 @@ public class Parser extends Producer<ParserBatch> {
                 addressesFromBlock.addAll(Parsers.accFromTransaction(tx));
 
 
-                if (!tx.getFrom().equals(block.getMinerAddress())) {
-                    nrgReward = nrgReward.add(BigDecimal.valueOf(tx.getNrgPrice())
-                            .multiply(BigDecimal.valueOf(tx.getNrgConsumed())));
+                if (!isMinerTx(block, tx)) {
+                    nrgReward = nrgReward.add(new BigDecimal(tx.getNrgPrice()).multiply(new BigDecimal(tx.getNrgUsed())));
                 }
 
                 batchObject.addTx(Transaction.from(tx, block));
@@ -117,7 +120,7 @@ public class Parser extends Producer<ParserBatch> {
             var firstTxHash = Parsers.getFirstTxHash(txDetails);
 
 
-            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward, blockReward ));
+            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward ));
 
             accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty()? null: txDetails.get(0)));
             internalTxMessages.add(new Message<>(null, block, null));
@@ -156,6 +159,10 @@ public class Parser extends Producer<ParserBatch> {
         batchObject.setBlockChainState(new ParserState(ParserStateServiceImpl.BLKCHAIN_ID,BigInteger.valueOf(apiService.getBlockNumber())));
         return batchObject;
     }//parse blk
+
+    private boolean isMinerTx(APIBlockDetails block, APITxDetails tx) {
+        return Utils.sanitizeHex(tx.getFrom()).equals(Utils.sanitizeHex(block.getMiner()));
+    }
 
 
     private void registerContracts(Contract contract1){

@@ -1,6 +1,7 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.blockchain.type.APIAccountDetails;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.AccountDetails;
 import org.aion.api.type.BlockDetails;
@@ -105,6 +106,7 @@ public class Account {
 
     private static final ThreadLocal<AccountBuilder> accountBuilder = ThreadLocal.withInitial(AccountBuilder::new);
 
+    @Deprecated
     public static Account from(String address, BlockDetails blockDetails, TxDetails tx, BigDecimal balance, BigInteger nonce){
         return accountBuilder.get()
                 .address(Utils.sanitizeHex(address))
@@ -116,6 +118,7 @@ public class Account {
                 .build();
     }
 
+    @Deprecated
     public static Account from(TxDetails tx, APIAccountDetails accountDetails){
         return accountBuilder.get()
                 .address(Utils.sanitizeHex(accountDetails.getAddress()))
@@ -124,6 +127,17 @@ public class Account {
                 .lastBlockNumber(accountDetails.getBlockNumber())
                 .contract(tx==null || tx.getContract().isEmptyAddress()? 0:1)
                 .transactionHash(tx==null?"":tx.getTxHash().toString())
+                .build();
+    }
+
+    public static Account from(APITxDetails tx, APIAccountDetails accountDetails){
+        return accountBuilder.get()
+                .address(Utils.sanitizeHex(accountDetails.getAddress()))
+                .balance(new BigDecimal(accountDetails.getBalance()))
+                .nonce(accountDetails.getNonce().toString(16))
+                .lastBlockNumber(accountDetails.getBlockNumber())
+                .contract(tx== null? 0 : Utils.sanitizeHex(tx.getContractAddress()).isEmpty()? 1:0)
+                .transactionHash(tx == null ? "" : Utils.sanitizeHex(tx.getTransactionHash()))
                 .build();
     }
 

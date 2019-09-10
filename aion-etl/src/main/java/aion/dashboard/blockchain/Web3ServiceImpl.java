@@ -9,6 +9,7 @@ import aion.dashboard.service.SchedulerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aion.util.bytes.ByteUtil;
+import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -294,6 +295,9 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
             }
         } catch (HttpStatusException e) {
             throw new Web3ApiException("Failed to execute call. Method: "+jsonMethod, e);
+        } catch (RuntimeException e){
+            GENERAL.error("Failed deserialization. ", e);
+            throw new Web3ApiException("Failed deserialization. Method: "+ jsonMethod);
         }
         finally {
             Thread.currentThread().setName(oldThreadName);

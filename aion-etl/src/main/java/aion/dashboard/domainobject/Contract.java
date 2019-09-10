@@ -1,7 +1,9 @@
 package aion.dashboard.domainobject;
 
 import aion.dashboard.blockchain.ContractType;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.blockchain.type.APIInternalTransaction;
+import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
@@ -104,6 +106,8 @@ public class Contract {
     }
 
     private static final ThreadLocal<ContractBuilder> builder = ThreadLocal.withInitial(ContractBuilder::new);
+
+    @Deprecated
     public static Contract from(BlockDetails b, TxDetails tx){
         return builder.get()
                 .setType(tx.getType())
@@ -117,7 +121,34 @@ public class Contract {
                 .build();
     }
 
+    public static Contract from(APIBlockDetails b, APITxDetails tx){
+        return builder.get()
+                .setType(tx.getType())
+                .setBlockNumber(b.getNumber())
+                .setTimestamp(b.getTimestamp())
+                .setContractCreatorAddr(Utils.sanitizeHex(tx.getFrom()))
+                .setContractAddr(Utils.sanitizeHex(tx.getContractAddress()))
+                .setContractTxHash(Utils.sanitizeHex(tx.getTransactionHash()))
+                .setContractName("")
+                .setInternal(false)
+                .build();
+    }
+
+    @Deprecated
     public static Contract from(BlockDetails b, APIInternalTransaction apiInternalTransaction, String contractTxHash){
+        return builder.get()
+                .setType(ContractType.AVM.byteType)
+                .setBlockNumber(b.getNumber())
+                .setTimestamp(b.getTimestamp())
+                .setContractCreatorAddr(Utils.sanitizeHex(apiInternalTransaction.getFrom()))
+                .setContractAddr(Utils.sanitizeHex(apiInternalTransaction.getContractAddress()))
+                .setContractTxHash(Utils.sanitizeHex(contractTxHash))
+                .setContractName("")
+                .setInternal(true)
+                .build();
+    }
+
+    public static Contract from(APIBlockDetails b, APIInternalTransaction apiInternalTransaction, String contractTxHash){
         return builder.get()
                 .setType(ContractType.AVM.byteType)
                 .setBlockNumber(b.getNumber())

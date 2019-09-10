@@ -3,11 +3,9 @@ package aion.dashboard.parser;
 import aion.dashboard.blockchain.ATSTokenImpl;
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.interfaces.ATSToken;
+import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.cache.CacheManager;
-import aion.dashboard.domainobject.Contract;
-import aion.dashboard.domainobject.ParserState;
-import aion.dashboard.domainobject.Token;
-import aion.dashboard.domainobject.TokenHolders;
+import aion.dashboard.domainobject.*;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.parser.type.TokenBatch;
@@ -116,8 +114,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
                 token = atsToken.getDetails(contract).orElseThrow();
             }
 
-
-            res.addTransfers(Parsers.getTokenTransfers(msg.getItem(), msg.getBlockDetails(), msg.getTxDetails(), token));
+            res.addTransfers(TokenTransfers.tokenTransfersFrom(msg.getItem(), msg.getTxDetails(), msg.getBlockDetails(), token));
             res.addHolders(getHolders(msg.getItem(), atsToken, msg.getBlockDetails(), holdersSet));
 
         } catch (NullPointerException e){
@@ -137,7 +134,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
         contractCacheManager.putIfAbsent(contractAddr, contract);
     }
 
-    private List<TokenHolders> getHolders(List<ContractEvent> events, ATSToken token, BlockDetails b, Set<String> holdersSet) throws AionApiException {
+    private List<TokenHolders> getHolders(List<ContractEvent> events, ATSToken token, APIBlockDetails b, Set<String> holdersSet) throws AionApiException {
 
         List<TokenHolders> res = new ArrayList<>();
 
@@ -156,7 +153,7 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
     }
 
 
-    private Optional<TokenHolders> createHolder(String address, BlockDetails b, ATSToken token) throws AionApiException {
+    private Optional<TokenHolders> createHolder(String address, APIBlockDetails b, ATSToken token) throws AionApiException {
         if (!address.isBlank() && org.aion.base.util.Utils.isValidAddress(address)) {
             return token.getHolderDetails(address, b);
         }

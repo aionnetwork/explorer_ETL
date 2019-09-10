@@ -1,10 +1,10 @@
 package aion.dashboard.parser.events;
 
+import aion.dashboard.blockchain.type.APITransactionLog;
 import aion.dashboard.exception.DecodeException;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.TxLog;
 import org.aion.avm.userlib.AionBuffer;
-import org.aion.base.type.AionAddress;
 import org.aion.base.util.ByteArrayWrapper;
 import org.aion.util.bytes.ByteUtil;
 import org.slf4j.Logger;
@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-
-import static aion.dashboard.parser.events.ContractEvents.*;
 
 public class AVMEventDecoder extends EventDecoder {
     static final AVMEventDecoder DECODER_INSTANCE=new AVMEventDecoder();
@@ -58,7 +55,7 @@ public class AVMEventDecoder extends EventDecoder {
 
 
     @Override
-    public Optional<ContractEvent> decodeEvent(TxLog txLog) {
+    public Optional<ContractEvent> decodeEvent(APITransactionLog txLog) {
         if(!txLog.getTopics().isEmpty()) {
             String hash = Utils.sanitizeHex(txLog.getTopics().get(0));
             try {//attempt to decode event and return as soon as the operation succeeds
@@ -82,7 +79,7 @@ public class AVMEventDecoder extends EventDecoder {
     }
 
 
-    private static Optional<ContractEvent> decodeEvent(TxLog txLog, AVMABIDefinitions.AVMEventSignature signature) {
+    private static Optional<ContractEvent> decodeEvent(APITransactionLog txLog, AVMABIDefinitions.AVMEventSignature signature) {
 
         if (Utils.sanitizeHex(txLog.getTopics().get(0)).equals(signature.getHashed())) {
             try {
@@ -92,9 +89,9 @@ public class AVMEventDecoder extends EventDecoder {
                         .setEventName(signature.getName())
                         .setSignatureHash(signature.hashed)
                         .setAvm(true)
-                        .setAddress(txLog.getAddress().toString());
+                        .setAddress(txLog.getAddress());
                 decodeIndexedTopics(builder, tailList(txLog.getTopics()), signature.indexedParameters);
-                decodeNonIndexedData(builder, txLog.getData(), signature.nonIndexedParameters);
+                decodeNonIndexedData(builder, ByteArrayWrapper.wrap(ByteUtil.hexStringToBytes(txLog.getData())), signature.nonIndexedParameters);
 
                 return Optional.of(builder.build());
             } catch (DecodeException | RuntimeException e){
