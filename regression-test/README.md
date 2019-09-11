@@ -1,28 +1,11 @@
 # Regression Test
 ### Setup
-1) Open the project in Intellij and go to "Edit Configurations"
+1) build the project using `./gradlew clean build`
+2) execute `cd build/distributions` and extract the tarball
+3) open the output folder and set the database server information and any tables that should be exempted from the test. 
+4) specify the databases to be tested
+5) the output will be found in the test_output folder 
 
-2) Add an environment variable for each database's ip, name, username, and password in the format of `V[version_number]_ip`:
-    ```
-    V3_IP
-    V3_NAME
-    V3_USER
-    V3_PASSWORD
-    
-    V4_IP
-    V4_NAME
-    ...
-    ```
-    *NB: Failure to provide these values will default to localhost, aionv(#), admin1, and password for each field respectively*
-    
-3) Add an environment variable for the minimum range called `RANGE_MIN` and the maximum range called `RANGE_MAX`. 
-
-*NB: Failure to provide these values will default them to 1,384,500 and 1,385,000 respectively.*
-
-4) (Optional) You can go to the `FromV4toV5` file located in `src > main > java > com > aion > dashboard > etl > tests`
-and within its main method, select specficially which tests you wish to run.
-
-5) Run the project with the environment configurations set.
-
-### NOTICE
-TO DO: Tests involving the v3 database against the v4 and v5 databases.
+### Interpreting Results
+The test results are stored as a value along with the primary key of the table and the table name (database1-value, database1-pk, database2-value, database2-pk).
+This allows a user to easily find the missing result by querying the table on the primary key.

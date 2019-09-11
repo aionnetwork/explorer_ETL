@@ -1,39 +1,38 @@
-apply plugin: 'java'
+plugins {
+    id 'java'
+    id 'application'
+    id 'distribution'
+    id 'idea'
+}
+mainClassName = "com.aion.dashboard.Main"
 
-group 'com.aion.dashboard.etl.dashboard.regression-test'
+jar {
+    manifest{
+        attributes 'Main-Class' : "com.aion.dashboard.Main"
+    }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+applicationDistribution.from('config.json'){
+    into''
+}
+
+group 'aion.dashboard'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 
 repositories {
     mavenCentral()
 }
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
-    }
-}
-apply plugin: 'org.junit.platform.gradle.plugin'
-
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.4'
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.2.0'
-    testRuntime("org.junit.platform:junit-platform-launcher:1.2.0")
-    testRuntime("org.junit.jupiter:junit-jupiter-engine:5.2.0")
-    testRuntime("org.junit.vintage:junit-vintage-engine:5.2.0")
-
-    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.14'
-    compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.1.Final'
-
-    compile group: 'org.json', name: 'json', version: '20180130'
-    
-//    Spring Dependencies
-    compile group: 'org.springframework.boot', name: 'spring-boot-starter-jdbc', version: '2.1.2.RELEASE'
-    compile group: 'org.springframework.boot', name: 'spring-boot-gradle-plugin', version: '2.1.2.RELEASE'
-    compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.1.2.RELEASE'
-
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'com.zaxxer', name: 'HikariCP', version: '3.3.1'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.9'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.9.9'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.9'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.17'
 }

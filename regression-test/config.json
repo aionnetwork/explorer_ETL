@@ -1,0 +1,13 @@
+{
+  "hosts": {
+    "host1": {
+      "url": "",
+      "port": "",
+      "user": "",
+      "password": ""
+    },
+    "db1": "",
+    "db2": ""
+  },
+  "exemptTables": []
+}
