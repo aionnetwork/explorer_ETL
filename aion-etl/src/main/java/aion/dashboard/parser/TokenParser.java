@@ -14,6 +14,7 @@ import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.TokenService;
 import aion.dashboard.parser.events.SolABIDefinitions;
 import aion.dashboard.parser.events.ContractEvent;
+import aion.dashboard.util.Utils;
 import org.aion.api.IContract;
 import org.aion.api.type.BlockDetails;
 import org.aion.base.type.AionAddress;
@@ -86,14 +87,14 @@ public class TokenParser extends IdleProducer<TokenBatch, ContractEvent> {
 
 
     private TokenBatch readTokenEvent(Message<ContractEvent> msg, Set<String> holdersSet) throws SQLException, AionApiException {
-        var contractAddr = msg.getItem().get(0).getAddress();
+        var contractAddr = Utils.sanitizeHex(msg.getItem().get(0).getAddress());
         var res = new TokenBatch();
         try {
             Contract contract;
 
             if (contractCacheManager.contains(contractAddr)) contract = contractCacheManager.getIfPresent(contractAddr);
             else {
-                contract = contractService.findContract(contractAddr).orElseThrow( () -> new NullPointerException("Failed to find the contract in the database."));
+                contract = contractService.findContract(contractAddr).orElseThrow( () -> new NullPointerException("Failed to find the contract "+contractAddr+" in the database. "));
                 registerContract(contract);
             }
 

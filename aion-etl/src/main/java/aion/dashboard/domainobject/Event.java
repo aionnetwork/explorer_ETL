@@ -125,7 +125,7 @@ public class Event {
         JSONArray inputList = new JSONArray();
         JSONArray paramList = new JSONArray();
         final EventBuilder eventBuilder = threadLocalBuilder.get().setName(contractEvent.getEventName())
-                .setContractAddr(contractEvent.getAddress())
+                .setContractAddr(Utils.sanitizeHex(contractEvent.getAddress()))
                 .setTimestamp(b.getTimestamp())
                 .setBlockNumber(b.getNumber())
                 .setTransactionHash(Utils.sanitizeHex(tx.getTransactionHash()));

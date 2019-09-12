@@ -136,7 +136,7 @@ public class Account {
                 .balance(new BigDecimal(accountDetails.getBalance()))
                 .nonce(accountDetails.getNonce().toString(16))
                 .lastBlockNumber(accountDetails.getBlockNumber())
-                .contract(tx== null? 0 : Utils.sanitizeHex(tx.getContractAddress()).isEmpty()? 1:0)
+                .contract(tx == null || Utils.sanitizeHex(tx.getContractAddress()).isEmpty() ? 0:1)
                 .transactionHash(tx == null ? "" : Utils.sanitizeHex(tx.getTransactionHash()))
                 .build();
     }
