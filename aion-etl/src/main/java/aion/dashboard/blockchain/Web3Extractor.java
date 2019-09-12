@@ -58,6 +58,7 @@ public class Web3Extractor extends Producer<APIBlockDetails> {
     protected void doReset() {
         ptr.set(getPointer());
         queue.clear();
+        GENERAL.info("Reset the queue to {}" , ptr.get());
         shouldReset.compareAndSet(true, false);
     }
 

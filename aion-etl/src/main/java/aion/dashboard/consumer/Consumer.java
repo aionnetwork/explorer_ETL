@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,7 @@ public class Consumer {
     private final ScheduledExecutorService workers = Executors.newScheduledThreadPool(4);
     private AtomicBoolean stopRunning = new AtomicBoolean(false);
     private AtomicReference<BigInteger> DB_HEIGHT = new AtomicReference<>(BigInteger.ZERO);
+    private final List<Producer> producerList;
 
     Consumer(Producer<ParserBatch> blockProducer,
              Producer<TokenBatch> tokenProducer,
@@ -54,6 +56,7 @@ public class Consumer {
         this.internalTransactionWriterWriteTask = internalTransactionWriterWriteTask;
         this.service = service;
         this.internalTransactionProducer = internalTransactionProducer;
+        producerList = List.of(blockProducer, accountProducer, tokenProducer, internalTransactionProducer);
     }
 
 
@@ -177,11 +180,11 @@ public class Consumer {
     }
 
     private void reset() {
-        blockProducer.reset();
-        tokenProducer.reset();
-        accountProducer.reset();
+        for (var producer: producerList){
+            producer.reset();
+        }
 
-        while (blockProducer.shouldReset() && !Thread.currentThread().isInterrupted()) {
+        while (producerList.stream().anyMatch(Producer::shouldReset) && !Thread.currentThread().isInterrupted()) {
             Utils.trySleep(100);
         }
 

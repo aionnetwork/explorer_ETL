@@ -154,7 +154,7 @@ public class ReorgServiceImpl implements ReorgService {
             throw exception;
         }
 
-        if(task.getFuture().isCancelled()){
+        if(task.getFuture() != null && task.getFuture().isCancelled()){
             task.scheduleNow();
         }
 
