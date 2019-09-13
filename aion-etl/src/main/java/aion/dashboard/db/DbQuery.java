@@ -62,9 +62,7 @@ public class DbQuery {
 
     //Block
     public static final String BlockGetMaxBlockNumber ="select max(block_number) from block ";
-    public static final String BlockGetByBlockNumber = "select block_number,block_hash,approx_nrg_reward,miner_address,parent_hash, receipt_tx_root,state_root,tx_trie_root,extra_data, " +
-            "nonce, bloom, solution,difficulty, total_difficulty, nrg_consumed, block_size, " +
-            "block_timestamp, num_transactions,block_time,nrg_reward,transaction_hash, transaction_hashes, nrg_limit from block where block_number=?";
+    public static final String BlockGetByBlockNumber = "select * from block where block_number=?";
     public static final String BlocksDeleteFrom = "delete from block where block_number >= ?";
     public static final String InsertBlock = "replace into block(" +
             "block_number," +
@@ -93,8 +91,12 @@ public class DbQuery {
             "year, " +
             "month, " +
             "day," +
-            "block_reward) " +
-            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "block_reward," +
+            "seed," +
+            "public_key," +
+            "signature," +
+            "seal_type) " +
+            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
 

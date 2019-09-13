@@ -1,14 +1,13 @@
 package aion.dashboard.domainobject;
 
+import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
-import org.aion.api.type.TxDetails;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.ZonedDateTime;
-import java.util.Comparator;
 import java.util.Objects;
 
 import static aion.dashboard.util.Utils.getZDT;
@@ -43,6 +42,10 @@ public class Block {
     private int blockDay;
     private double approxNrgReward;
     private BigDecimal blockReward;
+    private String seed;
+    private String signature;
+    private String publicKey;
+    private String sealType;
 
     public int getBlockYear() {
         return blockYear;
@@ -86,7 +89,11 @@ public class Block {
                 Objects.equals(totalDifficulty, block.totalDifficulty) &&
                 Objects.equals(transactionHashes, block.transactionHashes) &&
                 Objects.equals(lastTransactionHash, block.lastTransactionHash) &&
-                Objects.equals(nrgReward, block.nrgReward);
+                Objects.equals(nrgReward, block.nrgReward) &&
+                Objects.equals(seed, block.seed) &&
+                Objects.equals(publicKey, block.publicKey) &&
+                Objects.equals(signature, block.signature) &&
+                Objects.equals(blockReward, block.blockReward);
     }
 
     @Override
@@ -310,6 +317,9 @@ public class Block {
     }
 
     private static final ThreadLocal<BlockBuilder> threadLocalBuilder = ThreadLocal.withInitial(BlockBuilder::new);
+    public static BlockBuilder getBuilder(){
+        return threadLocalBuilder.get();
+    }
    @Deprecated
     public static Block from(BlockDetails b, String lastHash, String txList, BigDecimal nrgReward, BigInteger blockReward){
         return threadLocalBuilder.get()
@@ -369,6 +379,10 @@ public class Block {
                 .txTrieRoot(Utils.sanitizeHex(b.getTxTrieRoot()))
                 .approxNrgReward(Utils.approximate(nrgReward,18))
                 .blockReward(new BigDecimal(b.getBlockReward()))
+                .seed(b.getSeed())
+                .signature(b.getSignature())
+                .publicKey(b.getPublicKey())
+                .sealType(b.getSealType())
                 .build();
     }
 
@@ -379,6 +393,22 @@ public class Block {
     public Block setBlockReward(BigDecimal blockReward) {
         this.blockReward = blockReward;
         return this;
+    }
+
+    public String getSeed() {
+       return seed;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public String getSealType() {
+        return sealType;
     }
 
     public static class BlockBuilder {
@@ -406,6 +436,35 @@ public class Block {
         BigDecimal nrgReward;
         double approxNrgReward;
         BigDecimal blockReward;
+        String seed;
+        String signature;
+        String publicKey;
+        String sealType;
+
+        BlockBuilder sealType(APIBlock.SealType sealType){
+            this.sealType = sealType.name();
+            return this;
+        }
+
+        public BlockBuilder sealType(String sealType){
+            this.sealType = sealType;
+            return this;
+        }
+
+        public BlockBuilder seed(String seed){
+            this.seed = seed;
+            return this;
+        }
+
+        public BlockBuilder signature(String signature){
+            this.signature = signature;
+            return this;
+        }
+
+        public BlockBuilder publicKey(String publicKey){
+            this.publicKey = publicKey;
+            return this;
+        }
 
         public BlockBuilder blockReward(BigDecimal blockReward) {
             this.blockReward = blockReward;
@@ -555,6 +614,10 @@ public class Block {
             block.nrgReward = nrgReward;
             block.approxNrgReward = approxNrgReward;
             block.blockReward = blockReward;
+            block.seed = seed;
+            block.publicKey = publicKey;
+            block.signature = signature;
+            block.sealType = sealType;
             return block;
         }
     }

@@ -39,34 +39,7 @@ public class BlockServiceImpl implements BlockService {
 
             if(comp==null ||!comp.equals(block)) {
                 try (var ps = con.prepareStatement(DbQuery.InsertBlock)) {
-
-
-                    ps.setLong(1, block.getBlockNumber());
-                    ps.setString(2, block.getBlockHash());
-                    ps.setString(3, block.getMinerAddress());
-                    ps.setString(4, block.getParentHash());
-                    ps.setString(5, block.getReceiptTxRoot());
-                    ps.setString(6, block.getStateRoot());
-                    ps.setString(7, block.getTxTrieRoot());
-                    ps.setString(8, block.getExtraData());
-                    ps.setString(9, block.getNonce());
-                    ps.setString(10, block.getBloom());
-                    ps.setString(11, block.getSolution());
-                    ps.setLong(12, block.getDifficulty());
-                    ps.setLong(13, block.getTotalDifficulty());
-                    ps.setLong(14, block.getNrgConsumed());
-                    ps.setLong(15, block.getNrgLimit());
-                    ps.setLong(16, block.getBlockSize());
-                    ps.setTimestamp(17, new Timestamp(block.getBlockTimestamp()));
-                    ps.setLong(18, block.getNumTransactions());
-                    ps.setLong(19, block.getBlockTime());
-                    ps.setBigDecimal(20, block.getNrgReward());
-                    ps.setDouble(21, block.getApproxNrgReward());
-                    ps.setString(22, block.getLastTransactionHash());
-                    ps.setString(23, block.getTransactionHashes());
-                    ps.setInt(24, block.getBlockYear());
-                    ps.setInt(25, block.getBlockMonth());
-                    ps.setInt(26, block.getBlockDay());
+                    serializeBlock(ps, block);
                     ps.execute();
 
                     con.commit();
@@ -95,34 +68,7 @@ public class BlockServiceImpl implements BlockService {
                 for (Block block : blocks) {
                     Block comp = getByBlockNumber(block.getBlockNumber());
                     if (comp == null || !comp.equals(block)) {
-
-
-                        ps.setLong(1, block.getBlockNumber());
-                        ps.setString(2, block.getBlockHash());
-                        ps.setString(3, block.getMinerAddress());
-                        ps.setString(4, block.getParentHash());
-                        ps.setString(5, block.getReceiptTxRoot());
-                        ps.setString(6, block.getStateRoot());
-                        ps.setString(7, block.getTxTrieRoot());
-                        ps.setString(8, block.getExtraData());
-                        ps.setString(9, block.getNonce());
-                        ps.setString(10, block.getBloom());
-                        ps.setString(11, block.getSolution());
-                        ps.setLong(12, block.getDifficulty());
-                        ps.setLong(13, block.getTotalDifficulty());
-                        ps.setLong(14, block.getNrgConsumed());
-                        ps.setLong(15, block.getNrgLimit());
-                        ps.setLong(16, block.getBlockSize());
-                        ps.setLong(17, block.getBlockTimestamp());
-                        ps.setLong(18, block.getNumTransactions());
-                        ps.setLong(19, block.getBlockTime());
-                        ps.setBigDecimal(20, (block.getNrgReward()));
-                        ps.setDouble(21, block.getApproxNrgReward());
-                        ps.setString(22, block.getLastTransactionHash());
-                        ps.setString(23, block.getTransactionHashes());
-                        ps.setInt(24, block.getBlockYear());
-                        ps.setInt(25, block.getBlockMonth());
-                        ps.setInt(26, block.getBlockDay());
+                        serializeBlock(ps, block);
                         ps.execute();
                     }
 
@@ -151,31 +97,7 @@ public class BlockServiceImpl implements BlockService {
                 try (ResultSet rs = ps.executeQuery()) {
                     block = null;
                     while (rs.next()) {
-                        block = new Block.BlockBuilder()
-                                .blockNumber(rs.getLong("block_number"))
-                                .blockHash(rs.getString("block_hash"))
-                                .minerAddress(rs.getString("miner_address"))
-                                .parentHash(rs.getString("parent_hash"))
-                                .receiptTxRoot(rs.getString("receipt_tx_root"))
-                                .stateRoot(rs.getString("state_root"))
-                                .txTrieRoot(rs.getString("tx_trie_root"))
-                                .extraData(rs.getString("extra_data"))
-                                .nonce(rs.getString("nonce"))
-                                .bloom(rs.getString("bloom"))
-                                .solution(rs.getString("solution"))
-                                .difficulty(rs.getLong("difficulty"))
-                                .totalDifficulty(rs.getLong("total_difficulty"))
-                                .nrgConsumed(rs.getLong("nrg_consumed"))
-                                .nrgLimit(rs.getLong("nrg_limit"))
-                                .blockSize(rs.getLong("block_size"))
-                                .blockTimestamp(rs.getLong("block_timestamp"))
-                                .numTransactions(rs.getLong("num_transactions"))
-                                .blockTime(rs.getLong("block_time"))
-                                .nrgReward(rs.getBigDecimal("nrg_reward"))
-                                .transactionHash(rs.getString("transaction_hash"))
-                                .transactionList(rs.getString("transaction_hashes"))
-                                .approxNrgReward(rs.getDouble("approx_nrg_reward"))
-                                .build();
+                        block = blockFromResultSet(rs);
                     }
                 }
 
@@ -371,37 +293,45 @@ public class BlockServiceImpl implements BlockService {
 
         for(Block block:blocks) {
 
-            ps.setLong(1, block.getBlockNumber());
-            ps.setString(2, block.getBlockHash());
-            ps.setString(3, block.getMinerAddress());
-            ps.setString(4, block.getParentHash());
-            ps.setString(5, block.getReceiptTxRoot());
-            ps.setString(6, block.getStateRoot());
-            ps.setString(7, block.getTxTrieRoot());
-            ps.setString(8, block.getExtraData());
-            ps.setString(9, block.getNonce());
-            ps.setString(10, block.getBloom());
-            ps.setString(11, block.getSolution());
-            ps.setLong(12, block.getDifficulty());
-            ps.setLong(13, block.getTotalDifficulty());
-            ps.setLong(14, block.getNrgConsumed());
-            ps.setLong(15, block.getNrgLimit());
-            ps.setLong(16, block.getBlockSize());
-            ps.setLong(17, block.getBlockTimestamp());
-            ps.setLong(18, block.getNumTransactions());
-            ps.setLong(19, block.getBlockTime());
-            ps.setBigDecimal(20, (block.getNrgReward()));
-            ps.setDouble(21, block.getApproxNrgReward());
-            ps.setString(22, block.getLastTransactionHash());
-            ps.setString(23, block.getTransactionHashes());
-            ps.setInt(24, block.getBlockYear());
-            ps.setInt(25, block.getBlockMonth());
-            ps.setInt(26, block.getBlockDay());
-            ps.setBigDecimal(27,block.getBlockReward());
+            serializeBlock(ps, block);
             ps.addBatch();
         }
 
         return ps;
+    }
+
+    private void serializeBlock(PreparedStatement ps, Block block) throws SQLException {
+        ps.setLong(1, block.getBlockNumber());
+        ps.setString(2, block.getBlockHash());
+        ps.setString(3, block.getMinerAddress());
+        ps.setString(4, block.getParentHash());
+        ps.setString(5, block.getReceiptTxRoot());
+        ps.setString(6, block.getStateRoot());
+        ps.setString(7, block.getTxTrieRoot());
+        ps.setString(8, block.getExtraData());
+        ps.setString(9, block.getNonce());
+        ps.setString(10, block.getBloom());
+        ps.setString(11, block.getSolution());
+        ps.setLong(12, block.getDifficulty());
+        ps.setLong(13, block.getTotalDifficulty());
+        ps.setLong(14, block.getNrgConsumed());
+        ps.setLong(15, block.getNrgLimit());
+        ps.setLong(16, block.getBlockSize());
+        ps.setLong(17, block.getBlockTimestamp());
+        ps.setLong(18, block.getNumTransactions());
+        ps.setLong(19, block.getBlockTime());
+        ps.setBigDecimal(20, block.getNrgReward());
+        ps.setDouble(21, block.getApproxNrgReward());
+        ps.setString(22, block.getLastTransactionHash());
+        ps.setString(23, block.getTransactionHashes());
+        ps.setInt(24, block.getBlockYear());
+        ps.setInt(25, block.getBlockMonth());
+        ps.setInt(26, block.getBlockDay());
+        ps.setBigDecimal(27, block.getBlockReward());
+        ps.setString(28, block.getSeed());
+        ps.setString(29, block.getSignature());
+        ps.setString(30, block.getPublicKey());
+        ps.setString(31, block.getSealType());
     }
 
     @Override
@@ -431,39 +361,48 @@ public class BlockServiceImpl implements BlockService {
     }
 
     private Optional<List<Block>> executeAndGetBlocks(PreparedStatement ps) throws SQLException {
-        var blockBuilder = new Block.BlockBuilder();
         List<Block> blocks = new ArrayList<>();
         try (ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                blocks.add(blockBuilder.blockNumber(rs.getLong("block_number"))
-                        .blockHash(rs.getString("block_hash"))
-                        .minerAddress(rs.getString("miner_address"))
-                        .parentHash(rs.getString("parent_hash"))
-                        .receiptTxRoot(rs.getString("receipt_tx_root"))
-                        .stateRoot(rs.getString("state_root"))
-                        .txTrieRoot(rs.getString("tx_trie_root"))
-                        .extraData(rs.getString("extra_data"))
-                        .nonce(rs.getString("nonce"))
-                        .bloom(rs.getString("bloom"))
-                        .solution(rs.getString("solution"))
-                        .difficulty(rs.getLong("difficulty"))
-                        .totalDifficulty(rs.getLong("total_difficulty"))
-                        .nrgConsumed(rs.getLong("nrg_consumed"))
-                        .nrgLimit(rs.getLong("nrg_limit"))
-                        .blockSize(rs.getLong("block_size"))
-                        .blockTimestamp(rs.getLong("block_timestamp"))
-                        .numTransactions(rs.getLong("num_transactions"))
-                        .blockTime(rs.getLong("block_time"))
-                        .nrgReward(rs.getBigDecimal("nrg_reward"))
-                        .transactionHash(rs.getString("transaction_hash"))
-                        .transactionList(rs.getString("transaction_hashes"))
-                        .approxNrgReward(rs.getDouble("approx_nrg_reward"))
-                        .build());
+                blocks.add(blockFromResultSet(rs));
             }
         }
 
         return Optional.of(blocks);
+    }
+
+    private Block blockFromResultSet(ResultSet rs) throws SQLException {
+        Block.BlockBuilder blockBuilder = Block.getBuilder();
+        return blockBuilder.blockNumber(rs.getLong("block_number"))
+                .blockHash(rs.getString("block_hash"))
+                .minerAddress(rs.getString("miner_address"))
+                .parentHash(rs.getString("parent_hash"))
+                .receiptTxRoot(rs.getString("receipt_tx_root"))
+                .stateRoot(rs.getString("state_root"))
+                .txTrieRoot(rs.getString("tx_trie_root"))
+                .extraData(rs.getString("extra_data"))
+                .nonce(rs.getString("nonce"))
+                .bloom(rs.getString("bloom"))
+                .solution(rs.getString("solution"))
+                .difficulty(rs.getLong("difficulty"))
+                .totalDifficulty(rs.getLong("total_difficulty"))
+                .nrgConsumed(rs.getLong("nrg_consumed"))
+                .nrgLimit(rs.getLong("nrg_limit"))
+                .blockSize(rs.getLong("block_size"))
+                .blockTimestamp(rs.getLong("block_timestamp"))
+                .numTransactions(rs.getLong("num_transactions"))
+                .blockTime(rs.getLong("block_time"))
+                .nrgReward(rs.getBigDecimal("nrg_reward"))
+                .transactionHash(rs.getString("transaction_hash"))
+                .transactionList(rs.getString("transaction_hashes"))
+                .approxNrgReward(rs.getDouble("approx_nrg_reward"))
+                .signature(rs.getString("signature"))
+                .seed(rs.getString("seed"))
+                .blockReward(rs.getBigDecimal("block_reward"))
+                .publicKey(rs.getString("public_key"))
+                .sealType(rs.getString("seal_type"))
+                .build();
     }
 
 }
