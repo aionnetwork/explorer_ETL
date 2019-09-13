@@ -1,30 +1,33 @@
 package aion.dashboard.service;
 
 import aion.dashboard.blockchain.ATSTokenImpl;
-import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.interfaces.ATSToken;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.blockchain.type.APIAccountDetails;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.cache.CacheManager;
 import aion.dashboard.config.Config;
+import aion.dashboard.db.DbConnectionPool;
+import aion.dashboard.db.DbQuery;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.exception.AionApiException;
-import aion.dashboard.exception.ReorganizationLimitExceededException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.task.AbstractGraphingTask;
-import aion.dashboard.parser.events.SolABIDefinitions;
 import aion.dashboard.util.TimeLogger;
-import org.aion.api.IContract;
-import org.aion.api.sol.IAddress;
-import org.aion.base.type.AionAddress;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,6 +47,9 @@ public class ReorgServiceImpl implements ReorgService {
     private AccountService accountService;
     private BlockService blockService;
     private long reorgLimit;
+    private List<String> affectedAddresses;
+    private long transactionNum;
+    private ObjectWriter writer = new ObjectMapper().writer();
 
     public ReorgServiceImpl(ParserStateService stateService, Web3Service web3Service) {
         this.web3Service = web3Service;
@@ -51,35 +57,76 @@ public class ReorgServiceImpl implements ReorgService {
         blockService = BlockServiceImpl.getInstance();
         tokenHoldersService = TokenHoldersServiceImpl.getInstance();
         this.stateService = stateService;
-
+        transactionNum = 0;
+        affectedAddresses = new ArrayList<>();
         reorgLimit = Config.getInstance().getBlockReorgLimit();
+    }
+
+    private void cleanUp(){
+        transactionNum = 0;
+        if (!affectedAddresses.isEmpty()) {
+            affectedAddresses.clear();
+        }
     }
 
     @Override
     public boolean reorg() throws Exception {
-        long blkChainPointer = web3Service.getBlockNumber();
-        long dbPointer = stateService.readDBState().getBlockNumber().longValue();
-        long consistentBlockPointer;
-        if (dbPointer == -1) {
-            return false;
-        } else {
-            if (blkChainPointer >= dbPointer) consistentBlockPointer = checkDepth(dbPointer, reorgLimit);
-            else consistentBlockPointer = checkDepth(blkChainPointer, reorgLimit);
+        try {
+            long blkChainPointer = web3Service.getBlockNumber();
 
-            long requestedReorgSize = dbPointer - consistentBlockPointer;
-
-            if (requestedReorgSize == 0) {
-                GENERAL.trace("Reorg OK. ETL consistent at {}", consistentBlockPointer);
+            long dbPointer = stateService.readDBState().getBlockNumber().longValue();
+            long consistentBlockPointer;
+            if (dbPointer == -1) {
                 return false;
-            } else if (requestedReorgSize < 0) {
-                GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
-                throw new IllegalStateException();
             } else {
-                return performReorg(consistentBlockPointer);
+                if (blkChainPointer >= dbPointer) consistentBlockPointer = checkDepth(dbPointer, reorgLimit);
+                else consistentBlockPointer = checkDepth(blkChainPointer, reorgLimit);
+
+                long requestedReorgSize = dbPointer - consistentBlockPointer;
+
+                if (requestedReorgSize == 0) {
+                    GENERAL.trace("Reorg OK. ETL consistent at {}", consistentBlockPointer);
+                    return false;
+                } else if (requestedReorgSize < 0) {
+                    GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
+                    throw new IllegalStateException();
+                } else {
+                    storeDetails(consistentBlockPointer, (int)Math.min(requestedReorgSize, Integer.MAX_VALUE));
+                    return performReorg(consistentBlockPointer);
+                }
             }
+        }finally {
+            cleanUp();
         }
     }
 
+    void storeDetails(long blockNumber, int depth){
+        try{
+            String addressString = writer.writeValueAsString(this.affectedAddresses);
+            doStore(blockNumber, depth, addressString, transactionNum);
+        } catch (JsonProcessingException | SQLException | RuntimeException e) {
+            GENERAL.error("Failed to store reorg details in the database.");
+            GENERAL.error("Details: block_number={} \ndepth={}\naddresses={}\ntransaction_num:{}", blockNumber, depth, affectedAddresses, transactionNum);
+        }
+    }
+
+    static void doStore(long blockNumber, int depth, String addressString, long transactionNum) throws SQLException {
+        try(Connection con = DbConnectionPool.getConnection();
+            PreparedStatement ps = con.prepareStatement(DbQuery.InsertReorgDetails)) {
+            try {
+                ps.setLong(1, blockNumber);
+                ps.setTimestamp(2, Timestamp.from(Instant.now()));
+                ps.setInt(3, depth);
+                ps.setString(4, addressString);
+                ps.setLong(5, transactionNum);
+                ps.execute();
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        }
+    }
 
 
 
@@ -93,7 +140,7 @@ public class ReorgServiceImpl implements ReorgService {
         }
     }
 
-
+    // TODO: 9/13/19 Replace the this recursive function with a loop
     private long doCheck(final long blockNumber, final long depth) throws Exception {
         final long blockToCheck = blockNumber - depth;
         if (depth <= 0 || blockToCheck < 0){
@@ -108,6 +155,9 @@ public class ReorgServiceImpl implements ReorgService {
             if (!comparison){
                 var dbHash = dbBlock == null ? "null" : dbBlock.getBlockHash();
                 var apiHash = apiBlock == null ? "null" : apiBlock.getHash();
+                if (apiBlock != null){
+                    transactionNum += apiBlock.getTransactions().size();
+                }
                 GENERAL.error("Chain inconsistent at depth {}. DBBlock=[{}] != APIBlock=[{}]", blockToCheck, dbHash, apiHash );
                 return blockNumber - depth;
             }
@@ -208,7 +258,7 @@ public class ReorgServiceImpl implements ReorgService {
         Account.AccountBuilder accountBuilder = new Account.AccountBuilder();
         for (var bal: accounts) {//get updated accounts for these accounts
             APIAccountDetails details = web3Service.getAccountDetails(bal.getAddress());
-
+            affectedAddresses.add(bal.getAddress());
             accountBuilder.address(bal.getAddress())
                     .contract(bal.getContract())
                     .lastBlockNumber(details.getBlockNumber())

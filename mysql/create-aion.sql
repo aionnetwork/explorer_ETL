@@ -307,3 +307,14 @@ create table update_state (
     start bigint,
     end bigint
 );
+
+create table reorg_details(
+    id bigint auto_increment primary key,
+    block_number bigint not null,
+    server_timestamp timestamp not null ,
+    block_depth bigint not null,
+    affected_addresses mediumtext not null,
+    number_of_affected_transactions bigint not null
+) engine = InnoDB;
+create index reorg_details_block_number_index on reorg_details(block_number);
+create unique index reorg_details_server_timestamp_index on reorg_details(server_timestamp);

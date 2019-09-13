@@ -337,4 +337,7 @@ public class DbQuery {
             " end) values (?, ?, ?, ?, ?)";
 
     public static final String SelectFromUpdateState = "Select * from update_state where table_id = ?";
+
+    //------------------------ReorgDetails--------------------------------
+    public static final String InsertReorgDetails = "Insert into reorg_details (block_number, server_timestamp, block_depth, affected_addresses, number_of_affected_transactions) value (?,?,?,?,?)";
 }
