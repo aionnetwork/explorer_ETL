@@ -1,15 +1,11 @@
 package aion.dashboard.service;
 
-import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.interfaces.Web3Service;
-import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
-import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.Web3ApiException;
-import org.aion.api.type.BlockDetails;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -18,14 +14,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RollingBlockMeanImpl implements RollingBlockMean {
     private Set<APIBlockDetails> blockHistory;
     private Set<StrippedTransaction> transactionHistory;
-    private final int blockTimeWindow;
+    private final int blockStableWindow;
     private final int blockMaxSize;
     private final long transactionTimeWindow;
-    private final long blockcountwindow;
+    private final long blockRTWindow;
     private final AtomicReference<BigInteger> blockReward = new AtomicReference<>(BigInteger.ZERO);
     private class StrippedTransaction implements Comparable<StrippedTransaction>{
         StrippedTransaction(long timeStamp, long blockNumber, long numberTransactions) {
@@ -61,19 +58,19 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
      * @param dbPointer
      * @param service used to populate the Window
      * @param blockMaxSize the max size of the window
-     * @param blockTimeWindow the start of the period in which values are computed
+     * @param blockStableWindow the start of the period in which values are computed
      * @param transactionTimeWindow the size of the transaction window that should be maintained in seconds
      * @param blockCountWindow  the size of the block window to use for the RT statistics
      */
-    RollingBlockMeanImpl(long meanPointer, long transactionPointer, long dbPointer, Web3Service service, int blockMaxSize, int blockTimeWindow, long transactionTimeWindow, long blockCountWindow) throws Web3ApiException {
+    RollingBlockMeanImpl(long meanPointer, long transactionPointer, long dbPointer, Web3Service service, int blockMaxSize, int blockStableWindow, long transactionTimeWindow, long blockCountWindow) throws Web3ApiException {
         //This constructor is ok because it is only accessed through a factory method
 
-        blockcountwindow = blockCountWindow;
+        blockRTWindow = blockCountWindow;
         Thread.currentThread().setName("rolling-mean");
 
         this.transactionTimeWindow = transactionTimeWindow;
         this.blockMaxSize = blockMaxSize;
-        this.blockTimeWindow = blockTimeWindow;
+        this.blockStableWindow = blockStableWindow;
         blockHistory = new ConcurrentSkipListSet<>(Comparator.comparingLong(APIBlockDetails::getNumber));
         blockHistory.addAll(getBlockDetailsInRange(meanPointer, dbPointer, service));
         transactionHistory = getBlockDetailsInRange(transactionPointer, dbPointer, service).parallelStream()
@@ -97,7 +94,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 long endPointer  = startPointer + requestSize-1 ;// get range inclusive of request pointer
                 temp.addAll(service.getBlockDetailsInRange(startPointer, endPointer));
                 startPointer =temp.get(temp.size() -1).getNumber()+1;
-                requestSize = (end - startPointer+1) <= maxSize ? end - startPointer+1: maxSize;
+                requestSize = Math.min((end - startPointer + 1), maxSize);
             }
         }
         return temp;
@@ -148,25 +145,9 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
     public Optional<Metrics> computeStableMetricsFrom(long blockNumber) {
         if (blockNumber<1) return Optional.empty();
         else {
-            Optional<APIBlockDetails> detailsAtNum = blockHistory.parallelStream()
-                    .unordered()
-                    .filter( b -> b.getNumber() == blockNumber)
-                    .findAny();
-
-            if (detailsAtNum.isEmpty()) return Optional.empty();
-            else {
-                long endTime = detailsAtNum.get().getTimestamp();
-
-                List<APIBlockDetails> blockDetails = blockHistory.parallelStream()
-                        .filter(e ->
-                                detailsAtNum.get().getNumber() >= e.getNumber()
-                                        && Math.abs(endTime - e.getTimestamp()) <= blockTimeWindow * 60// eliminate any blocks that were after the last block
-                        )
-                        .sorted(Comparator.comparing(APIBlockDetails::getNumber))
-                        .collect(Collectors.toUnmodifiableList());
-
-                return doMetricsComputation(blockDetails, Metrics.STABLE_ID);
-            }
+            List<APIBlockDetails> blockDetails = findBlocksInRange(blockNumber - blockStableWindow);
+            if (blockDetails.isEmpty()) return Optional.empty();
+            else return doMetricsComputation(blockDetails, Metrics.STABLE_ID);
         }
     }
 
@@ -175,21 +156,19 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
         if (blockNumber<1) return Optional.empty();
         else {
-
-            Optional<APIBlockDetails> detailsAtNum = blockHistory.parallelStream()
-                    .unordered()
-                    .filter( b -> b.getNumber() == blockNumber)
-                    .findAny();
-            if (!detailsAtNum.isPresent()) return Optional.empty();
-            final long startBlock = detailsAtNum.get().getNumber() - blockcountwindow;
-
-            List<APIBlockDetails> blockDetails = blockHistory.parallelStream()
-                    .filter(b -> b.getNumber() > startBlock)//get range exclusive of the start block
-                    .collect(Collectors.toList());
-
-            return doMetricsComputation(blockDetails, Metrics.RT_ID);
+            List<APIBlockDetails> blockDetails = findBlocksInRange(blockNumber - blockRTWindow);
+            if (blockDetails.isEmpty()) return Optional.empty();
+            else return doMetricsComputation(blockDetails, Metrics.RT_ID);
         }
 
+    }
+
+    List<APIBlockDetails> findBlocksInRange(long blockNumber) {
+        final long blockNumberToUse = Math.max(blockNumber, 0);// no block before genesis
+        return blockHistory.parallelStream()
+                .unordered()
+                .filter( b->b.getNumber() > blockNumberToUse) // find the block that matches this block number
+                .collect(Collectors.toList());
     }
 
 

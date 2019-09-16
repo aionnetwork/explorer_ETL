@@ -156,7 +156,7 @@ public class Config {
 
 			Long _blockQueryRange = json.optLong("blockQueryRange");
 			if (_blockQueryRange != null) {
-				blockQueryRange = Math.min(_blockQueryRange, MAX_BLK_QUERY_RANGE);
+				blockQueryRange = _blockQueryRange;
 			}
 
 			Long _blockReorgLimit = json.optLong("blockReorgLimit");
@@ -343,7 +343,7 @@ public class Config {
         return TransactionWindowSize;
     }
 
-    public int getBlockWindowCountSize() {
+    public int getBlockWindowRTSize() {
         return BlockWindowCountSize;
     }
 

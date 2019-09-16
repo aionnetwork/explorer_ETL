@@ -1,18 +1,13 @@
 package aion.dashboard.service;
 
-import aion.dashboard.blockchain.AionService;
 import aion.dashboard.blockchain.interfaces.Web3Service;
-import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.config.Config;
-import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.Web3ApiException;
-import org.aion.api.type.BlockDetails;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +32,7 @@ public interface RollingBlockMean {
 
         long transactionTimeWindow = config.getTransactionWindowSize() * 60L; // in minutes
         int blockTimeWindow = config.getBlockWindowStableSize();
-        int blockCountWindow = config.getBlockWindowCountSize();
+        int blockCountWindow = config.getBlockWindowRTSize();
         int blockMaxSize = config.getBlockMaxWindowSize();
 
 
@@ -56,7 +51,7 @@ public interface RollingBlockMean {
 
         long transactionTimeWindow = config.getTransactionWindowSize() * 60L; // in minutes
         int blockTimeWindow = config.getBlockWindowStableSize();
-        int blockCountWindow = config.getBlockWindowCountSize();
+        int blockCountWindow = config.getBlockWindowRTSize();
         int blockMaxSize = config.getBlockMaxWindowSize();
 
         return new RollingBlockMeanImpl(
