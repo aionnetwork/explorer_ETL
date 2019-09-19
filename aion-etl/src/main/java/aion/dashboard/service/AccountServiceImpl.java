@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AccountServiceImpl implements AccountService {
@@ -36,27 +37,22 @@ public class AccountServiceImpl implements AccountService {
 
         try (var con = DbConnectionPool.getConnection()) {
             Account comp=getByAddress(account.getAddress());
-
-            if(comp==null ||!comp.equals(account)) {
-
-                try (PreparedStatement ps = con.prepareStatement(DbQuery.AccountInsert)) {
-                    ps.setString(1, account.getAddress());
-                    ps.setBigDecimal(2, account.getBalance());
-                    ps.setLong(3, account.getLastBlockNumber());
-                    ps.setInt(4, comp == null ? account.getContract() : comp.getContract());
-                    ps.setString(5, account.getNonce());
-                    ps.setString(6, comp == null ? account.getTransactionHash() : comp.getTransactionHash());
-                    ps.setDouble(7, account.getApproxBalance());
-                    ps.execute();
-                    con.commit();
-                }
-                catch (SQLException e){
-                    con.rollback();
-                    throw e;
-                }
-
+            try (PreparedStatement ps = con.prepareStatement(DbQuery.AccountInsert)) {
+                ps.setString(1, account.getAddress());
+                ps.setBigDecimal(2, account.getBalance());
+                ps.setLong(3, account.getLastBlockNumber());
+                ps.setInt(4, Objects.requireNonNullElse(comp, account).getContract());
+                ps.setString(5, account.getNonce());
+                ps.setString(6, Objects.requireNonNullElse(comp, account).getTransactionHash());
+                ps.setDouble(7, account.getApproxBalance());
+                ps.setLong(8, Objects.requireNonNullElse(comp, account).getFirstBlockNumber());
+                ps.execute();
+                con.commit();
             }
-
+            catch (SQLException e){
+                con.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             return false;
 
@@ -93,9 +89,8 @@ public class AccountServiceImpl implements AccountService {
             PreparedStatement ps = con.prepareStatement(DbQuery.AccountSelectByAddress)) {
             ps.setString(1,address);
             try (ResultSet resultSet = ps.executeQuery()) {
-
-                while (resultSet.next()) {
-                    return new Account.AccountBuilder()
+                if (resultSet.next()) {
+                    Account acc=  new Account.AccountBuilder()
                             .balance(resultSet.getBigDecimal("balance"))
                             .address(resultSet.getString("address"))
                             .contract(resultSet.getInt("contract"))
@@ -103,10 +98,11 @@ public class AccountServiceImpl implements AccountService {
                             .lastBlockNumber(resultSet.getLong("last_block_number"))
                             .transactionHash(resultSet.getString("transaction_hash"))
                             .build();
+                    acc.setFirstBlockNumber(resultSet.getLong("first_block_number"));
+                    return acc;
                 }
+                else return null;
             }
-
-            return null;
         }
     }
 
@@ -163,16 +159,15 @@ public class AccountServiceImpl implements AccountService {
 
         for(Account account : accounts) {
             Account comp = getByAddress(account.getAddress());
-            if (comp == null || !comp.equals(account)) {
-                ps.setString(1, account.getAddress());
-                ps.setBigDecimal(2, (account.getBalance()));
-                ps.setLong(3, account.getLastBlockNumber());
-                ps.setInt(4, comp == null ? account.getContract() : comp.getContract());
-                ps.setString(5, account.getNonce());
-                ps.setString(6, comp == null ? account.getTransactionHash() : comp.getTransactionHash());
-                ps.setDouble(7, account.getApproxBalance());
-                ps.addBatch();
-            }
+            ps.setString(1, account.getAddress());
+            ps.setBigDecimal(2, (account.getBalance()));
+            ps.setLong(3, account.getLastBlockNumber());
+            ps.setInt(4, Objects.requireNonNullElse(comp, account).getContract());
+            ps.setString(5, account.getNonce());
+            ps.setString(6, Objects.requireNonNullElse(comp, account).getTransactionHash());
+            ps.setDouble(7, account.getApproxBalance());
+            ps.setLong(8, Objects.requireNonNullElse(comp, account).getFirstBlockNumber());
+            ps.addBatch();
         }
 
         return ps;

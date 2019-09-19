@@ -34,22 +34,12 @@ CREATE TABLE `block` (
 	`year` SMALLINT,
 	`month` TINYINT,
 	`day` TINYINT,
-	PRIMARY KEY(`block_number`,`year`,`month`)
-) ENGINE = InnoDB
-PARTITION BY RANGE(`year`)
-SUBPARTITION BY HASH(`month`)
-SUBPARTITIONS 12 (
-	PARTITION p2018 VALUES LESS THAN (2019),
-	PARTITION p2019 VALUES LESS THAN (2020),
-	PARTITION p2020 VALUES LESS THAN (2021),
-	PARTITION p2021 VALUES LESS THAN (2022),
-	PARTITION p2022 VALUES LESS THAN (2023),
-	PARTITION p2023_and_up VALUES LESS THAN MAXVALUE
-);
-CREATE INDEX `day_block` ON block(`day`);
+	PRIMARY KEY(`block_number`)
+) ENGINE = InnoDB;
 CREATE INDEX `block_hash_block` ON block(`block_hash`);
 CREATE INDEX `miner_address_block` ON block(`miner_address`);
 CREATE INDEX `block_timestamp_block` ON block(`block_timestamp`);
+CREATE UNIQUE INDEX block_block_timestamp_miner_address_index on block (miner_address, block_timestamp);
 
 ALTER TABLE `block` ADD CONSTRAINT `block_number_unique` UNIQUE KEY(`block_number`, `month`, `year`);
 ALTER TABLE `block` ADD CONSTRAINT `block_timestamp_unique` UNIQUE KEY(`block_timestamp`, `month`, `year`);
@@ -77,23 +67,16 @@ CREATE TABLE `transaction` (
 	`day` TINYINT,
 	`type` VARCHAR(8),
 	`internal_transaction_count` SMALLINT DEFAULT 0,
-	PRIMARY KEY(`transaction_hash`,`year`,`month`)
-) ENGINE = InnoDB
-PARTITION BY RANGE(`year`)
-SUBPARTITION BY HASH(`month`)
-SUBPARTITIONS 12 (
-	PARTITION p2018 VALUES LESS THAN (2019),
-	PARTITION p2019 VALUES LESS THAN (2020),
-	PARTITION p2020 VALUES LESS THAN (2021),
-	PARTITION p2021 VALUES LESS THAN (2022),
-	PARTITION p2022 VALUES LESS THAN (2023),
-	PARTITION p2023_and_up VALUES LESS THAN MAXVALUE
-);
+	PRIMARY KEY(`transaction_hash`)
+) ENGINE = InnoDB;
 CREATE INDEX `block_timestamp_transaction` ON transaction(`block_timestamp`);
 CREATE INDEX `block_number_transaction` ON transaction(`block_number`);
 CREATE INDEX `from_addr_transaction` ON transaction(`from_addr`);
 CREATE INDEX `to_addr_transaction` ON transaction(`to_addr`);
-CREATE INDEX `day_transaction` ON transaction(`day`);
+create index transaction_timestamp_to_addr_index on transaction(block_timestamp, to_addr);
+create index transaction_timestamp_from_addr_index on transaction(block_timestamp, from_addr);
+create index transaction_block_number_from_addr_index on transaction (block_number, from_addr);
+create index transaction_block_number_to_addr_index on transaction (block_number, to_addr);
 
 CREATE TABLE `parser_state` (
 	`id` TINYINT,
@@ -115,8 +98,11 @@ CREATE TABLE `account` (
 `nonce` TINYTEXT NOT NULL,
 `transaction_hash` VARCHAR(64) NOT NULL,
 `approx_balance` double(48,18) NULL ,
+`first_block_number` bigint not null,
 PRIMARY KEY(`address`)
 ) ENGINE = InnoDB;
+create index first_block_number_account on account(first_block_number);
+create index last_block_number_account on account(last_block_number);
 
 CREATE TABLE `token` (
 	`contract_addr` VARCHAR(64) NOT NULL,
@@ -132,20 +118,12 @@ CREATE TABLE `token` (
 	`year` SMALLINT,
 	`month` TINYINT,
 	`day` TINYINT,
-	PRIMARY KEY(`contract_addr`, `year`, `month`)
-) ENGINE = InnoDB
-PARTITION BY RANGE(`year`)
-SUBPARTITION BY HASH(`month`)
-SUBPARTITIONS 12 (
-	PARTITION p2018 VALUES LESS THAN (2019),
-	PARTITION p2019 VALUES LESS THAN (2020),
-	PARTITION p2020 VALUES LESS THAN (2021),
-	PARTITION p2021 VALUES LESS THAN (2022),
-	PARTITION p2022 VALUES LESS THAN (2023),
-	PARTITION p2023_and_up VALUES LESS THAN MAXVALUE
-);
+	PRIMARY KEY(`contract_addr`)
+) ENGINE = InnoDB;
 CREATE INDEX `name_token` ON token(`name`);
 CREATE INDEX `symbol_token` ON token(`symbol`);
+CREATE INDEX `creation_timestamp_token` ON token(`creation_timestamp`);
+
 
 CREATE TABLE `token_transfers` (
 	`transfer_id` BIGINT NOT NULL AUTO_INCREMENT,
@@ -164,22 +142,13 @@ CREATE TABLE `token_transfers` (
 	`month` TINYINT,
 	`day` TINYINT,
 	`approx_value` double(64,18) default 0.0 not null ,
-	PRIMARY KEY(`transfer_id`, `year`, `month`)
-) ENGINE = InnoDB
-PARTITION BY RANGE(`year`)
-SUBPARTITION BY HASH(`month`)
-SUBPARTITIONS 12 (
-	PARTITION p2018 VALUES LESS THAN (2019),
-	PARTITION p2019 VALUES LESS THAN (2020),
-	PARTITION p2020 VALUES LESS THAN (2021),
-	PARTITION p2021 VALUES LESS THAN (2022),
-	PARTITION p2022 VALUES LESS THAN (2023),
-	PARTITION p2023_and_up VALUES LESS THAN MAXVALUE
-);
+	PRIMARY KEY(`transfer_id`)
+) ENGINE = InnoDB;
 CREATE INDEX `to_addr_token_transfers` ON token_transfers(`to_addr`);
 CREATE INDEX `from_addr_token_transfers` ON token_transfers(`from_addr`);
 CREATE INDEX `contract_addr_token_transfers` ON token_transfers(`contract_addr`);
 CREATE INDEX `transaction_hash_token_transfers` ON token_transfers(`transaction_hash`);
+CREATE INDEX `transfer_timestamp_token_transfers` ON token_transfers(`transfer_timestamp`);
 
 CREATE TABLE `token_holders` (
 	`scaled_balance` DECIMAL(64,18) NOT NULL,
@@ -241,7 +210,6 @@ CREATE INDEX `graph_type_graphing` ON graphing(`graph_type`);
 CREATE INDEX `year_graphing` ON graphing(`year`);
 CREATE INDEX `month_graphing` ON graphing(`month`);
 CREATE INDEX `day_graphing` ON graphing(`day`);
-
 CREATE TABLE `metrics` (
 	`id` TINYINT NOT NULL,
 	`total_transaction` BIGINT NULL,
@@ -251,7 +219,7 @@ CREATE TABLE `metrics` (
 	`end_block` BIGINT NULL,
 	`average_nrg_consumed` DECIMAL(64,10) NULL,
 	`average_nrg_limit` DECIMAL(64,10) NULL,
-	`averaged_block_time` DECIMAL(14,10) NULL,
+	`averaged_block_time` DECIMAL(14,1) NULL,
 	`average_difficulty` DECIMAL(64,10) NULL,
 	`end_timestamp` INT NULL,
 	`start_timestamp` INT NULL,

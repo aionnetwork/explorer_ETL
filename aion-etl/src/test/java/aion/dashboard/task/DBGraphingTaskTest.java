@@ -1,9 +1,12 @@
 package aion.dashboard.task;
 
 import aion.dashboard.exception.GraphingException;
+import aion.dashboard.service.GraphingService;
+import aion.dashboard.service.GraphingServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
+import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,5 +41,14 @@ class DBGraphingTaskTest {
         assertTrue(res.isPresent());
 
         assertTrue(DBGraphingTask.isValidRange(res.get()));
+    }
+
+    @Test
+    void checkTimeout(){
+        GraphingService service = GraphingServiceImpl.getInstance();
+        var res =assertTimeout(Duration.ofSeconds(4), ()-> {
+            return service.countActiveAddresses(3000_000L);
+        });
+        assertNotEquals(res, 0);
     }
 }

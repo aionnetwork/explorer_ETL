@@ -50,8 +50,9 @@ public class DbQuery {
             "contract," +
             "nonce," +
             "transaction_hash," +
-            "approx_balance) " +
-            "VALUES(?,?,?,?,?,?,?)";
+            "approx_balance," +
+            "first_block_number) " +
+            "VALUES(?,?,?,?,?,?,?,?)";
     public static final String AccountSelectByAddress = "select * from account where address = ? limit 1";
     public static final String AccountSelectByRange = "select * from account  limit ?,?";
     public static final String AccountDeleteFromBlock = "delete from account where last_block_number >= ?";
@@ -229,9 +230,7 @@ public class DbQuery {
     public static final String GraphingSelectLastRecord = "select * from graphing where block_number = " +
             "(select max(block_number)  from graphing where block_number < ?) limit 1";
 
-    public static final String CountActiveAddresses = "select @aa:=(select count(distinct from_addr) from transaction where block_number <= ?) as a," +
-            "@cc:=(select count(distinct to_addr) from transaction where block_number <= ? and to_addr not in (select distinct from_addr from transaction where block_number <= ?)) as b, " +
-            "(@aa+@cc) as total";
+    public static final String CountActiveAddresses = "select count(*) as total from account where first_block_number <=? ";
 
 
     public static final String FindMinInconsistentRecord = "select block_number from graphing where id = (select min(id) from graphing where value < 100 and graph_type = 'Blocks Mined' and block_number >= ?)";

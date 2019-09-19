@@ -69,7 +69,7 @@ public class AccountParser extends IdleProducer<AccountBatch, String> {
 
     private Account getAccount(Message<String> msg, String address) {
         try {
-            return Account.from(msg.getTxDetails(), service.getAccountDetails(address));
+            return Account.from(msg.getBlockDetails().getNumber(),msg.getTxDetails(), service.getAccountDetails(address));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

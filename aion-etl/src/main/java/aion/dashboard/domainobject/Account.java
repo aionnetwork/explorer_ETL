@@ -3,7 +3,6 @@ package aion.dashboard.domainobject;
 import aion.dashboard.blockchain.type.APIAccountDetails;
 import aion.dashboard.blockchain.type.APITxDetails;
 import aion.dashboard.util.Utils;
-import org.aion.api.type.AccountDetails;
 import org.aion.api.type.BlockDetails;
 import org.aion.api.type.TxDetails;
 
@@ -22,6 +21,7 @@ public class Account {
     private int contract=0;
     private String nonce;
     private double approxBalance;
+    private long firstBlockNumber;
 
     private Account(Long lastBlockNumber, BigDecimal balance, String address, int contract, String nonce, String transactionHash){
         this.lastBlockNumber=lastBlockNumber;
@@ -31,11 +31,20 @@ public class Account {
         this.nonce = nonce;
         this.transactionHash = transactionHash;
         approxBalance= balance == null ? 0d : approximate(balance, 18);
+        this.firstBlockNumber = lastBlockNumber;
     }
 
 
 
     private Account(){}
+
+    public long getFirstBlockNumber() {
+        return firstBlockNumber;
+    }
+
+    public void setFirstBlockNumber(long firstBlockNumber) {
+        this.firstBlockNumber = firstBlockNumber;
+    }
 
     public Account setTransactionHash(String transactionHash) {
         this.transactionHash = transactionHash;
@@ -130,12 +139,12 @@ public class Account {
                 .build();
     }
 
-    public static Account from(APITxDetails tx, APIAccountDetails accountDetails){
+    public static Account from(long blockNumber,APITxDetails tx, APIAccountDetails accountDetails){
         return accountBuilder.get()
                 .address(Utils.sanitizeHex(accountDetails.getAddress()))
                 .balance(new BigDecimal(accountDetails.getBalance()))
                 .nonce(accountDetails.getNonce().toString(16))
-                .lastBlockNumber(accountDetails.getBlockNumber())
+                .lastBlockNumber(blockNumber)
                 .contract(tx == null || Utils.sanitizeHex(tx.getContractAddress()).isEmpty() ? 0:1)
                 .transactionHash(tx == null ? "" : Utils.sanitizeHex(tx.getTransactionHash()))
                 .build();
@@ -195,7 +204,7 @@ public class Account {
         }
 
         public Account build(){
-            return new Account(lastBlockNumber,balance,address,contract, nonce, transactionHash);
+            return new Account(lastBlockNumber,balance,address,contract, nonce, transactionHash );
         }
     }
 }

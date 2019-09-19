@@ -150,8 +150,6 @@ public class GraphingServiceImpl implements GraphingService {
         try(Connection con = DbConnectionPool.getConnection()){
             try(PreparedStatement ps = con.prepareStatement(DbQuery.CountActiveAddresses)){
                 ps.setLong(1, blockNumber);
-                ps.setLong(2, blockNumber);
-                ps.setLong(3, blockNumber);
                 try(ResultSet rs = ps.executeQuery()) {
                     while (rs.next()){
                         out = rs.getLong("total");
