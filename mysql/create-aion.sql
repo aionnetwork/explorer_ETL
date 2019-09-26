@@ -15,12 +15,12 @@ CREATE TABLE `block` (
 	`bloom` VARCHAR(512),
 	`solution` TEXT,
 	`signature` VARCHAR(64),
-	`seed` varchar(64),
-	`public_key` varchar(64),
+	`seed` varchar(128),
+	`public_key` varchar(128),
 	`seal_type` varchar(4),
-	`difficulty` BIGINT,
-	`total_difficulty` BIGINT,
-	`nrg_consumed` BIGINT,
+	`difficulty` decimal(32,1),
+	`total_difficulty` decimal(64,1),
+	`nrg_consumed` decimal(64,1),
 	`nrg_limit` BIGINT,
 	`block_size` BIGINT,
 	`block_timestamp` INT,
@@ -216,7 +216,7 @@ CREATE TABLE `metrics` (
 	`transactions_per_second` DECIMAL(64,10) NULL,
 	`peak_transactions_per_block` SMALLINT NULL,
 	`start_block` BIGINT NULL,
-	`end_block` BIGINT NULL,
+	`end_block` BIGINT NOT NULL ,
 	`average_nrg_consumed` DECIMAL(64,10) NULL,
 	`average_nrg_limit` DECIMAL(64,10) NULL,
 	`averaged_block_time` DECIMAL(14,1) NULL,
@@ -225,10 +225,15 @@ CREATE TABLE `metrics` (
 	`start_timestamp` INT NULL,
 	`averaged_hash_power` DECIMAL(64,10) NULL,
 	`last_block_reward` DECIMAL(64,18) NULL,
-	PRIMARY KEY(`id`)
+	`pow_avg_difficulty` DECIMAL(32,1) NULL ,
+	`pos_avg_difficulty` DECIMAL(32,1 ) NULL ,
+	`pow_avg_block_time` DECIMAL(32,1) NULL ,
+	`pos_avg_block_time` DECIMAL(32,1 ) NULL ,
+	`avg_pos_issuance` DECIMAL(64,1) NULL,
+	`percentage_of_network_staking` DECIMAL(9,6) NULL,
+	`total_stake` DECIMAL(36, 19) NULL,
+	PRIMARY KEY(`id`, `end_block`)
 ) ENGINE = InnoDB;
-INSERT INTO `metrics` (id) VALUES (1);
-INSERT INTO `metrics` (id) VALUES (2);
 
 
 CREATE TABLE `internal_transfer`(

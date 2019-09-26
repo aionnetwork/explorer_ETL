@@ -6,15 +6,22 @@ import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.Web3ApiException;
+import aion.dashboard.util.MetricsCalc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import static aion.dashboard.blockchain.type.APIBlock.SealType.POS;
+import static aion.dashboard.blockchain.type.APIBlock.SealType.POW;
+import static aion.dashboard.util.MetricsCalc.*;
 
 public class RollingBlockMeanImpl implements RollingBlockMean {
     private Set<APIBlockDetails> blockHistory;
@@ -24,6 +31,8 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
     private final long transactionTimeWindow;
     private final long blockRTWindow;
     private final AtomicReference<BigInteger> blockReward = new AtomicReference<>(BigInteger.ZERO);
+    private final Web3Service apiService;
+    private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private class StrippedTransaction implements Comparable<StrippedTransaction>{
         StrippedTransaction(long timeStamp, long blockNumber, long numberTransactions) {
             this.timeStamp = timeStamp;
@@ -67,7 +76,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
         blockRTWindow = blockCountWindow;
         Thread.currentThread().setName("rolling-mean");
-
+        apiService = service;
         this.transactionTimeWindow = transactionTimeWindow;
         this.blockMaxSize = blockMaxSize;
         this.blockStableWindow = blockStableWindow;
@@ -143,31 +152,35 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
 
     @Override
     public Optional<Metrics> computeStableMetricsFrom(long blockNumber) {
-        if (blockNumber<1) return Optional.empty();
-        else {
-            List<APIBlockDetails> blockDetails = findBlocksInRange(blockNumber - blockStableWindow);
-            if (blockDetails.isEmpty()) return Optional.empty();
-            else return doMetricsComputation(blockDetails, Metrics.STABLE_ID);
-        }
+        return getMetrics(blockNumber, blockStableWindow, Metrics.STABLE_ID);
     }
 
     @Override
     public Optional<Metrics> computeRTMetricsFrom(long blockNumber) {
-
-        if (blockNumber<1) return Optional.empty();
-        else {
-            List<APIBlockDetails> blockDetails = findBlocksInRange(blockNumber - blockRTWindow);
-            if (blockDetails.isEmpty()) return Optional.empty();
-            else return doMetricsComputation(blockDetails, Metrics.RT_ID);
-        }
+        return getMetrics(blockNumber, blockRTWindow, Metrics.RT_ID);
 
     }
 
-    List<APIBlockDetails> findBlocksInRange(long blockNumber) {
-        final long blockNumberToUse = Math.max(blockNumber, 0);// no block before genesis
+    private Optional<Metrics> getMetrics(long blockNumber, long windowSize, int stableId) {
+        try {
+            if (blockNumber < 1) return Optional.empty();
+            else {
+                List<APIBlockDetails> blockDetails = findBlocksInRange(blockNumber - windowSize, blockNumber );
+                if (blockDetails.isEmpty()) return Optional.empty();
+                else return doMetricsComputation(blockDetails, stableId);
+            }
+        } catch (Exception e) {
+            GENERAL.debug("Encountered an error while computing metrics at block number {} and window size {}", blockNumber, windowSize);
+            GENERAL.debug("Error:",e);
+            return Optional.empty();
+        }
+    }
+
+    List<APIBlockDetails> findBlocksInRange(long startBlockExclusive, long endBlockInclusive) {
+        final long blockNumberToUse = Math.max(startBlockExclusive, 0);// no block before genesis
         return blockHistory.parallelStream()
                 .unordered()
-                .filter( b->b.getNumber() > blockNumberToUse) // find the block that matches this block number
+                .filter( b->b.getNumber() > blockNumberToUse && b.getNumber()<=endBlockInclusive) // find the block that matches this block number
                 .collect(Collectors.toList());
     }
 
@@ -181,16 +194,23 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
     private Optional<Metrics> doMetricsComputation(List<APIBlockDetails> blockDetails, int id) {
         if (blockDetails.isEmpty()) return Optional.empty();
 
-        final BigDecimal averageDifficulty = blockDetails.parallelStream()
+        final List<APIBlockDetails> posBlocks = blockDetails.stream()
+                .filter(b->b.getSealType().equals(POS))
+                .collect(Collectors.toUnmodifiableList());
+        final List<APIBlockDetails> powBlocks = blockDetails.stream()
+                .filter(b->b.getSealType().equals(POW))
+                .collect(Collectors.toUnmodifiableList());
+
+        final BigDecimal averageNetworkDifficulty = blockDetails.parallelStream()
                 .map(b -> new BigDecimal(b.getDifficulty()))//Get the difficulty of each block
                 .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
-                .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL64);//Find the average
+                .divide(BigDecimal.valueOf(blockDetails.size()).max(BigDecimal.ONE), MathContext.DECIMAL64);//Find the average
 
 
-        final BigDecimal averageBlockTime = blockDetails.parallelStream()
+        final BigDecimal averageNetworkBlockTime = blockDetails.parallelStream()
                 .map(b -> BigDecimal.valueOf(b.getBlockTime()))//get the block time of each block
                 .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the time
-                .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL64);// find the average over the period
+                .divide(BigDecimal.valueOf(blockDetails.size()).max(BigDecimal.ONE), MathContext.DECIMAL64);// find the average over the period
 
 
         final BigInteger transactionsOver24Hrs = transactionHistory.parallelStream()
@@ -201,8 +221,6 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 .mapToLong(t -> t.numberTransactions)
                 .max()
                 .orElse(0);
-        final BigDecimal averageHashPower = new BigDecimal(blockDetails.get(blockDetails.size() - 1).getDifficulty())//assumption the last block has the greatest block number
-                .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
 
         final BigDecimal averageNrgLimit =  blockDetails.parallelStream()
                 .unordered()//disregard order... This is a performance optimization
@@ -223,25 +241,32 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         final BigDecimal averageTxnsPerSecond = blockDetails.parallelStream()
                 .map(b -> BigDecimal.valueOf(b.getTxDetails().size()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(EndTimeStamp - StartTimeStamp), MathContext.DECIMAL64);
-
-
+                .divide(BigDecimal.valueOf(EndTimeStamp - StartTimeStamp).max(BigDecimal.ONE), MathContext.DECIMAL64);
+        final long endBlock =blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).max().getAsLong();
+        final BigDecimal networkStake = MetricsCalc.networkStake(endBlock);
         return Optional.of(
                 new Metrics.MetricsBuilder()
-                        .setAverageBlockTime(averageBlockTime)
-                        .setAverageDifficulty(averageDifficulty)
-                        .setAverageHashPower(averageHashPower)
+                        .setAverageBlockTime(averageNetworkBlockTime)
+                        .setAverageDifficulty(averageNetworkDifficulty)
+                        .setAverageHashPower(hashRate(powBlocks))
                         .setAverageNrgConsumed(averageNrgConsumed)
                         .setAverageNrgLimit(averageNrgLimit)
                         .setStartTimeStamp(StartTimeStamp)
                         .setEndTimeStamp(EndTimeStamp)
-                        .setEndBlock(blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).max().getAsLong())
-                        .setStartBlock(blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).min().getAsLong())
+                        .setEndBlock(endBlock)
+                        .setStartBlock(blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).min().orElseThrow())
                         .setPeakTransactionsPerBlock(PeakTransactions)
                         .setTotalTransactions(transactionsOver24Hrs)
                         .setTransactionsPerSecond(averageTxnsPerSecond)
                         .setId(id)
                         .setLastBlockReward(blockReward.get())
+                        .setPosBlockDifficulty(avgDifficulty(posBlocks))
+                        .setPowBlockDifficulty(avgDifficulty(powBlocks))
+                        .setPosBlockTime(avgBlockTime(posBlocks))
+                        .setPowBlockTime(avgBlockTime(powBlocks))
+                        .setAveragePOSIssuance(avgIssuance(posBlocks))
+                        .setTotalStake(networkStake)
+                        .setPercentageOfNetworkStaking(networkStakingPercentage(Instant.ofEpochSecond(EndTimeStamp), networkStake).orElse(BigDecimal.ZERO))
                         .build()
         );
     }

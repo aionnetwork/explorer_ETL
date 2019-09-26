@@ -1,8 +1,11 @@
 package aion.dashboard.blockchain.type;
 
+import aion.dashboard.util.Utils;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import org.aion.util.bytes.ByteUtil;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Objects;
@@ -16,12 +19,12 @@ import static java.util.Objects.requireNonNullElse;
 public class APIBlockDetails {
     private int numTransactions;
     private String logsBloom;
-    private long totalDifficulty;
+    private BigInteger totalDifficulty;
     private String receiptsRoot;
     private String extraData;
     private long nrgUsed;
     private String miner;
-    private long difficulty;
+    private BigInteger difficulty;
     private long number;
     private String gasLimit;
     private String gasUsed;
@@ -44,12 +47,14 @@ public class APIBlockDetails {
     //--------------------------
     //Required for pos blocks
     private String seed;
+    private long miningDifficulty;
     private String signature;
     private String publicKey;
     //--------------------------
     //Required for pow blocks
     private String solution;
     private String nonce;
+    private long stakingDifficulty;
     //--------------------------
 
     private APIBlockDetails(Builder builder){
@@ -77,6 +82,8 @@ public class APIBlockDetails {
         txTrieRoot = requireNonNull(builder.txTrieRoot);
         blockTime = builder.blockTime;
         sealType = APIBlock.SealType.fromByte(Objects.requireNonNullElse(builder.sealType, 1));
+        miningDifficulty = builder.miningDifficulty;
+        stakingDifficulty = builder.stakingDifficulty;
         if (sealType.equals(APIBlock.SealType.POW)){
             nonce = requireNonNull(builder.nonce);
             solution = requireNonNull(builder.solution);
@@ -98,7 +105,7 @@ public class APIBlockDetails {
         return logsBloom;
     }
 
-    public long getTotalDifficulty() {
+    public BigInteger getTotalDifficulty() {
         return totalDifficulty;
     }
 
@@ -122,7 +129,7 @@ public class APIBlockDetails {
         return miner;
     }
 
-    public long getDifficulty() {
+    public BigInteger getDifficulty() {
         return difficulty;
     }
 
@@ -222,13 +229,13 @@ public class APIBlockDetails {
     @JsonPOJOBuilder(withPrefix = "set", buildMethodName = "create")
     public static class Builder{
         private String logsBloom;
-        private Long totalDifficulty;
+        private BigInteger totalDifficulty;
         private String receiptsRoot;
         private String extraData;
         private Long nrgUsed;
         private String nonce;
         private String miner;
-        private long difficulty;
+        private BigInteger difficulty;
         private long number;
         private Long nrgLimit;
         private String solution;
@@ -251,6 +258,18 @@ public class APIBlockDetails {
         private String gasLimit;
         private String gasUsed;
         private int numTransactions;
+        private long stakingDifficulty;
+        private long miningDifficulty;
+
+        public Builder setMiningDifficulty(String miningDifficulty) {
+            this.miningDifficulty = Utils.longFromHexString(miningDifficulty);
+            return this;
+        }
+
+        public Builder setStakingDifficulty(String stakingDifficulty) {
+            this.stakingDifficulty = Utils.longFromHexString(stakingDifficulty);
+            return this;
+        }
 
         public Builder setBlockTime(int blockTime) {
             this.blockTime = blockTime;
@@ -267,13 +286,13 @@ public class APIBlockDetails {
             return this;
         }
 
-        public Builder setAntiParentHash(String antiParentHash) {
-            this.antiParentHash = antiParentHash;
+        public Builder setAntiParentHash(byte[] antiParentHash) {
+            this.antiParentHash = ByteUtil.toHexString(antiParentHash);
             return this;
         }
 
-        public Builder setSealType(Integer sealType) {
-            this.sealType = sealType;
+        public Builder setSealType(String sealType) {
+            this.sealType = Utils.intFromHexString(sealType);
 
             return this;
         }
@@ -300,7 +319,7 @@ public class APIBlockDetails {
         }
 
         public Builder setTotalDifficulty(String totalDifficulty) {
-            this.totalDifficulty = longFromHexString(totalDifficulty);
+            this.totalDifficulty = bigIntegerFromHex(totalDifficulty);
             return this;
         }
 
@@ -335,7 +354,7 @@ public class APIBlockDetails {
         }
 
         public Builder setDifficulty(String difficulty) {
-            this.difficulty = longFromHexString(difficulty);
+            this.difficulty = bigIntegerFromHex(difficulty);
             return this;
         }
 

@@ -2,9 +2,7 @@ package aion.dashboard.parser.type;
 
 import aion.dashboard.domainobject.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class ParserBatch extends AbstractBatch{
     private List<Block> blocks;

@@ -118,7 +118,7 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
 
         final BigDecimal blocksMined = BigDecimal.valueOf(blocks.size());
         final BigDecimal averageDifficulty = blocks.parallelStream()
-                .map(b -> new BigDecimal(b.getDifficulty()))//Get the difficulty of each block
+                .map(Block::getDifficulty)//Get the difficulty of each block
                 .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
                 .divide(blocksMined, MathContext.DECIMAL64);//Find the average
 
@@ -134,7 +134,7 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
                 .sum();// sum up the size of the lists
 
 
-        final BigDecimal averageHashPower = new BigDecimal(blocks.get(blocks.size() -1).getDifficulty())
+        final BigDecimal averageHashPower = (blocks.get(blocks.size() -1).getDifficulty())
                 .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
 
 

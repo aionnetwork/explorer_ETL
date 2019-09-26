@@ -20,6 +20,11 @@ public class GuavaManager<K,V> extends CacheManager<K, V> {
         init();
     }
 
+    GuavaManager(CacheBuilder builder){
+        super(null);
+        intCache = builder.build();
+    }
+
     private static final Logger LOGGER_GENERAL = LoggerFactory.getLogger("logger_general");
     private void init(){
         intCache = CacheBuilder.newBuilder()

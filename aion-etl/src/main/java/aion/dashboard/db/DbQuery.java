@@ -237,21 +237,29 @@ public class DbQuery {
 
     //--------------------------------Metrics-------------------------------------------
 
-    public static final String MetricsInsert = "update metrics set " +
-            " total_transaction = ?," +
-            " transactions_per_second = ?," +
-            " peak_transactions_per_block = ?," +
-            " start_block = ?," +
-            " end_block = ?," +
-            " average_nrg_consumed = ?," +
-            " average_nrg_limit = ?," +
-            " averaged_block_time = ?," +
-            " average_difficulty = ?," +
-            " end_timestamp = ?," +
-            " start_timestamp = ?," +
-            " averaged_hash_power = ?," +
-            " last_block_reward = ?" +
-            " where id = ?";
+    public static final String MetricsInsert = "insert into metrics (" +
+            "id," +
+            "total_transaction," +
+            "transactions_per_second," +
+            "peak_transactions_per_block," +
+            "start_block," +
+            "end_block," +
+            "average_nrg_consumed," +
+            "average_nrg_limit," +
+            "averaged_block_time," +
+            "average_difficulty," +
+            " end_timestamp," +
+            "start_timestamp," +
+            "averaged_hash_power," +
+            "last_block_reward," +
+            "pow_avg_difficulty," +
+            "pos_avg_difficulty," +
+            "pow_avg_block_time," +
+            "pos_avg_block_time," +
+            "avg_pos_issuance," +
+            "percentage_of_network_staking," +
+            "total_stake) " +
+            "values (?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 
     public static final String MetricsDelete = "update metrics set " +
@@ -340,4 +348,6 @@ public class DbQuery {
 
     //------------------------ReorgDetails--------------------------------
     public static final String InsertReorgDetails = "Insert into reorg_details (block_number, server_timestamp, block_depth, affected_addresses, number_of_affected_transactions) value (?,?,?,?,?)";
+    //------------------------CirculatingSupply---------------------------
+    public static final String SelectCirculatingSupply = "Select * from circulating_supply";
 }

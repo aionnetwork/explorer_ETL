@@ -22,7 +22,7 @@ class Web3ServiceImplTest {
     Logger test_logger = LoggerFactory.getLogger("logger_test");
     @BeforeEach
     void setup(){
-        web3Service.setWeb3Providers(List.of("192.168.1.67:8545"));
+
     }
 
     @Test
@@ -32,7 +32,6 @@ class Web3ServiceImplTest {
 
     @Test
     public void getInternalTransaction() throws Exception {
-        web3Service.setWeb3Providers(List.of("192.168.1.67:8545"));
         System.out.println(web3Service.getInternalTransaction("0xe570e0407083da0ade69c9c8f30e44bf2d5ee0d28b7d9873b9009731a9e61317"));
     }
     @Test
@@ -44,6 +43,11 @@ class Web3ServiceImplTest {
                 this::getBlockWithTxLogs,
                 this::getBlockWithInternalTx
         );
+    }
+
+    @Test
+    public void getAPIBlock() throws Web3ApiException {
+        web3Service.getBlock(1);
     }
 
     private void getGenesisBlock() throws Web3ApiException {

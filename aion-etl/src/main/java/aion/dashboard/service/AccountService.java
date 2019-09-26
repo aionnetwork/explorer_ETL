@@ -2,6 +2,7 @@ package aion.dashboard.service;
 
 import aion.dashboard.domainobject.Account;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -25,4 +26,5 @@ public interface AccountService {
 
     PreparedStatement prepare(Connection con, List<Account> account) throws SQLException;
 
+    BigDecimal sumBalance() throws SQLException;
 }

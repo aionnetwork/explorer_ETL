@@ -6,7 +6,6 @@ import aion.dashboard.exception.Web3ApiException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.math.BigInteger;
@@ -31,9 +30,9 @@ class RollingBlockMeanImplTest {
 
     @Test
     void findBlocksInRange() {
-        var rtBlocks = rollingBlockMean.findBlocksInRange(10_000L - 32);
+        var rtBlocks = rollingBlockMean.findBlocksInRange(10_000L - 32, 10_000L);
         assertEquals(32, rtBlocks.size());
-        var listOf2kBlocks = rollingBlockMean.findBlocksInRange(0);
+        var listOf2kBlocks = rollingBlockMean.findBlocksInRange(0, 10_000L);
         assertEquals(2001, listOf2kBlocks.size());
     }
 }

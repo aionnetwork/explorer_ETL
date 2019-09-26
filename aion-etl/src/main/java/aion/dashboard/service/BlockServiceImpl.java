@@ -124,7 +124,6 @@ public class BlockServiceImpl implements BlockService {
              PreparedStatement psDeleteTransfers = con.prepareStatement(DbQuery.TokenTransfersDelete);
              PreparedStatement psDeleteTokenBalances = con.prepareStatement(DbQuery.TokenHoldersDeleteByBlockNumber);
              PreparedStatement psDeleteGraphing = con.prepareStatement(DbQuery.GraphingDelete);
-             PreparedStatement psDeleteMetric = MetricsServiceImpl.getInstance().prepareDelete(con);
              PreparedStatement psInternalTransferService = InternalTransferServiceImpl.getInstance().prepareDelete(con, blockNumber);
              PreparedStatement psTxLog = TxLogServiceImpl.getInstance().prepareDelete(con, blockNumber);
         ) {
@@ -133,9 +132,6 @@ public class BlockServiceImpl implements BlockService {
             PreparedStatement psUpdateParserState = null;
             List<PreparedStatement> statements = new ArrayList<>();
             try {
-
-                psDeleteMetric.execute();
-
                 psInternalTransferService.execute();
                 psDeleteToken.setLong(1, blockNumber);
                 psDeleteToken.execute();
@@ -312,8 +308,8 @@ public class BlockServiceImpl implements BlockService {
         ps.setString(9, block.getNonce());
         ps.setString(10, block.getBloom());
         ps.setString(11, block.getSolution());
-        ps.setLong(12, block.getDifficulty());
-        ps.setLong(13, block.getTotalDifficulty());
+        ps.setBigDecimal(12, block.getDifficulty());
+        ps.setBigDecimal(13, block.getTotalDifficulty());
         ps.setLong(14, block.getNrgConsumed());
         ps.setLong(15, block.getNrgLimit());
         ps.setLong(16, block.getBlockSize());
@@ -385,8 +381,8 @@ public class BlockServiceImpl implements BlockService {
                 .nonce(rs.getString("nonce"))
                 .bloom(rs.getString("bloom"))
                 .solution(rs.getString("solution"))
-                .difficulty(rs.getLong("difficulty"))
-                .totalDifficulty(rs.getLong("total_difficulty"))
+                .difficulty(rs.getBigDecimal("difficulty"))
+                .totalDifficulty(rs.getBigDecimal("total_difficulty"))
                 .nrgConsumed(rs.getLong("nrg_consumed"))
                 .nrgLimit(rs.getLong("nrg_limit"))
                 .blockSize(rs.getLong("block_size"))

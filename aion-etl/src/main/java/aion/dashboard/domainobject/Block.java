@@ -26,8 +26,8 @@ public class Block {
     private String nonce;
     private String bloom;
     private String solution;
-    private long difficulty;
-    private long totalDifficulty;
+    private BigDecimal difficulty;
+    private BigDecimal totalDifficulty;
     private long nrgConsumed;
     private long nrgLimit;
     private long blockSize;
@@ -211,19 +211,19 @@ public class Block {
         this.solution = solution;
     }
 
-    public long getDifficulty() {
+    public BigDecimal getDifficulty() {
         return difficulty;
     }
 
-    public void setDifficulty(long difficulty) {
+    public void setDifficulty(BigDecimal difficulty) {
         this.difficulty = difficulty;
     }
 
-    public long getTotalDifficulty() {
+    public BigDecimal getTotalDifficulty() {
         return totalDifficulty;
     }
 
-    public void setTotalDifficulty(long totalDifficulty) {
+    public void setTotalDifficulty(BigDecimal totalDifficulty) {
         this.totalDifficulty = totalDifficulty;
     }
 
@@ -334,8 +334,8 @@ public class Block {
                 .nonce(b.getNonce().toString(16))
                 .bloom(b.getBloom().toString())
                 .solution(b.getSolution().toString())
-                .difficulty(b.getDifficulty().longValue())
-                .totalDifficulty(b.getTotalDifficulty().longValue())
+                .difficulty(b.getDifficulty())
+                .totalDifficulty(b.getTotalDifficulty())
                 .nrgConsumed(b.getNrgConsumed())
                 .nrgLimit(b.getNrgLimit())
                 .blockSize(b.getSize())
@@ -379,9 +379,9 @@ public class Block {
                 .txTrieRoot(Utils.sanitizeHex(b.getTxTrieRoot()))
                 .approxNrgReward(Utils.approximate(nrgReward,18))
                 .blockReward(new BigDecimal(b.getBlockReward()))
-                .seed(b.getSeed())
-                .signature(b.getSignature())
-                .publicKey(b.getPublicKey())
+                .seed(Utils.sanitizeHex(b.getSeed()))
+                .signature(Utils.sanitizeHex(b.getSignature()))
+                .publicKey(Utils.sanitizeHex(b.getPublicKey()))
                 .sealType(b.getSealType())
                 .build();
     }
@@ -423,8 +423,8 @@ public class Block {
         String nonce;
         String bloom;
         String solution;
-        long difficulty;
-        long totalDifficulty;
+        BigDecimal difficulty;
+        BigDecimal totalDifficulty;
         long nrgConsumed;
         long nrgLimit;
         long blockSize;
@@ -532,13 +532,13 @@ public class Block {
             return this;
         }
 
-        public BlockBuilder difficulty(long difficulty) {
-            this.difficulty = difficulty;
+        public BlockBuilder difficulty(BigInteger difficulty) {
+            this.difficulty = new BigDecimal(difficulty);
             return this;
         }
 
-        public BlockBuilder totalDifficulty(long totalDifficulty) {
-            this.totalDifficulty = totalDifficulty;
+        public BlockBuilder totalDifficulty(BigInteger totalDifficulty) {
+            this.totalDifficulty = new BigDecimal(totalDifficulty);
             return this;
         }
 
@@ -619,6 +619,16 @@ public class Block {
             block.signature = signature;
             block.sealType = sealType;
             return block;
+        }
+
+        public BlockBuilder difficulty(BigDecimal difficulty) {
+            this.difficulty = difficulty;
+            return this;
+        }
+
+        public BlockBuilder totalDifficulty(BigDecimal totalDifficulty) {
+            this.totalDifficulty = totalDifficulty;
+            return this;
         }
     }
 }

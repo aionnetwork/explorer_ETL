@@ -12,10 +12,7 @@ import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.RollingBlockMean;
 import aion.dashboard.parser.events.ContractEvent;
 import aion.dashboard.util.Utils;
-import org.aion.api.type.BlockDetails;
-import org.aion.api.type.TxDetails;
 import org.aion.util.bytes.ByteUtil;
-import org.aion.zero.impl.core.BloomFilter;
 import org.json.JSONArray;
 
 import java.math.BigDecimal;
@@ -25,6 +22,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 public class Parser extends Producer<ParserBatch> {
     private final Web3Extractor extractor;
@@ -33,7 +31,7 @@ public class Parser extends Producer<ParserBatch> {
     private final TokenParser tokenProd;
     private final Web3Service apiService;
     private final InternalTransactionParser internalTransactionProducer;
-    private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(2);
+    private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     Parser(Web3Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, Web3Service apiService, InternalTransactionParser internalTransactionProducer) {
         super(queue);
@@ -67,13 +65,14 @@ public class Parser extends Producer<ParserBatch> {
         }
     }
 
-    private ParserBatch parseBlk(Iterator<APIBlockDetails> blockDetails) throws Exception {
+    ParserBatch parseBlk(Iterator<APIBlockDetails> blockDetails) throws Exception {
         ParserBatch batchObject = new ParserBatch();
 
         APIBlockDetails block = null;
         List<Message<String>> accountsMessages=new ArrayList<>();
         List<Message<ContractEvent>> tokenMessages = new ArrayList<>();
         List<Message<Void>> internalTxMessages = new ArrayList<>();
+        List<CompletableFuture> futures = new ArrayList<>();
         GENERAL.debug("Starting parser.");
         while (blockDetails.hasNext()) {
             block = blockDetails.next();
@@ -88,8 +87,7 @@ public class Parser extends Producer<ParserBatch> {
             //Add miner
             addressesFromBlock.add(block.getMiner());
             // add block to rolling mean
-            rollingBlockMean.add(block);
-
+            futures.addAll(computeMetricsAsync(batchObject, block));
 
             BigDecimal nrgReward = new BigDecimal(0);
             JSONArray array = new JSONArray();
@@ -139,26 +137,28 @@ public class Parser extends Producer<ParserBatch> {
         if (!internalTxMessages.isEmpty()){
             internalTransactionProducer.submitAll(internalTxMessages);
         }
-        if (lastBlockNumber >= 0) {
-            //run these operation asynchronously
-            final CompletableFuture<Void> future0 = CompletableFuture
-                    .supplyAsync(() -> rollingBlockMean.computeRTMetricsFrom(lastBlockNumber), rollingMeanExecutor)
-                    .thenAcceptAsync(o -> o.ifPresent(batchObject::addMetric), rollingMeanExecutor);
-            final CompletableFuture<Void> future1 = CompletableFuture
-                    .supplyAsync(() -> rollingBlockMean.computeStableMetricsFrom(lastBlockNumber), rollingMeanExecutor)
-                    .thenAcceptAsync(o -> o.ifPresent(batchObject::addMetric), rollingMeanExecutor);
 
-            future0.join();
-            future1.join();
-
-            batchObject.setMeanStates(rollingBlockMean.getStates());
-        }
-
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[]{})).join();
+        batchObject.setMeanStates(rollingBlockMean.getStates());
 
         batchObject.setState(new ParserState(ParserStateServiceImpl.DB_ID, BigInteger.valueOf(lastBlockNumber)));
         batchObject.setBlockChainState(new ParserState(ParserStateServiceImpl.BLKCHAIN_ID,BigInteger.valueOf(apiService.getBlockNumber())));
         return batchObject;
     }//parse blk
+
+    private List<CompletableFuture> computeMetricsAsync(ParserBatch batchObject, APIBlockDetails block) {
+        rollingBlockMean.add(block);
+        final long blockNumber = block.getNumber();
+        var f0 = computeMeanForBlock(rollingBlockMean::computeRTMetricsFrom, blockNumber, batchObject);// calculate the  realtime metrics
+        var f1 = computeMeanForBlock(rollingBlockMean::computeStableMetricsFrom, blockNumber, batchObject);// calculate the stable metrics
+
+        return List.of(f1, f0);
+    }
+
+    private CompletableFuture<?> computeMeanForBlock(Function<Long, Optional<Metrics>> metricFunction, long blockNUmber, ParserBatch batch){
+        return CompletableFuture.supplyAsync(()-> metricFunction.apply(blockNUmber), rollingMeanExecutor)
+                .thenAcceptAsync(o-> o.ifPresent(batch::addMetric));
+    }
 
     private boolean isMinerTx(APIBlockDetails block, APITxDetails tx) {
         return Utils.sanitizeHex(tx.getFrom()).equals(Utils.sanitizeHex(block.getMiner()));

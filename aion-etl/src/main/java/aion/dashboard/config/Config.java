@@ -10,10 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Config {
@@ -37,6 +34,7 @@ public class Config {
     private static final long READER_POLL_DELAY = 1000;
     private static final long READER_ERR_POLL_DELAY = 500;
     private final static long QUEUE_SIZE = 4;
+    private String network;
     private String emailSenderUsername;
     private String emailSenderPassword;
     private List<String> emailRecipients = new ArrayList<>();
@@ -81,7 +79,7 @@ public class Config {
     private List<String> apiConnections = new ArrayList<>();
     private boolean enableVerifier;
     private boolean integrityChecks;
-
+    private String stakingContractAddress;
 
 
 	// no configuration for logging. control it directly from logback
@@ -93,15 +91,15 @@ public class Config {
 
 			JSONObject sql = json.getJSONObject("sql");
 
-			taskType = AbstractGraphingTask.TaskType.valueOf(Optional.ofNullable(System.getenv("TASK_TYPE")).orElse("DB"));
-
-            isTest = Optional.ofNullable(System.getenv("TEST")).orElse("false").equalsIgnoreCase("true");
-            maxHeight = Long.parseLong(Optional.ofNullable(System.getenv("MAX_HEIGHT")).orElse("10000"));
-			sqlUsername = Optional.ofNullable(System.getenv("DB_USER")).orElse("");
-			sqlPassword = Optional.ofNullable(System.getenv("DB_USER_PASSWORD")).orElse("");
-            GeneralLevel = Level.valueOf(Optional.ofNullable(System.getenv("ETL_LOG_LEVEL")).orElse("trace").toUpperCase());
-            IntegrityCheckLevel = Level.valueOf(Optional.ofNullable(System.getenv("INTEGRITY_LEVEL")).orElse("debug").toUpperCase());
-
+			taskType = AbstractGraphingTask.TaskType.valueOf(getFromEnv("TASK_TYPE", "DB"));
+            stakingContractAddress = getFromEnv("STAKING", "");
+            isTest = getFromEnv("TEST", "false").equalsIgnoreCase("true");
+            maxHeight = Long.parseLong(getFromEnv("MAX_HEIGHT", "10000"));
+			sqlUsername = getFromEnv("DB_USER", "");
+			sqlPassword = getFromEnv("DB_USER_PASSWORD", "");
+            GeneralLevel = Level.valueOf(getFromEnv("ETL_LOG_LEVEL", "trace").toUpperCase());
+            IntegrityCheckLevel = Level.valueOf(getFromEnv("INTEGRITY_LEVEL", "debug").toUpperCase());
+            network = json.optString("network","");
 
             web3Providers = json.getJSONArray("web3").toList().stream().map(Object::toString).collect(Collectors.toList());
             enableVerifier = json.optBoolean("enableVerifier", false);
@@ -220,7 +218,15 @@ public class Config {
         }
     }
 
-	public List<String> getApiConnections() {
+    private String getFromEnv(String variableName, String defaultValue) {
+        return Objects.requireNonNullElse(System.getenv(variableName), defaultValue);
+    }
+
+    public String getNetwork() {
+        return network;
+    }
+
+    public List<String> getApiConnections() {
 		return apiConnections;
 	}
 
@@ -385,5 +391,14 @@ public class Config {
 
     public boolean isIntegrityChecks() {
         return integrityChecks;
+    }
+
+    public String getStakingContractAddress() {
+        return stakingContractAddress;
+    }
+
+    public Config setStakingContractAddress(String stakingContractAddress) {
+        this.stakingContractAddress = stakingContractAddress;
+        return this;
     }
 }

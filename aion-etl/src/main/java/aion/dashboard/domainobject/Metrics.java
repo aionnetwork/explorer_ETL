@@ -2,6 +2,7 @@ package aion.dashboard.domainobject;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Objects;
 
 public class Metrics {
 
@@ -22,37 +23,38 @@ public class Metrics {
     private BigDecimal averageHashPower;
     private int id;
     private BigDecimal lastBlockReward;
+    private BigDecimal powBlockDifficulty;
+    private BigDecimal posBlockDifficulty;
+    private BigDecimal powBlockTime;
+    private BigDecimal posBlockTime;
+    private BigDecimal averagePOSIssuance;
+    private BigDecimal percentageOfNetworkStaking;
+    private BigDecimal totalStake;
 
 
     //This constructor is accessed only through a builder as such it is only accessed through the vpn
-    private Metrics(BigInteger totalTransactions,
-                    BigDecimal transactionsPerSecond,
-                    long peakTransactionsPerBlock,
-                    long startBlock,
-                    long endBlock,
-                    BigDecimal averageNrgConsumed,
-                    BigDecimal averageNrgLimit,
-                    BigDecimal averageBlockTime,
-                    BigDecimal averageDifficulty,
-                    long endTimeStamp,
-                    long startTimeStamp,
-                    BigDecimal averageHashPower,
-                    int id,
-                    BigDecimal lastBlockReward) {
-        this.totalTransactions = totalTransactions;
-        this.transactionsPerSecond = transactionsPerSecond;
-        this.peakTransactionsPerBlock = peakTransactionsPerBlock;
-        this.startBlock = startBlock;
-        this.endBlock = endBlock;
-        this.averageNrgConsumed = averageNrgConsumed;
-        this.averageNrgLimit = averageNrgLimit;
-        this.averageBlockTime = averageBlockTime;
-        this.averageDifficulty = averageDifficulty;
-        this.endTimeStamp = endTimeStamp;
-        this.startTimeStamp = startTimeStamp;
-        this.averageHashPower = averageHashPower;
-        this.id = id;
-        this.lastBlockReward = lastBlockReward;
+    private Metrics(MetricsBuilder builder) {
+        this.totalTransactions = builder.totalTransactions;
+        this.transactionsPerSecond = builder.transactionsPerSecond;
+        this.peakTransactionsPerBlock = builder.peakTransactionsPerBlock;
+        this.startBlock = builder.startBlock;
+        this.endBlock = builder.endBlock;
+        this.averageNrgConsumed = builder.averageNrgConsumed;
+        this.averageNrgLimit = builder.averageNrgLimit;
+        this.averageBlockTime = builder.averageBlockTime;
+        this.averageDifficulty = builder.averageDifficulty;
+        this.endTimeStamp = builder.endTimeStamp;
+        this.startTimeStamp = builder.startTimeStamp;
+        this.averageHashPower = builder.averageHashPower;
+        this.id = builder.id;
+        this.lastBlockReward = new BigDecimal(builder.lastBlockReward);
+        this.powBlockDifficulty = builder.powBlockDifficulty;
+        this.posBlockDifficulty = builder.posBlockDifficulty;
+        this.powBlockTime = builder.powBlockTime;
+        this.posBlockTime = builder.posBlockTime;
+        this.averagePOSIssuance = builder.averagePOSIssuance;
+        this.percentageOfNetworkStaking = builder.percentageOfNetworkStaking;
+        this.totalStake = builder.totalStake;
     }
 
     public BigInteger getTotalTransactions() {
@@ -111,6 +113,48 @@ public class Metrics {
         return lastBlockReward;
     }
 
+    public BigDecimal getPowBlockDifficulty() {
+        return powBlockDifficulty;
+    }
+
+    public BigDecimal getPosBlockDifficulty() {
+        return posBlockDifficulty;
+    }
+
+    public BigDecimal getPowBlockTime() {
+        return powBlockTime;
+    }
+
+    public BigDecimal getPosBlockTime() {
+        return posBlockTime;
+    }
+
+    public BigDecimal getAveragePOSIssuance() {
+        return averagePOSIssuance;
+    }
+
+    public BigDecimal getPercentageOfNetworkStaking() {
+        return percentageOfNetworkStaking;
+    }
+
+    public BigDecimal getTotalStake() {
+        return totalStake;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Metrics)) return false;
+        Metrics metrics = (Metrics) o;
+        return endBlock == metrics.endBlock &&
+                id == metrics.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(endBlock, id);
+    }
+
     public static class MetricsBuilder{
 
         private BigInteger totalTransactions;
@@ -127,6 +171,13 @@ public class Metrics {
         private long startTimeStamp;
         private int id;
         private BigInteger lastBlockReward;
+        private BigDecimal powBlockDifficulty;
+        private BigDecimal posBlockDifficulty;
+        private BigDecimal powBlockTime;
+        private BigDecimal posBlockTime;
+        private BigDecimal averagePOSIssuance;
+        private BigDecimal percentageOfNetworkStaking;
+        private BigDecimal totalStake;
 
 
         public MetricsBuilder setTotalTransactions(BigInteger totalTransactions) {
@@ -189,27 +240,44 @@ public class Metrics {
             return this;
         }
 
+        public MetricsBuilder setPowBlockDifficulty(BigDecimal powBlockDifficulty) {
+            this.powBlockDifficulty = powBlockDifficulty;
+            return this;
+        }
+
+        public MetricsBuilder setPosBlockDifficulty(BigDecimal posBlockDifficulty) {
+            this.posBlockDifficulty = posBlockDifficulty;
+            return this;
+        }
+
+        public MetricsBuilder setPowBlockTime(BigDecimal powBlockTime) {
+            this.powBlockTime = powBlockTime;
+            return this;
+        }
+
+        public MetricsBuilder setPosBlockTime(BigDecimal posBlockTime) {
+            this.posBlockTime = posBlockTime;
+            return this;
+        }
+
+
+        public MetricsBuilder setAveragePOSIssuance(BigDecimal averagePOSIssuance) {
+            this.averagePOSIssuance = averagePOSIssuance;
+            return this;
+        }
+
+        public MetricsBuilder setPercentageOfNetworkStaking(BigDecimal percentageOfNetworkStaking) {
+            this.percentageOfNetworkStaking = percentageOfNetworkStaking;
+            return this;
+        }
+
+        public MetricsBuilder setTotalStake(BigDecimal totalStake) {
+            this.totalStake = totalStake;
+            return this;
+        }
 
         public Metrics build(){
-            if (isValid(totalTransactions) && isValid(transactionsPerSecond) && isValid(peakTransactionsPerBlock)
-                    && isValid(startBlock) && isValid(endBlock) && isValid(averageNrgConsumed) && isValid(averageNrgLimit)
-                    && isValid(averageBlockTime) && isValid(averageDifficulty) && isValid(endTimeStamp) && isValid(startTimeStamp)
-                    && isValid(averageHashPower) && (id == RT_ID || id == STABLE_ID)) {
-                return new Metrics(totalTransactions,
-                        transactionsPerSecond,
-                        peakTransactionsPerBlock,
-                        startBlock,
-                        endBlock,
-                        averageNrgConsumed,
-                        averageNrgLimit,
-                        averageBlockTime,
-                        averageDifficulty,
-                        endTimeStamp,
-                        startTimeStamp,
-                        averageHashPower,
-                        id, new BigDecimal(lastBlockReward));
-            }
-            else throw new IllegalStateException("Failed to build metrics: " + this.toString());
+            return new Metrics(this);
         }
 
         @Override
@@ -228,20 +296,6 @@ public class Metrics {
                     ", startTimeStamp=" + startTimeStamp +
                     '}';
         }
-
-        private static boolean isValid(BigDecimal bigDecimal){
-            return bigDecimal !=null && bigDecimal.compareTo(BigDecimal.ZERO) >= 0;
-        }
-
-        private static boolean isValid(long along){
-            return along>=0;
-        }
-
-        private static boolean isValid (BigInteger bigInteger){
-            return bigInteger !=null && bigInteger.compareTo(BigInteger.ZERO) >= 0;
-
-        }
-
 
         public MetricsBuilder setId(int id) {
             this.id = id;
