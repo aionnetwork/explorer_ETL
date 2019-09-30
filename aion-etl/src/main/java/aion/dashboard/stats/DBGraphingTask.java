@@ -114,6 +114,12 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
                 .setValue(bd)
                 .setTimestamp(maxTimestamp)
                 .build()));
+        List<Block> posBlocks = blocks.stream()
+                .filter(b->b.getSealType().equalsIgnoreCase("Pos"))
+                .collect(Collectors.toUnmodifiableList());
+        List<Block> powBlocks = blocks.stream()
+                .filter(b->b.getSealType().equalsIgnoreCase("Pow"))
+                .collect(Collectors.toUnmodifiableList());
 
 
         final BigDecimal blocksMined = BigDecimal.valueOf(blocks.size());
@@ -133,14 +139,23 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
                 .mapToLong(Block::getNumTransactions)// get the size of each transaction list
                 .sum();// sum up the size of the lists
 
-
-        final BigDecimal averageHashPower = (blocks.get(blocks.size() -1).getDifficulty())
-                .divide(averageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
-
-
-
+        final BigDecimal posAverageDifficulty = posBlocks.parallelStream()
+                .map(Block::getDifficulty)//Get the difficulty of each block
+                .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
+                .divide(blocksMined, MathContext.DECIMAL64);//Find the average
 
 
+        final BigDecimal posAverageBlockTime = MetricsCalc.avgBlockTimeDO(posBlocks);// find the average over the period
+
+        final BigDecimal powAverageDifficulty = powBlocks.parallelStream()
+                .map(Block::getDifficulty)//Get the difficulty of each block
+                .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the difficulties
+                .divide(blocksMined, MathContext.DECIMAL64);//Find the average
+
+        final BigDecimal powAverageBlockTime = MetricsCalc.avgBlockTimeDO(powBlocks);// find the average over the period
+
+        final BigDecimal averageHashPower = (powBlocks.get(powBlocks.size() -1).getDifficulty())
+                .divide(powAverageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
 
         Map<String, Integer> minerCount = new HashMap<>();
 
@@ -188,7 +203,10 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
         res.add(builder.setValue(averageDifficulty).setGraphType(Graphing.GraphType.DIFFICULTY).setDetail("").build());
         res.add(builder.setValue(averageHashPower).setGraphType(Graphing.GraphType.HASH_POWER).setDetail("").build());
         res.add(builder.setValue(blocksMined).setGraphType(Graphing.GraphType.BLOCKS_MINED).setDetail("").build());
-
+        res.add(builder.setValue(posAverageBlockTime).setGraphType(Graphing.GraphType.POS_BLOCK_TIME).setDetail("").build());
+        res.add(builder.setValue(powAverageBlockTime).setGraphType(Graphing.GraphType.POW_BLOCK_TIME).setDetail("").build());
+        res.add(builder.setValue(posAverageDifficulty).setGraphType(Graphing.GraphType.POS_DIFFICULTY).setDetail("").build());
+        res.add(builder.setValue(powAverageDifficulty).setGraphType(Graphing.GraphType.POW_DIFFICULTY).setDetail("").build());
         Utils.awaitResult(activeAddressFuture::isDone, result -> result);
 
         if (activeAddressFuture.isCompletedExceptionally()){

@@ -68,7 +68,11 @@ public class Graphing {
         HASH_POWER("Hashing Power"),
         TOP_MINER("Top Miner"),
         TRANSACTION_OVER_TIME("Transactions per hour"),
-        BLOCKS_MINED("Blocks Mined");
+        BLOCKS_MINED("Blocks Mined"),
+        POS_DIFFICULTY("Pos Difficulty"),
+        POW_DIFFICULTY("Pow Difficulty"),
+        POS_BLOCK_TIME("Pos avg block time"),
+        POW_BLOCK_TIME("Pow avg block time");
 
         private String type;
 

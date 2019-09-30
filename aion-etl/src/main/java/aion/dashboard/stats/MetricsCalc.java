@@ -103,6 +103,25 @@ public class MetricsCalc {
         }
     }
 
+    public static BigDecimal avgBlockTimeDO(List<Block> blockDetails) {
+        long res = 0L;
+        long currentBlockTimestamp = -1;
+
+        for (Block blockDetail : blockDetails) {
+            long previousTimestamp = currentBlockTimestamp;// set the previous block timestamp
+            currentBlockTimestamp = blockDetail.getBlockTimestamp();// set the current block timestamp to this block
+            if (previousTimestamp != -1) {
+                //find the block time and sum
+                res += (currentBlockTimestamp - previousTimestamp);
+            }
+        }
+        if (blockDetails.size()<=1) {
+            return BigDecimal.valueOf(-999);
+        } else {
+            return BigDecimal.valueOf(res).divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL32);
+        }
+    }
+
     public static BigDecimal hashRate(List<APIBlockDetails> blockDetails) {
         validateBlockTypes(blockDetails, POW);
         BigDecimal averageBlockTime = avgBlockTime(blockDetails);
