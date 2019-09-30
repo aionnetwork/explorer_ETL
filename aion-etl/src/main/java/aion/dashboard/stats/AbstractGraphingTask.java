@@ -1,4 +1,4 @@
-package aion.dashboard.task;
+package aion.dashboard.stats;
 
 import aion.dashboard.domainobject.Graphing;
 import aion.dashboard.service.GraphingService;

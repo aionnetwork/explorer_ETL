@@ -1,4 +1,4 @@
-package aion.dashboard.task;
+package aion.dashboard.stats;
 
 import aion.dashboard.domainobject.Block;
 import aion.dashboard.domainobject.Graphing;

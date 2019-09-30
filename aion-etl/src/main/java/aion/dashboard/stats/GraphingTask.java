@@ -1,4 +1,4 @@
-package aion.dashboard.task;
+package aion.dashboard.stats;
 
 import aion.dashboard.blockchain.AionService;
 import aion.dashboard.domainobject.Graphing;
@@ -7,8 +7,6 @@ import aion.dashboard.exception.DbServiceException;
 import aion.dashboard.service.*;
 import aion.dashboard.util.TimeLogger;
 import org.aion.api.type.BlockDetails;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -16,8 +14,6 @@ import java.sql.SQLException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public final class GraphingTask extends AbstractGraphingTask<BlockDetails> {

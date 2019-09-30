@@ -1,23 +1,31 @@
-package aion.dashboard.util;
+package aion.dashboard.stats;
 
 import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.config.Config;
+import aion.dashboard.domainobject.Block;
+import aion.dashboard.domainobject.SealInfo;
+import aion.dashboard.domainobject.ValidatorStats;
 import aion.dashboard.service.AccountServiceImpl;
 import aion.dashboard.service.DBService;
+import aion.dashboard.util.Utils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static aion.dashboard.blockchain.type.APIBlock.SealType.POW;
 
 public class MetricsCalc {
+
+    private MetricsCalc(){
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * @param instant     the time for the circulating supply
@@ -119,5 +127,36 @@ public class MetricsCalc {
         if (!blockDetails.isEmpty()) {
             validateBlockTypes(blockDetails, blockDetails.get(0).getSealType());
         }
+    }
+
+    public static List<ValidatorStats> calculateStats(List<SealInfo> sealInfos, Block block){
+        return countValidators(sealInfos).entrySet()
+                .stream()
+                .map(e -> {
+                    String[] splitStr = e.getKey().split("-");
+                    String addr = splitStr[0];// get the address
+                    String sealType = splitStr[1]; // get the seal type
+                    return new ValidatorStats(block.getBlockNumber(),
+                            addr,
+                            sealType,
+                            e.getValue(),
+                            block.getBlockTimestamp(),
+                            sealInfos.size());
+                }).collect(Collectors.toUnmodifiableList());
+    }
+
+    static Map<String, Integer> countValidators(List<SealInfo> sealInfosToGroup){
+        Map<String, Integer> validatorInfoMap = new HashMap<>();
+        for(SealInfo info: sealInfosToGroup){
+            String key = info.getMinerAddress() + "-" + info.getSealType();// create a unique signature for each validator
+            //using their coinbase address and sealed block type
+            if (!validatorInfoMap.containsKey(key)){// first time this validator was encountered
+                validatorInfoMap.put(key, 1);
+            }
+            else {
+                validatorInfoMap.merge(key, 1, Integer::sum);// increment
+            }
+        }
+        return validatorInfoMap;
     }
 }

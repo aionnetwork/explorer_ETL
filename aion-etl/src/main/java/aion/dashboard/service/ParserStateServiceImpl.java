@@ -29,6 +29,7 @@ public class ParserStateServiceImpl implements ParserStateService {
     public static final int ACCOUNT_ID=7;
     public static final int TOKEN_ID=8;
     public static final int INTERNAL_TX_ID=9;
+    public static final int MINING_INFO_STATE=10;
 
     public static ParserStateServiceImpl getInstance() {
         return PARSER_STATE_SERVICE;
@@ -211,6 +212,11 @@ public class ParserStateServiceImpl implements ParserStateService {
     @Override
     public ParserState readTransactionMeanState() {
         return readState().stream().filter(parserState -> parserState.getId() == TRANSACTION_MEAN_ID).findFirst().orElseThrow();
+    }
+
+    @Override
+    public ParserState readMinerInfoState() {
+        return readState().stream().filter(parserState -> parserState.getId() == MINING_INFO_STATE).findFirst().orElseThrow();
     }
 
     @Override

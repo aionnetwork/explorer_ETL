@@ -1,8 +1,11 @@
-package aion.dashboard.service;
+package aion.dashboard.stats;
 
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.Web3ApiException;
+import aion.dashboard.service.ParserStateService;
+import aion.dashboard.stats.RollingBlockMean;
+import aion.dashboard.stats.RollingBlockMeanImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

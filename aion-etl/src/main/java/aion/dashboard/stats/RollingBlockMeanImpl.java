@@ -1,4 +1,4 @@
-package aion.dashboard.service;
+package aion.dashboard.stats;
 
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.blockchain.type.APIBlockDetails;
@@ -6,7 +6,7 @@ import aion.dashboard.config.Config;
 import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.Web3ApiException;
-import aion.dashboard.util.MetricsCalc;
+import aion.dashboard.service.ParserStateServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 import static aion.dashboard.blockchain.type.APIBlock.SealType.POS;
 import static aion.dashboard.blockchain.type.APIBlock.SealType.POW;
-import static aion.dashboard.util.MetricsCalc.*;
+import static aion.dashboard.stats.MetricsCalc.*;
 
 public class RollingBlockMeanImpl implements RollingBlockMean {
     private Set<APIBlockDetails> blockHistory;
@@ -122,15 +122,24 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
             transactionHistory.remove(tx);
             transactionHistory.add(tx);
         }
-        final long minBlock = blockDetails.getNumber() - blockMaxSize;
-
-        blockHistory.removeIf(b -> b.getNumber() <= minBlock);
-        long now = blockDetails.getTimestamp();
-        long weekAgo = now - (transactionTimeWindow * 60);
-
-        transactionHistory.removeIf(st -> st.timeStamp < weekAgo);
         //update the block reward
         this.blockReward.set(blockDetails.getBlockReward());
+    }
+
+    @Override
+    public void updateStates(){
+        Optional<APIBlockDetails> optionalAPIBlockDetails = blockHistory.stream()
+                .max(Comparator.comparingLong(APIBlockDetails::getNumber));
+        if(optionalAPIBlockDetails.isPresent()) {
+            APIBlockDetails blockDetails = optionalAPIBlockDetails.get();
+            final long minBlock = blockDetails.getNumber() - blockMaxSize;
+
+            blockHistory.removeIf(b -> b.getNumber() <= minBlock);
+            long now = blockDetails.getTimestamp();
+            long beginningOfRange = now - (minutesToSeconds(transactionTimeWindow) );
+
+            transactionHistory.removeIf(st -> st.timeStamp <= beginningOfRange);
+        }
     }
 
     public synchronized void reorg(long consistentBlock) {
@@ -184,6 +193,10 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 .collect(Collectors.toList());
     }
 
+    private static long minutesToSeconds(long hours){
+        return hours * 60;
+    }
+
 
     /**
      * TODO consider switching this to a loop
@@ -194,6 +207,10 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
     private Optional<Metrics> doMetricsComputation(List<APIBlockDetails> blockDetails, int id) {
         if (blockDetails.isEmpty()) return Optional.empty();
 
+        //noinspection OptionalGetWithoutIsPresent
+        final long StartTimeStamp = blockDetails.parallelStream().mapToLong(APIBlockDetails::getTimestamp).min().getAsLong();
+        //noinspection OptionalGetWithoutIsPresent
+        final long EndTimeStamp = blockDetails.parallelStream().mapToLong(APIBlockDetails::getTimestamp).max().getAsLong();
         final List<APIBlockDetails> posBlocks = blockDetails.stream()
                 .filter(b->b.getSealType().equals(POS))
                 .collect(Collectors.toUnmodifiableList());
@@ -212,12 +229,15 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)//Accumulate the time
                 .divide(BigDecimal.valueOf(blockDetails.size()).max(BigDecimal.ONE), MathContext.DECIMAL64);// find the average over the period
 
+        final var currTransactionHistory= transactionHistory.stream()
+                .filter(t -> inTimeRange(EndTimeStamp, t))
+                .collect(Collectors.toList());
 
-        final BigInteger transactionsOver24Hrs = transactionHistory.parallelStream()
+        final BigInteger transactionsOver24Hrs = currTransactionHistory.parallelStream()
                 .map(t -> BigInteger.valueOf(t.numberTransactions))
                 .reduce(BigInteger.ZERO,BigInteger::add);
 
-        final long PeakTransactions= transactionHistory.parallelStream()
+        final long PeakTransactions= currTransactionHistory.parallelStream()
                 .mapToLong(t -> t.numberTransactions)
                 .max()
                 .orElse(0);
@@ -233,17 +253,15 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                 .map(b-> b.getTxDetails().stream().map(t-> new BigDecimal(t.getNrgUsed())).reduce(BigDecimal.ZERO,BigDecimal::add))
                 .reduce(BigDecimal.ZERO,BigDecimal::add)
                 .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL128);
-
-        //noinspection OptionalGetWithoutIsPresent
-        final long StartTimeStamp = blockDetails.parallelStream().mapToLong(APIBlockDetails::getTimestamp).min().getAsLong();
-        //noinspection OptionalGetWithoutIsPresent
-        final long EndTimeStamp = blockDetails.parallelStream().mapToLong(APIBlockDetails::getTimestamp).max().getAsLong();
         final BigDecimal averageTxnsPerSecond = blockDetails.parallelStream()
                 .map(b -> BigDecimal.valueOf(b.getTxDetails().size()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(BigDecimal.valueOf(EndTimeStamp - StartTimeStamp).max(BigDecimal.ONE), MathContext.DECIMAL64);
-        final long endBlock =blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).max().getAsLong();
-        final BigDecimal networkStake = MetricsCalc.networkStake(endBlock);
+
+        final APIBlockDetails endBlock =blockDetails.parallelStream()
+                .max(Comparator.comparingLong(APIBlockDetails::getNumber))
+                .orElseThrow();
+        final BigDecimal networkStake = MetricsCalc.networkStake(endBlock.getNumber());
         return Optional.of(
                 new Metrics.MetricsBuilder()
                         .setAverageBlockTime(averageNetworkBlockTime)
@@ -253,13 +271,13 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                         .setAverageNrgLimit(averageNrgLimit)
                         .setStartTimeStamp(StartTimeStamp)
                         .setEndTimeStamp(EndTimeStamp)
-                        .setEndBlock(endBlock)
+                        .setEndBlock(endBlock.getNumber())
                         .setStartBlock(blockDetails.parallelStream().mapToLong(APIBlockDetails::getNumber).min().orElseThrow())
                         .setPeakTransactionsPerBlock(PeakTransactions)
                         .setTotalTransactions(transactionsOver24Hrs)
                         .setTransactionsPerSecond(averageTxnsPerSecond)
                         .setId(id)
-                        .setLastBlockReward(blockReward.get())
+                        .setLastBlockReward(endBlock.getBlockReward())
                         .setPosBlockDifficulty(avgDifficulty(posBlocks))
                         .setPowBlockDifficulty(avgDifficulty(powBlocks))
                         .setPosBlockTime(avgBlockTime(posBlocks))
@@ -271,8 +289,13 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
         );
     }
 
+    private boolean inTimeRange(long endTimeStamp, StrippedTransaction t) {
+        return t.timeStamp<= endTimeStamp && t.timeStamp >= endTimeStamp - minutesToSeconds(transactionTimeWindow);
+    }
+
     @Override
     public List<ParserState> getStates() {
+        updateStates();
         var builder = new ParserState.ParserStateBuilder();
 
         return List.of(

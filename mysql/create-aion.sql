@@ -89,6 +89,7 @@ INSERT INTO `parser_state` VALUES(3,0); 		# to track integrity check head
 INSERT INTO `parser_state` VALUES(4,0); 		# to track the current state of the graph TABLEs
 INSERT INTO `parser_state` VALUES(5,1); 		# to track the start of the rolling window
 INSERT INTO `parser_state` VALUES(6,1); 		# to tract the start of the rolling transaction window
+INSERT INTO `parser_state` VALUE (10,1);
 
 CREATE TABLE `account` (
 `address` VARCHAR(64) NOT NULL,
@@ -323,3 +324,13 @@ create table reorg_details(
 ) engine = InnoDB;
 create index reorg_details_block_number_index on reorg_details(block_number);
 create unique index reorg_details_server_timestamp_index on reorg_details(server_timestamp);
+
+create table validator_stats(
+							block_number bigint not null,
+							miner_address varchar(64) not null,
+							seal_type varchar(4) not null,
+							block_count int not null,
+							block_timestamp bigint not null,
+							percentage_of_blocks_validated decimal(10,7) not null,
+							primary key (block_number, miner_address, seal_type)
+);

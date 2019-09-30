@@ -9,7 +9,7 @@ import aion.dashboard.domainobject.*;
 import aion.dashboard.parser.type.Message;
 import aion.dashboard.parser.type.ParserBatch;
 import aion.dashboard.service.ParserStateServiceImpl;
-import aion.dashboard.service.RollingBlockMean;
+import aion.dashboard.stats.RollingBlockMean;
 import aion.dashboard.parser.events.ContractEvent;
 import aion.dashboard.util.Utils;
 import org.aion.util.bytes.ByteUtil;

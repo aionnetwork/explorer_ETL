@@ -1,4 +1,4 @@
-package aion.dashboard.service;
+package aion.dashboard.stats;
 
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.blockchain.type.APIBlockDetails;
@@ -7,6 +7,7 @@ import aion.dashboard.domainobject.Metrics;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.Web3ApiException;
+import aion.dashboard.service.ParserStateService;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,7 +77,7 @@ public interface RollingBlockMean {
 
     Optional<Metrics> computeStableMetricsFrom(long blockNumber);
     Optional<Metrics> computeRTMetricsFrom(long blockNumber);
-
+    void updateStates();
     List<ParserState> getStates();
 
 }

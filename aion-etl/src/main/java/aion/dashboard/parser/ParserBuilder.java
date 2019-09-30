@@ -1,11 +1,9 @@
 package aion.dashboard.parser;
 
-import aion.dashboard.blockchain.AionService;
-import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.blockchain.Web3Extractor;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.parser.type.ParserBatch;
-import aion.dashboard.service.RollingBlockMean;
+import aion.dashboard.stats.RollingBlockMean;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;

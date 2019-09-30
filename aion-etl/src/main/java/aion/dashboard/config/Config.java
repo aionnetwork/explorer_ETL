@@ -1,6 +1,6 @@
 package aion.dashboard.config;
 
-import aion.dashboard.task.AbstractGraphingTask;
+import aion.dashboard.stats.AbstractGraphingTask;
 import ch.qos.logback.classic.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -68,6 +68,7 @@ public class Config {
     private int TransactionWindowSize;
     private int BlockWindowCountSize;
     private int BlockWindowStableSize;
+    private int minerWindowSize;
     private boolean isTest;
     private long maxHeight;
     private AbstractGraphingTask.TaskType taskType;
@@ -131,7 +132,7 @@ public class Config {
             TransactionWindowSize = rollingMeanConfig.optInt("transactionWindowSize", 24);//in hours
             BlockWindowCountSize = rollingMeanConfig.optInt("blockWindowCountSize", 32);// the count of blocks to include
             BlockWindowStableSize = rollingMeanConfig.optInt("blockWindowTimeSize", 60);// in minutes
-
+            minerWindowSize = rollingMeanConfig.optInt("minerWindowSize", 360 * 24 * 7);
             apiTimeOut = json.optInt("apiTimeOut", 50000);
             JSONObject test = json.getJSONObject("test");
             testLargeLimit = test.getLong("largeLimit");
@@ -400,5 +401,9 @@ public class Config {
     public Config setStakingContractAddress(String stakingContractAddress) {
         this.stakingContractAddress = stakingContractAddress;
         return this;
+    }
+
+    public int getMinerWindowSize() {
+        return minerWindowSize;
     }
 }

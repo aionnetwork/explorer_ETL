@@ -1,8 +1,9 @@
-package aion.dashboard.task;
+package aion.dashboard.stats;
 
 import aion.dashboard.exception.GraphingException;
 import aion.dashboard.service.GraphingService;
 import aion.dashboard.service.GraphingServiceImpl;
+import aion.dashboard.stats.DBGraphingTask;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;

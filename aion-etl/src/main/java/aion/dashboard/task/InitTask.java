@@ -1,28 +1,28 @@
 package aion.dashboard.task;
 
 import aion.dashboard.blockchain.AionService;
-import aion.dashboard.blockchain.Extractor;
 import aion.dashboard.blockchain.Web3Extractor;
 import aion.dashboard.blockchain.Web3ServiceImpl;
 import aion.dashboard.blockchain.interfaces.Web3Service;
 import aion.dashboard.config.BuildVersion;
 import aion.dashboard.config.Config;
 import aion.dashboard.consumer.*;
-import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
+import aion.dashboard.stats.AbstractGraphingTask;
+import aion.dashboard.stats.RollingBlockMean;
+import aion.dashboard.stats.ValidatorStatsTask;
 import aion.dashboard.update.UpdateManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.validation.Validator;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public final class InitTask {
 
@@ -140,8 +140,10 @@ public final class InitTask {
         //Start the graphing process
         AbstractGraphingTask task = AbstractGraphingTask.getInstance(Config.getInstance().getTaskType());
         task.scheduleNow();
-
+        ValidatorStatsTask validatorStatsTask = new ValidatorStatsTask();
+        validatorStatsTask.start();
         //Create the shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(validatorStatsTask::stop));
         Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task));
     }
 

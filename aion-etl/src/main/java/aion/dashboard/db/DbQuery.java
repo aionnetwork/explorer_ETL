@@ -100,7 +100,7 @@ public class DbQuery {
             "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
-
+    public static final String SelectMiningInfoFromBlock = "select block_number, seal_type, miner_address from block where block_number>=? and block_number<=?";
 
     public static final String SelectFromBlockInRange = "Select * from block where block_number between ? and ?";
 
@@ -350,4 +350,13 @@ public class DbQuery {
     public static final String InsertReorgDetails = "Insert into reorg_details (block_number, server_timestamp, block_depth, affected_addresses, number_of_affected_transactions) value (?,?,?,?,?)";
     //------------------------CirculatingSupply---------------------------
     public static final String SelectCirculatingSupply = "Select * from circulating_supply";
+    //
+    public static final String INSERT_MINER_STATS = "insert into validator_stats (block_number," +
+            " miner_address, " +
+            "seal_type," +
+            " block_count, " +
+            "block_timestamp," +
+            " percentage_of_blocks_validated) " +
+            "VALUE (?,?,?,?,?,?);";
+    public static final String DELETE_VALIDATORS = "delete from validator_stats where block_number = ?";
 }

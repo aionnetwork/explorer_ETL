@@ -2,17 +2,14 @@ package aion.dashboard.parser;
 
 import aion.dashboard.blockchain.Web3Extractor;
 import aion.dashboard.blockchain.interfaces.Web3Service;
-import aion.dashboard.domainobject.InternalTransaction;
 import aion.dashboard.domainobject.ParserState;
-import aion.dashboard.domainobject.Token;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.service.ParserStateService;
-import aion.dashboard.service.RollingBlockMean;
+import aion.dashboard.stats.RollingBlockMean;
 import aion.dashboard.util.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.math.BigInteger;
@@ -21,7 +18,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyFloat;
 
 class ParserTest {
     Parser parser;

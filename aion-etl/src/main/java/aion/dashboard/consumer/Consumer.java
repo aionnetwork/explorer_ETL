@@ -1,5 +1,6 @@
 package aion.dashboard.consumer;
 
+import aion.dashboard.db.SharedDBLocks;
 import aion.dashboard.domainobject.ParserState;
 import aion.dashboard.parser.Producer;
 import aion.dashboard.parser.type.*;
@@ -17,8 +18,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Consumer {
 
@@ -32,11 +31,11 @@ public class Consumer {
     private final WriteTask<InternalTransactionBatch> internalTransactionWriterWriteTask;
     private final ReorgService service;
     private final Producer<InternalTransactionBatch> internalTransactionProducer;
-    private final ReadWriteLock dbLock = new ReentrantReadWriteLock();
     private final ScheduledExecutorService workers = Executors.newScheduledThreadPool(4);
     private AtomicBoolean stopRunning = new AtomicBoolean(false);
     private AtomicReference<BigInteger> DB_HEIGHT = new AtomicReference<>(BigInteger.ZERO);
     private final List<Producer> producerList;
+    private SharedDBLocks sharedDbLocks = SharedDBLocks.getInstance();
 
     Consumer(Producer<ParserBatch> blockProducer,
              Producer<TokenBatch> tokenProducer,
@@ -209,20 +208,20 @@ public class Consumer {
 
 
     private void lockReorg() {
-        dbLock.writeLock().lock();
+        sharedDbLocks.lockReorg();
     }
 
     private void lockDBWrite() {
-        dbLock.readLock().lock();
+        sharedDbLocks.lockDBWrite();
     }
 
 
     private void unlockReorg() {
-        dbLock.writeLock().unlock();
+        sharedDbLocks.unlockReorg();
     }
 
     private void unlockDBWrite() {
-        dbLock.readLock().unlock();
+        sharedDbLocks.unlockDBWrite();
     }
 
 

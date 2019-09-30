@@ -2,6 +2,7 @@ package aion.dashboard.service;
 
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.domainobject.Block;
+import aion.dashboard.domainobject.SealInfo;
 import aion.dashboard.domainobject.TokenHolders;
 
 import java.sql.Connection;
@@ -28,4 +29,6 @@ public interface BlockService {
     Optional<List<Block>> getBlocksInTimeRange(long timestampStart, long timestampEnd);
 
     Optional<List<Block>> getBlocksByRange(long numberStart, long numEnd );
+
+    List<SealInfo> getMiningInfo(long start, long end) throws SQLException;
 }

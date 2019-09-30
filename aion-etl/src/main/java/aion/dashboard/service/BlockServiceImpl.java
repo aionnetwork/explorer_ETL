@@ -6,7 +6,6 @@ import aion.dashboard.domainobject.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
 import java.util.ArrayList;
@@ -172,6 +171,9 @@ public class BlockServiceImpl implements BlockService {
                 statesToUpdate.add(builder
                         .blockNumber(BigInteger.valueOf(blockNumber - 1))
                         .id(ParserStateServiceImpl.DB_ID).build());
+                statesToUpdate.add(builder
+                        .blockNumber(BigInteger.valueOf(blockNumber - blockNumber % 360 ))
+                        .id(ParserStateServiceImpl.MINING_INFO_STATE).build());
 
 
                 /*
@@ -353,6 +355,22 @@ public class BlockServiceImpl implements BlockService {
             return executeAndGetBlocks(ps);
         }catch (SQLException e){
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<SealInfo> getMiningInfo(long start, long endInclusive) throws SQLException {
+        try(Connection con= DbConnectionPool.getConnection();
+            PreparedStatement ps = con.prepareStatement(DbQuery.SelectMiningInfoFromBlock)){
+            ps.setLong(1, start);
+            ps.setLong(2, endInclusive);
+            try(ResultSet rs = ps.executeQuery()){
+                ArrayList<SealInfo> res = new ArrayList<>();
+                while (rs.next()){
+                    res.add(new SealInfo(rs.getString("miner_address"), rs.getLong("block_number"), rs.getString("seal_type")));
+                }
+                return res;
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import aion.dashboard.blockchain.interfaces.APIService;
 import aion.dashboard.domainobject.Account;
 import aion.dashboard.service.AccountService;
 import aion.dashboard.util.Tuple2;
+import aion.dashboard.db.SharedDBLocks;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -14,6 +15,7 @@ public class AccountIntegrityCheck extends IntegrityCheck<Account, Tuple2<String
 
     private final AccountService service;
     private final APIService apiService;
+    private final SharedDBLocks sharedDbLocks = SharedDBLocks.getInstance();
 
     AccountIntegrityCheck(AccountService service, APIService apiService) {
         super("acc-integrity-check", "Accounts");
@@ -52,14 +54,17 @@ public class AccountIntegrityCheck extends IntegrityCheck<Account, Tuple2<String
         }
 
         if (!accountsToUpdate.isEmpty()) {
-            if (service.save(accountsToUpdate)) {
-                INTEGRITY_LOGGER.info("Updated accounts.");
-                accountsToUpdate.forEach(account -> INTEGRITY_LOGGER.trace("Update: {}", account.getAddress()));
+            sharedDbLocks.lockDBWrite();
+            try {
+                if (service.save(accountsToUpdate)) {
+                    INTEGRITY_LOGGER.info("Updated accounts.");
+                    accountsToUpdate.forEach(account -> INTEGRITY_LOGGER.trace("Update: {}", account.getAddress()));
+                } else {
+                    INTEGRITY_LOGGER.warn("Failed to update accounts.");
+                }
+            }finally {
+                sharedDbLocks.unlockDBWrite();
             }
-            else {
-                INTEGRITY_LOGGER.warn("Failed to update accounts.");
-            }
-
         }
         return res;
     }
