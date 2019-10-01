@@ -4,6 +4,7 @@ import aion.dashboard.parser.type.Message;
 import aion.dashboard.parser.type.TokenBatch;
 import aion.dashboard.util.Utils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
@@ -33,9 +34,12 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
 
     protected final List<S> task() throws Exception {
         List<Message<T>> records = getMessage();
-        final List<S> tokenBatches = doTask(records);
-        consumeMessage();
-        return tokenBatches;
+        if (records == null) return Collections.emptyList();
+        else {
+            final List<S> batches = doTask(records);
+            consumeMessage();
+            return batches;
+        }
     }
     protected abstract List<S> doTask(List<Message<T>> messages) throws Exception;
     @Override
@@ -50,20 +54,8 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
         return workQueue.poll();
     }
 
-    protected List<Message<T>> getMessage() throws InterruptedException {
-        while (keepLooping()){
-            var res= workQueue.peek();
-            if (res!=null && !res.isEmpty()){
-                return res;
-            }else {
-                if (res != null){
-                    workQueue.poll();// discard any empty elements
-                }
-                Utils.trySleep(100);
-            }
-        }
-
-        throw new InterruptedException();
+    protected List<Message<T>> getMessage() {
+        return workQueue.peek();
     }
 
 

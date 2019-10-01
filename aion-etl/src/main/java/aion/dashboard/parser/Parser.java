@@ -31,7 +31,8 @@ public class Parser extends Producer<ParserBatch> {
     private final TokenParser tokenProd;
     private final Web3Service apiService;
     private final InternalTransactionParser internalTransactionProducer;
-    private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(
+            Math.max(Runtime.getRuntime().availableProcessors()/2, 1));
 
     Parser(Web3Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, Web3Service apiService, InternalTransactionParser internalTransactionProducer) {
         super(queue);

@@ -1,5 +1,6 @@
 package aion.dashboard.parser;
 
+import aion.dashboard.config.Config;
 import aion.dashboard.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,6 @@ public abstract class Producer<T> implements Runnable {
 
                 List<T> res = task();// run the task and store the result only if it is valid
                 if (res != null && !res.isEmpty()) queue.put(res);
-                Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 GENERAL.debug("Thread interrupted. Ending execution.");
@@ -141,7 +141,7 @@ public abstract class Producer<T> implements Runnable {
     }
 
     protected boolean keepLooping() {
-        return (!Thread.currentThread().isInterrupted() && !shouldStop.get());
+        return (Utils.trySleep(Config.getInstance().getDelayPollingMain()) && !shouldStop.get());
     }
 
     public int queueSize(){

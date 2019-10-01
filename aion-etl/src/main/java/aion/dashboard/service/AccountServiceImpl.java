@@ -1,6 +1,5 @@
 package aion.dashboard.service;
 
-import aion.dashboard.cache.CacheManager;
 import aion.dashboard.db.DbConnectionPool;
 import aion.dashboard.db.DbQuery;
 import aion.dashboard.domainobject.Account;
@@ -14,18 +13,20 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AccountServiceImpl implements AccountService {
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private static final AccountServiceImpl INSTANCE = new AccountServiceImpl();
     //TODO change this to 12hrs since this significantly impacts the performance of the ETL
-    private static final CacheManager<String, BigDecimal> totalSupply = CacheManager.getExpiringCache(CacheManager.Cache.CIRCULATING_SUPPLY, Duration.ofSeconds(30), 1);
-    private final String circulatingSupplyStr = "CIRCULATING_SUPPLY";
+    private final AtomicReference<BigDecimal> currCirculatingSupply = new AtomicReference<>(BigDecimal.ZERO);
+    private final AtomicLong lastUpdateInstant = new AtomicLong(0L);
     TimeLogger timeLogger;
 
     public static AccountServiceImpl getInstance() {
@@ -181,9 +182,10 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public BigDecimal sumBalance() throws SQLException {
-        if (AccountServiceImpl.totalSupply.contains(circulatingSupplyStr)){
-            return totalSupply.getIfPresent(circulatingSupplyStr);
+    public synchronized BigDecimal sumBalance(Instant instant) throws SQLException {
+        if (instant.getEpochSecond() - this.lastUpdateInstant.get() <= (12*60*60)){
+            // all data is valid for 12hrs
+            return currCirculatingSupply.get();
         }
         else{
             try(Connection con = DbConnectionPool.getConnection();
@@ -191,7 +193,8 @@ public class AccountServiceImpl implements AccountService {
                 ResultSet rs = ps.executeQuery()){
                 if (rs.next()) {
                     BigDecimal circulatingSupply = Utils.toAion(rs.getBigDecimal(1));
-                    totalSupply.putIfAbsent(circulatingSupplyStr, circulatingSupply);
+                    this.currCirculatingSupply.set(circulatingSupply);
+                    this.lastUpdateInstant.set(instant.getEpochSecond());
                     return circulatingSupply;
                 }
                 else {

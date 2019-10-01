@@ -7,6 +7,7 @@ import aion.dashboard.parser.Producer;
 import aion.dashboard.service.ParserStateService;
 import aion.dashboard.util.Utils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,18 +40,21 @@ public class Web3Extractor extends Producer<APIBlockDetails> {
     @Override
     protected List<APIBlockDetails> task() throws Exception {
         Thread.currentThread().setName("extractor");
+        if (apiService.getBlockNumber() < ptr.get() + 1) {
+            return Collections.emptyList();
+        } else {
+            try {
+                List<APIBlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
 
-        try {
-            List<APIBlockDetails> records = getBlocks(ptr.get() + 1, requestSize);
-
-            if (GENERAL.isTraceEnabled()) {
-                records.forEach(blk-> GENERAL.trace("Retrieved block with block_number: {}", blk.getNumber()));
+                if (GENERAL.isTraceEnabled()) {
+                    records.forEach(blk-> GENERAL.trace("Retrieved block with block_number: {}", blk.getNumber()));
+                }
+                ptr.set(Utils.getLastRecord(records).getNumber());
+                return records;
+            } catch (Web3ApiException e){
+                GENERAL.error("Failed to retrieve blocks at block number {}.", ptr.get());
+                throw e;
             }
-            ptr.set(Utils.getLastRecord(records).getNumber());
-            return records;
-        } catch (Web3ApiException e){
-            GENERAL.error("Failed to retrieve blocks at block number {}.", ptr.get());
-            throw e;
         }
     }
 
@@ -63,7 +67,6 @@ public class Web3Extractor extends Producer<APIBlockDetails> {
     }
 
     private List<APIBlockDetails> getBlocks(long start, int num ) throws Exception {
-        while (apiService.getBlockNumber() < start)Thread.sleep(500);
         long end = Math.min(start + num - 1, apiService.getBlockNumber());
         return apiService.getBlockDetailsInRange(start, end);
     }

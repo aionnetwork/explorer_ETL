@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,5 +27,5 @@ public interface AccountService {
 
     PreparedStatement prepare(Connection con, List<Account> account) throws SQLException;
 
-    BigDecimal sumBalance() throws SQLException;
+    BigDecimal sumBalance(Instant instant) throws SQLException;
 }
