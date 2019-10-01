@@ -89,7 +89,7 @@ INSERT INTO `parser_state` VALUES(3,0); 		# to track integrity check head
 INSERT INTO `parser_state` VALUES(4,0); 		# to track the current state of the graph TABLEs
 INSERT INTO `parser_state` VALUES(5,1); 		# to track the start of the rolling window
 INSERT INTO `parser_state` VALUES(6,1); 		# to tract the start of the rolling transaction window
-INSERT INTO `parser_state` VALUE (10,1);
+INSERT INTO `parser_state` VALUE (10,0);
 
 CREATE TABLE `account` (
 `address` VARCHAR(64) NOT NULL,
@@ -332,5 +332,7 @@ create table validator_stats(
 							block_count int not null,
 							block_timestamp bigint not null,
 							percentage_of_blocks_validated decimal(10,7) not null,
+							average_transactions_per_block decimal(16,10) not null,
 							primary key (block_number, miner_address, seal_type)
 );
+create index validator_stats_block_number_seal_type_index on validator_stats(seal_type, block_number);

@@ -55,7 +55,7 @@ public class ValidatorStatsTask implements Runnable {
         // run every minute
         do {
             try {
-                curr = parserStateService.readMinerInfoState().getBlockNumber().longValue();
+                curr = parserStateService.readMinerInfoState().getBlockNumber().longValue()+1;
                 Thread.currentThread().setName("validator-stats");
 
                 while (!Thread.currentThread().isInterrupted()
@@ -90,7 +90,7 @@ public class ValidatorStatsTask implements Runnable {
     private boolean canUpdate(long curr) {
         try{
             sharedDbLocks.lockDBWrite();
-            return curr + BLOCK_TIME_INTERVAL < parserStateService.readDBState().getBlockNumber().longValue();
+            return curr + BLOCK_TIME_INTERVAL - 1  < parserStateService.readDBState().getBlockNumber().longValue();
         }finally {
             sharedDbLocks.unlockDBWrite();
         }

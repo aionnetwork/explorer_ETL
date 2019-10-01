@@ -4,7 +4,6 @@ import aion.dashboard.domainobject.Block;
 import aion.dashboard.domainobject.SealInfo;
 import aion.dashboard.service.BlockService;
 import aion.dashboard.service.BlockServiceImpl;
-import aion.dashboard.stats.MetricsCalc;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,17 +41,18 @@ class MetricsCalcTest {
         assertTrue(stats.stream().allMatch(stat -> miners.contains(stat.getMinerAddress() + "-" + stat.getSealType())));
 
         List<SealInfo> sealInfos = new ArrayList<>();
+        int transactionNum = 10;
         List<String> address = List.of("a", "b", "c", "d");
         int count = 0;
         for (int j = 0; j < 10; j++) {
 
             for (int i = 0; i <= 2; i++) {
-                sealInfos.add(new SealInfo(address.get(i), count, "POW"));
+                sealInfos.add(new SealInfo(address.get(i), count, "POW", transactionNum));
                 count++;
             }
 
             for (int i = 2; i <= 3; i++) {
-                sealInfos.add(new SealInfo(address.get(i), count, "POS"));
+                sealInfos.add(new SealInfo(address.get(i), count, "POS", transactionNum));
                 count++;
             }
         }
@@ -63,6 +63,7 @@ class MetricsCalcTest {
         assertTrue(stats2.stream().allMatch(m -> m.getPercentageOfBlocksValidated().compareTo(BigDecimal.valueOf(20)) == 0));
         assertTrue(stats2.stream().allMatch(m -> m.getBlockCount() == 10));
         assertTrue(stats2.stream().allMatch(m-> address.contains(m.getMinerAddress())));
+        assertTrue(stats2.stream().allMatch(m-> m.getAverageTransactionsPerBlock().compareTo(BigDecimal.TEN) == 0));
     }
 
     @Test
@@ -71,8 +72,8 @@ class MetricsCalcTest {
         var res = assertDoesNotThrow(() -> MetricsCalc.countValidators(list));
         var miners = list.stream().map(m -> m.getMinerAddress() + "-" + m.getSealType()).collect(Collectors.toSet());
         assertNotNull(res);
-        assertTrue(res.values().stream().allMatch(i -> i >= 1));
-        assertEquals(list.size(), res.values().stream().mapToInt(i -> i).sum());
+        assertTrue(res.values().stream().allMatch(sealInfoList -> sealInfoList.size() >= 1));
+        assertEquals(list.size(), res.values().stream().mapToInt(List::size).sum());
         assertTrue(res.keySet().containsAll(miners));
     }
 }

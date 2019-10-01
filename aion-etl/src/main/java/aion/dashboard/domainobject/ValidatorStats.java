@@ -10,13 +10,15 @@ public class ValidatorStats {
     private final int blockCount;
     private final long blockTimestamp;
     private final BigDecimal percentageOfBlocksValidated;
+    private final BigDecimal averageTransactionsPerBlock;
 
-    public ValidatorStats(long blockNumber, String minerAddress, String sealType, int blockCount, long blockTimestamp, long totalBlockCount) {
+    public ValidatorStats(long blockNumber, String minerAddress, String sealType, int blockCount, long blockTimestamp, long totalBlockCount, BigDecimal averageTxnsPerBlock) {
         this.blockNumber = blockNumber;
         this.minerAddress = minerAddress;
         this.sealType = sealType;
         this.blockCount = blockCount;
         this.blockTimestamp = blockTimestamp;
+        this.averageTransactionsPerBlock = averageTxnsPerBlock;
         this.percentageOfBlocksValidated = BigDecimal.valueOf(blockCount)
                 .scaleByPowerOfTen(2)
                 .divide(BigDecimal.valueOf(totalBlockCount), MathContext.DECIMAL32);
@@ -46,4 +48,7 @@ public class ValidatorStats {
         return percentageOfBlocksValidated;
     }
 
+    public BigDecimal getAverageTransactionsPerBlock() {
+        return averageTransactionsPerBlock;
+    }
 }

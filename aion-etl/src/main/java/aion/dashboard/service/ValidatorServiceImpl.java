@@ -23,6 +23,7 @@ public class ValidatorServiceImpl implements ValidatorService {
             ps.setInt(4, stat.getBlockCount());
             ps.setLong(5, stat.getBlockTimestamp());
             ps.setBigDecimal(6, stat.getPercentageOfBlocksValidated());
+            ps.setBigDecimal(7, stat.getAverageTransactionsPerBlock());
             ps.addBatch();
         }
         return ps;

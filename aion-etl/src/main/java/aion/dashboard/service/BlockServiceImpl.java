@@ -367,7 +367,7 @@ public class BlockServiceImpl implements BlockService {
             try(ResultSet rs = ps.executeQuery()){
                 ArrayList<SealInfo> res = new ArrayList<>();
                 while (rs.next()){
-                    res.add(new SealInfo(rs.getString("miner_address"), rs.getLong("block_number"), rs.getString("seal_type")));
+                    res.add(new SealInfo(rs.getString("miner_address"), rs.getLong("block_number"), rs.getString("seal_type"), rs.getInt("num_transactions")));
                 }
                 return res;
             }

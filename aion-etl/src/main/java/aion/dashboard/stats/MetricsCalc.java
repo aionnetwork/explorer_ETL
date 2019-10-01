@@ -16,7 +16,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static aion.dashboard.blockchain.type.APIBlock.SealType.POW;
@@ -38,7 +37,7 @@ public class MetricsCalc {
             if (config.getNetwork().equalsIgnoreCase("mainnet")) {
                 circulatingSupply = DBService.getInstance().getCirculatingSupply(instant);
             } else {
-                circulatingSupply = AccountServiceImpl.getInstance().sumBalance();
+                circulatingSupply = AccountServiceImpl.getInstance().sumBalance(instant);
             }
             return Optional.of(networkStake.divide(circulatingSupply, MathContext.DECIMAL128).multiply(BigDecimal.valueOf(100)));
 
@@ -158,24 +157,36 @@ public class MetricsCalc {
                     return new ValidatorStats(block.getBlockNumber(),
                             addr,
                             sealType,
-                            e.getValue(),
+                            e.getValue().size(),
                             block.getBlockTimestamp(),
-                            sealInfos.size());
+                            sealInfos.size(),
+                            avgTxnForMiner(e.getValue())
+                           );
                 }).collect(Collectors.toUnmodifiableList());
     }
 
-    static Map<String, Integer> countValidators(List<SealInfo> sealInfosToGroup){
-        Map<String, Integer> validatorInfoMap = new HashMap<>();
+    static Map<String, List<SealInfo>> countValidators(List<SealInfo> sealInfosToGroup){
+        Map<String, List<SealInfo>> validatorInfoMap = new HashMap<>();
         for(SealInfo info: sealInfosToGroup){
             String key = info.getMinerAddress() + "-" + info.getSealType();// create a unique signature for each validator
             //using their coinbase address and sealed block type
             if (!validatorInfoMap.containsKey(key)){// first time this validator was encountered
-                validatorInfoMap.put(key, 1);
+                validatorInfoMap.put(key, new ArrayList<>());
             }
-            else {
-                validatorInfoMap.merge(key, 1, Integer::sum);// increment
-            }
+            validatorInfoMap.get(key).add(info);
         }
         return validatorInfoMap;
+    }
+
+    private static BigDecimal avgNums(List<Integer> integers){
+        return BigDecimal.valueOf(integers.stream()
+                .reduce(0, Integer::sum))
+                .divide(BigDecimal.valueOf(integers.size()), MathContext.DECIMAL32);
+    }
+
+    private static BigDecimal avgTxnForMiner(List<SealInfo> sealInfos){
+        return avgNums(sealInfos.stream()
+                .map(SealInfo::getTransactionNum)
+                .collect(Collectors.toList()));
     }
 }

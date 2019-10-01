@@ -100,7 +100,7 @@ public class DbQuery {
             "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
-    public static final String SelectMiningInfoFromBlock = "select block_number, seal_type, miner_address from block where block_number>=? and block_number<=?";
+    public static final String SelectMiningInfoFromBlock = "select block_number, seal_type, miner_address, num_transactions from block where block_number>=? and block_number<=?";
 
     public static final String SelectFromBlockInRange = "Select * from block where block_number between ? and ?";
 
@@ -356,7 +356,8 @@ public class DbQuery {
             "seal_type," +
             " block_count, " +
             "block_timestamp," +
-            " percentage_of_blocks_validated) " +
-            "VALUE (?,?,?,?,?,?);";
+            " percentage_of_blocks_validated, " +
+            " average_transactions_per_block) " +
+            "VALUE (?,?,?,?,?,?,?);";
     public static final String DELETE_VALIDATORS = "delete from validator_stats where block_number = ?";
 }
