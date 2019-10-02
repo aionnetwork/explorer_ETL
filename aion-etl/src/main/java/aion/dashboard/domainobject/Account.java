@@ -115,6 +115,10 @@ public class Account {
 
     private static final ThreadLocal<AccountBuilder> accountBuilder = ThreadLocal.withInitial(AccountBuilder::new);
 
+    public static AccountBuilder builder() {
+        return accountBuilder.get();
+    }
+
     @Deprecated
     public static Account from(String address, BlockDetails blockDetails, TxDetails tx, BigDecimal balance, BigInteger nonce){
         return accountBuilder.get()

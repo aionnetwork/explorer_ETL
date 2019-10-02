@@ -98,20 +98,24 @@ public class AccountServiceImpl implements AccountService {
             ps.setString(1,address);
             try (ResultSet resultSet = ps.executeQuery()) {
                 if (resultSet.next()) {
-                    Account acc=  new Account.AccountBuilder()
-                            .balance(resultSet.getBigDecimal("balance"))
-                            .address(resultSet.getString("address"))
-                            .contract(resultSet.getInt("contract"))
-                            .nonce(resultSet.getString("nonce"))
-                            .lastBlockNumber(resultSet.getLong("last_block_number"))
-                            .transactionHash(resultSet.getString("transaction_hash"))
-                            .build();
-                    acc.setFirstBlockNumber(resultSet.getLong("first_block_number"));
-                    return acc;
+                    return deserializeAccount(resultSet);
                 }
                 else return null;
             }
         }
+    }
+
+    private Account deserializeAccount(ResultSet resultSet) throws SQLException {
+        Account acc = Account.builder()
+                .balance(resultSet.getBigDecimal("balance"))
+                .address(resultSet.getString("address"))
+                .contract(resultSet.getInt("contract"))
+                .nonce(resultSet.getString("nonce"))
+                .lastBlockNumber(resultSet.getLong("last_block_number"))
+                .transactionHash(resultSet.getString("transaction_hash"))
+                .build();
+        acc.setFirstBlockNumber(resultSet.getLong("first_block_number"));
+        return acc;
     }
 
 
@@ -146,16 +150,7 @@ public class AccountServiceImpl implements AccountService {
         List<Account> list = new ArrayList<>();
         try (ResultSet resultSet = ps.executeQuery()) {
             while (resultSet.next()) {
-                list.add(new Account.AccountBuilder()
-                        .balance((resultSet.getBigDecimal("balance")))
-                        .address(resultSet.getString("address"))
-                        .contract(resultSet.getInt("contract"))
-                        .lastBlockNumber(resultSet.getLong("last_block_number"))
-                        .transactionHash(resultSet.getString("transaction_hash"))
-                        .nonce(resultSet.getString("nonce"))
-                        .build());
-
-
+                list.add(deserializeAccount(resultSet));
             }
         }
         return list;
