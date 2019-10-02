@@ -36,7 +36,7 @@ repositories {
 
 
 group 'aion-etl'
-version = "2.3-${grgit.head().abbreviatedId}-${DateTimeFormatter.ofPattern("hhmm-dd-MM-yyyy").format(ZonedDateTime.now( ZoneId.of("UTC")))}"
+version = "2.4-${grgit.head().abbreviatedId}-${DateTimeFormatter.ofPattern("hhmm-dd-MM-yyyy").format(ZonedDateTime.now( ZoneId.of("UTC")))}"
 
 gversion {
     srcDir       = "src/main/java/"           // path is relative to the sub-project by default
