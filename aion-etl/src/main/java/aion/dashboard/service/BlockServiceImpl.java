@@ -174,6 +174,14 @@ public class BlockServiceImpl implements BlockService {
                 statesToUpdate.add(builder
                         .blockNumber(BigInteger.valueOf(blockNumber - blockNumber % 360 ))
                         .id(ParserStateServiceImpl.MINING_INFO_STATE).build());
+                statesToUpdate.add(builder
+                        .blockNumber(BigInteger.valueOf(blockNumber).subtract(BigInteger.valueOf(2000)))
+                        .id(ParserStateServiceImpl.BLOCK_MEAN_ID).build()
+                );
+                statesToUpdate.add(builder
+                        .blockNumber(BigInteger.valueOf(blockNumber).subtract(BigInteger.valueOf(9000)))
+                        .id(ParserStateServiceImpl.TRANSACTION_MEAN_ID).build()
+                );
 
 
                 /*

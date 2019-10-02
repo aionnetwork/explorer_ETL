@@ -237,7 +237,7 @@ public class DbQuery {
 
     //--------------------------------Metrics-------------------------------------------
 
-    public static final String MetricsInsert = "insert into metrics (" +
+    public static final String MetricsInsert = "replace into metrics (" +
             "id," +
             "total_transaction," +
             "transactions_per_second," +

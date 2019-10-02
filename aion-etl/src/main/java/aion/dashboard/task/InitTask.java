@@ -52,7 +52,7 @@ public final class InitTask {
         } catch (Exception e){
             GENERAL.error("Unexpected error: ",e);
         }
-
+        System.exit(1);
     }
 
     private static void printVersion() {
