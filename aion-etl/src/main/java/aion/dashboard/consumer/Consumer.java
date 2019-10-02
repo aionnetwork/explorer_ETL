@@ -197,7 +197,8 @@ public class Consumer {
             Thread.currentThread().setName("Reorg-Th");
             GENERAL.info("Checking for chain inconsistencies.");
 
-            if (service.reorg()) {
+            while (service.reorg()) {// if a reorg occured ensure that the blocks below
+                //the max depth are also valid
                 reset();
             }
 
