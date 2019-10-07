@@ -6,35 +6,29 @@ import aion.dashboard.parser.Producer;
 import aion.dashboard.parser.type.*;
 import aion.dashboard.service.ParserStateServiceImpl;
 import aion.dashboard.service.ReorgService;
+import aion.dashboard.util.Tuple2;
 import aion.dashboard.util.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class Consumer {
 
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
-    private final Producer<ParserBatch> blockProducer;
-    private final Producer<TokenBatch> tokenProducer;
-    private final Producer<AccountBatch> accountProducer;
-    private final WriteTask<ParserBatch> blockWriter;
-    private final WriteTask<AccountBatch> accountWriter;
-    private final WriteTask<TokenBatch> tokenWriter;
-    private final WriteTask<InternalTransactionBatch> internalTransactionWriterWriteTask;
     private final ReorgService service;
-    private final Producer<InternalTransactionBatch> internalTransactionProducer;
-    private final ScheduledExecutorService workers = Executors.newScheduledThreadPool(4);
+    private final ExecutorService workers = Executors.newSingleThreadScheduledExecutor();
     private AtomicBoolean stopRunning = new AtomicBoolean(false);
     private AtomicReference<BigInteger> DB_HEIGHT = new AtomicReference<>(BigInteger.ZERO);
-    private final List<Producer> producerList;
+    private final List<Tuple2<Producer, WriteTask>> producerWriteTask;
     private SharedDBLocks sharedDbLocks = SharedDBLocks.getInstance();
 
     Consumer(Producer<ParserBatch> blockProducer,
@@ -45,37 +39,43 @@ public class Consumer {
              WriteTask<TokenBatch> tokenWriter,
              WriteTask<InternalTransactionBatch> internalTransactionWriterWriteTask,
              ReorgService service, Producer<InternalTransactionBatch> internalTransactionProducer) {
-
-        this.blockProducer = blockProducer;
-        this.tokenProducer = tokenProducer;
-        this.accountProducer = accountProducer;
-        this.blockWriter = blockWriter;
-        this.accountWriter = accountWriter;
-        this.tokenWriter = tokenWriter;
-        this.internalTransactionWriterWriteTask = internalTransactionWriterWriteTask;
         this.service = service;
-        this.internalTransactionProducer = internalTransactionProducer;
-        producerList = List.of(blockProducer, accountProducer, tokenProducer, internalTransactionProducer);
+        producerWriteTask = List.of(
+                new Tuple2<>(blockProducer, blockWriter),
+                new Tuple2<>(accountProducer, accountWriter),
+                new Tuple2<>(tokenProducer, tokenWriter),
+                new Tuple2<>(internalTransactionProducer, internalTransactionWriterWriteTask));
     }
 
 
     public void start() {
-        workers.scheduleWithFixedDelay(() -> {
-            try {
-                this.reorg();
-            } catch (Exception e) {
-                GENERAL.warn("The reorg failed with the exception: ",e);
-            }
-        }, 0, 10, TimeUnit.SECONDS);
-        workers.submit(this::consumeBlocks);
-        workers.submit(this::consumeTokens);
-        workers.submit(this::consumeAccounts);
-        workers.submit(this::consumeItx);
+        workers.submit(this::consumeAll);
     }
 
+    private void consumeAll(){
+        final String threadName = "Consumer";
+        Thread.currentThread().setName(threadName);
+        GENERAL.info("Starting Consumer");
+        while (keepRunning()){
+            try {
+                reorg();
+                for(var producerWriterPair: producerWriteTask){
+                    //noinspection unchecked
+                    doWrites(producerWriterPair._1(),producerWriterPair._2());
+                }
+            } catch (Exception e) {
+                Thread.currentThread().setName("Loader");
+                GENERAL.error("Caught exception: ", e);
+            }
+        }
+        Thread.currentThread().setName(threadName);
+        GENERAL.debug(threadName);
+    }
 
-    private boolean keepRunning(Producer producer) {
-        return (!Thread.currentThread().isInterrupted() && !stopRunning.get()) || producer.peek().hasNext();
+    private boolean keepRunning(){
+        return Utils.trySleep(1_000L) ||
+                producerWriteTask.stream().map(Tuple2::_1).anyMatch(p-> p.queueSize()>0) ||
+                !stopRunning.get();
     }
 
     public void stop() {
@@ -94,11 +94,12 @@ public class Consumer {
 
     private <T extends AbstractBatch> void doWrites(Producer<T> producer, WriteTask<T> writer) throws Exception {
         lockDBWrite();
+        Thread.currentThread().setName(writer.toString());
         var record = producer.peek();
         try {
             while (record!=null && record.hasNext()) {
                 var batch = record.next();
-                checkpoint(batch.getState());// pause execution if this is a token, account or itx consumer
+                if (shouldWait(batch.getState())) return;// pause execution if this is a token, account or itx consumer
                 GENERAL.debug("Attempting to write batch with block number: {}", batch.getState().getBlockNumber());
                 try {
                     writer.write(batch);
@@ -110,75 +111,21 @@ public class Consumer {
                     DB_HEIGHT.set(batch.getState().getBlockNumber());//signal the new DB height
                 }
             }
+            producer.consume();
         }finally {
             unlockDBWrite();
         }
     }
 
-    private void checkpoint(ParserState state) {
-        while (state.getId() != ParserStateServiceImpl.DB_ID &&
-                state.getBlockNumber().compareTo(DB_HEIGHT.get()) > 0) {// ensure that the main chain is stored first
-            if (!Utils.trySleep(50)) Thread.currentThread().interrupt();
-        }
-    }
-
-
-    private void consumeItx(){
-        Thread.currentThread().setName("itx-loader");
-        load(internalTransactionProducer, internalTransactionWriterWriteTask);
-        GENERAL.info("Ended Internal transaction loader");
-    }
-
-    private void consumeAccounts() {
-        Thread.currentThread().setName("accounts-loader");
-        load(accountProducer, accountWriter);
-        GENERAL.info("Ended Accounts loader");
-    }
-
-    private void consumeBlocks() {
-        Thread.currentThread().setName("block-loader");
-        load(blockProducer, blockWriter);
-        GENERAL.info("Ended block loader");
-    }
-
-    private void consumeTokens() {
-        Thread.currentThread().setName("tokens-loader");
-        load(tokenProducer, tokenWriter);
-        GENERAL.info("Ended Accounts loader");
-
-    }
-
-    private <T extends AbstractBatch> void load(Producer<T> producer, WriteTask<T> writeTask) {
-        while (keepRunning(producer)) {
-            try {
-                getMessage(producer);
-
-                doWrites(producer, writeTask);
-                producer.consume();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                GENERAL.error("Failed to load blocks due to exception:  ",e);
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-    private <T> Iterator<T> getMessage(Producer<T> producer) throws InterruptedException {
-        while (keepRunning(producer)) {
-            var res = producer.peek();
-
-            if (res != null && res.hasNext()) return res;
-            else Utils.trySleep(100);
-
-
-        }
-        throw new InterruptedException();
-
+    private boolean shouldWait(ParserState state) {
+        return state.getId() != ParserStateServiceImpl.DB_ID &&
+                state.getBlockNumber().compareTo(DB_HEIGHT.get()) > 0;
     }
 
     private void reset() {
+        List<Producer> producerList = producerWriteTask.stream()
+                .map(Tuple2::_1)
+                .collect(Collectors.toUnmodifiableList());
         for (var producer: producerList){
             producer.reset();
         }
@@ -194,10 +141,8 @@ public class Consumer {
         lockReorg();
 
         try {
-            Thread.currentThread().setName("Reorg-Th");
-            GENERAL.info("Checking for chain inconsistencies.");
-
-            while (service.reorg()) {// if a reorg occured ensure that the blocks below
+            Thread.currentThread().setName("Reorg");
+            while (service.reorg()) {// if a reorg occurred ensure that the blocks below
                 //the max depth are also valid
                 reset();
             }

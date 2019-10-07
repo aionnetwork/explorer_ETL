@@ -8,13 +8,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.List;
 
-public class TokenWriter implements WriteTask<TokenBatch> {
+public class TokenWriter extends WriteTask<TokenBatch> {
     TokenService tokenService;
     TokenHoldersService tokenHoldersService;
     TokenTransfersService transfersService;
     ParserStateServiceImpl parserStateService;
 
     public TokenWriter(TokenService tokenService, TokenHoldersService tokenHoldersService, TokenTransfersService transfersService, ParserStateServiceImpl parserStateService) {
+        super("Token-Writer");
         this.tokenService = tokenService;
         this.tokenHoldersService = tokenHoldersService;
         this.transfersService = transfersService;
@@ -23,6 +24,7 @@ public class TokenWriter implements WriteTask<TokenBatch> {
 
 
     public TokenWriter(){
+        super("Token Writer");
         tokenService = TokenServiceImpl.getInstance();
         tokenHoldersService = TokenHoldersServiceImpl.getInstance();
         transfersService = TokenTransfersServiceImpl.getInstance();

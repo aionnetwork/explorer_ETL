@@ -9,12 +9,14 @@ import aion.dashboard.service.*;
 import java.sql.Connection;
 import java.util.*;
 
-public class InternalTransactionWriter implements WriteTask<InternalTransactionBatch> {
+public class InternalTransactionWriter extends WriteTask<InternalTransactionBatch> {
 
     private final InternalTransactionService internalTransactionService = InternalTransactionServiceImpl.getInstance();
     private final TransactionService transactionService = TransactionServiceImpl.getInstance();
     private final ContractService contractService = ContractServiceImpl.getInstance();
-
+    public InternalTransactionWriter(){
+        super("ITX-Writer");
+    }
     @Override
     public void write(InternalTransactionBatch records) throws Exception {
 

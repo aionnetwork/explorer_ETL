@@ -11,16 +11,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.List;
 
-public class AccountWriter implements WriteTask<AccountBatch> {
+public class AccountWriter extends WriteTask<AccountBatch> {
     ParserStateService parserStateService;
     AccountService accountService;
 
     public AccountWriter(ParserStateService parserStateService, AccountService accountService) {
+        super("Account-Writer");
         this.parserStateService = parserStateService;
         this.accountService = accountService;
     }
 
     public AccountWriter() {
+        super("Account-Writer");
         parserStateService = ParserStateServiceImpl.getInstance();
         accountService= AccountServiceImpl.getInstance();
 

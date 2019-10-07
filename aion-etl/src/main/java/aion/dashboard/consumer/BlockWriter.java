@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class BlockWriter implements WriteTask<ParserBatch> {
+public class BlockWriter extends WriteTask<ParserBatch> {
 
     private BlockService blockService;
     private TransactionService transactionService;
@@ -21,6 +21,7 @@ public class BlockWriter implements WriteTask<ParserBatch> {
     private TxLogService txLogService;
 
     public BlockWriter(BlockService blockService, TransactionService transactionService, InternalTransferService transferService, ContractService contractService, ParserStateService parserStateService, EventService eventService, MetricsService metricsService) {
+        super("Block-Writer");
         this.blockService = blockService;
         this.transactionService = transactionService;
         this.transferService = transferService;
@@ -31,6 +32,7 @@ public class BlockWriter implements WriteTask<ParserBatch> {
     }
 
     public BlockWriter() {
+        super("Block Writer");
         metricsService = MetricsServiceImpl.getInstance();
         txLogService = TxLogServiceImpl.getInstance();
         blockService = BlockServiceImpl.getInstance();
