@@ -56,15 +56,11 @@ public class ReorgServiceImpl implements ReorgService {
         tokenHoldersService = TokenHoldersServiceImpl.getInstance();
         this.stateService = stateService;
         transactionNum = 0;
-        affectedAddresses = new ArrayList<>();
         reorgLimit = Config.getInstance().getBlockReorgLimit();
     }
 
     private void cleanUp(){
         transactionNum = 0;
-        if (!affectedAddresses.isEmpty()) {
-            affectedAddresses.clear();
-        }
     }
 
     @Override
@@ -89,8 +85,9 @@ public class ReorgServiceImpl implements ReorgService {
                     GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
                     throw new IllegalStateException();
                 } else {
+                    boolean bool = performReorg(consistentBlockPointer);
                     storeDetails(consistentBlockPointer, (int)Math.min(requestedReorgSize, Integer.MAX_VALUE));
-                    return performReorg(consistentBlockPointer);
+                    return bool;
                 }
             }
         }finally {
@@ -256,7 +253,6 @@ public class ReorgServiceImpl implements ReorgService {
         Account.AccountBuilder accountBuilder = new Account.AccountBuilder();
         for (var bal: accounts) {//get updated accounts for these accounts
             APIAccountDetails details = web3Service.getAccountDetails(bal.getAddress());
-            affectedAddresses.add(bal.getAddress());
             accountBuilder.address(bal.getAddress())
                     .contract(bal.getContract())
                     .lastBlockNumber(details.getBlockNumber())
@@ -265,7 +261,8 @@ public class ReorgServiceImpl implements ReorgService {
                     .nonce(details.getNonce().toString(16));
             res.add(accountBuilder.build());
         }
-
+        affectedAddresses = accounts.stream().map(Account::getAddress).collect(Collectors.toUnmodifiableList());
+        affectedAddresses.forEach(System.out::println);
         return res;
     }
 }
