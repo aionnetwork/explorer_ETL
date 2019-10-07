@@ -48,7 +48,6 @@ public class ReorgServiceImpl implements ReorgService {
     private long reorgLimit;
     private List<String> affectedAddresses;
     private long transactionNum;
-    private ObjectWriter writer = new ObjectMapper().writer();
 
     public ReorgServiceImpl(ParserStateService stateService, Web3Service web3Service) {
         this.web3Service = web3Service;
@@ -101,9 +100,9 @@ public class ReorgServiceImpl implements ReorgService {
 
     void storeDetails(long blockNumber, int depth){
         try{
-            String addressString = writer.writeValueAsString(this.affectedAddresses);
+            String addressString = "["+ String.join(",", affectedAddresses) +"]";
             doStore(blockNumber, depth, addressString, transactionNum);
-        } catch (JsonProcessingException | SQLException | RuntimeException e) {
+        } catch (SQLException | RuntimeException e) {
             GENERAL.error("Failed to store reorg details in the database.");
             GENERAL.error("Details: block_number={} \ndepth={}\naddresses={}\ntransaction_num:{}", blockNumber, depth, affectedAddresses, transactionNum);
         }
