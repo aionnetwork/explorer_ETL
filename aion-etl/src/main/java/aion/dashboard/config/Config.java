@@ -93,7 +93,10 @@ public class Config {
 			JSONObject sql = json.getJSONObject("sql");
 
 			taskType = AbstractGraphingTask.TaskType.valueOf(getFromEnv("TASK_TYPE", "DB"));
-            stakingContractAddress = getFromEnv("STAKING", "");
+            stakingContractAddress = getFromEnv("STAKING", null);
+            if (Objects.isNull(stakingContractAddress)) {
+                throw new IllegalStateException("Failed to initialize STAKING in the .env");
+            }
             isTest = getFromEnv("TEST", "false").equalsIgnoreCase("true");
             maxHeight = Long.parseLong(getFromEnv("MAX_HEIGHT", "10000"));
 			sqlUsername = getFromEnv("DB_USER", "");
@@ -213,7 +216,11 @@ public class Config {
 
             queueSize = _queueSize == null? QUEUE_SIZE : _queueSize;
 
-        } catch (Exception e) {
+        }
+		catch (IllegalStateException e){
+		    GENERAL.warn("Failed to correctly set up the environment.", e);
+        }
+		catch (Exception e) {
             GENERAL.debug("Config ERR: Please check that config.json exists and required fields are populated.");
             System.exit(-1);
         }
