@@ -294,8 +294,10 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
                 throw new HttpStatusException(responseEntity.getStatusCode());
             }
         } catch (HttpStatusException e) {
+            GENERAL.error("Caused by web3 provider: {}", endpoint);
             throw new Web3ApiException("Failed to execute call. Method: "+jsonMethod, e);
         } catch (RuntimeException e){
+            GENERAL.error("Caused by web3 provider: {}", endpoint);
             GENERAL.error("Failed deserialization. ", e);
             throw new Web3ApiException("Failed deserialization. Method: "+ jsonMethod);
         }
