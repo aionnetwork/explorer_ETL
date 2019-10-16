@@ -1,15 +1,14 @@
 package aion.dashboard.util;
 
+import org.aion.util.bytes.ByteUtil;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -22,6 +21,18 @@ public class Utils {
 
     private Utils(){
         throw new UnsupportedOperationException("Cannot create an instance of " + Utils.class.getName());
+    }
+
+    public static BigInteger bigIntegerFromHex(String hex) {
+        return ByteUtil.bytesToBigInteger(ByteUtil.hexStringToBytes(hex));
+    }
+
+    public static long longFromHexString(String blockNumber) {
+        return ByteUtil.byteArrayToLong(ByteUtil.hexStringToBytes(blockNumber));
+    }
+
+    public static int intFromHexString(String blockNumber) {
+        return ByteUtil.byteArrayToInt(ByteUtil.hexStringToBytes(blockNumber));
     }
 
     private static final BigDecimal WEI_RATE = BigDecimal.valueOf(10).pow(18);
@@ -78,7 +89,7 @@ public class Utils {
 
 
     public static String sanitizeHex(String address){
-        return address.replaceFirst("^0x","");
+        return Objects.isNull(address) ? "":address.replaceFirst("^0x","");
     }
     public static Optional<String> getValidAddress(String address){
         if (address.length() >= 64){
