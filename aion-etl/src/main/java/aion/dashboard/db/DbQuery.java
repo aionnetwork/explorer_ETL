@@ -96,8 +96,9 @@ public class DbQuery {
             "seed," +
             "public_key," +
             "signature," +
-            "seal_type) " +
-            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+            "seal_type," +
+            "coinbase_address) " +
+            "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static final String SelectFromBlockWhereTimestampBetween = "Select * from block where block_timestamp between ? and ?";
     public static final String SelectMiningInfoFromBlock = "select block_number, seal_type, miner_address, num_transactions from block where block_number>=? and block_number<=?";

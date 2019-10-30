@@ -1,6 +1,9 @@
 package aion.dashboard.util;
 
+import org.aion.crypto.AddressSpecs;
+import org.aion.crypto.ECKeyFac;
 import org.aion.util.bytes.ByteUtil;
+import org.spongycastle.crypto.digests.KeccakDigest;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -180,5 +183,9 @@ public class Utils {
 
     public static boolean compareStrings(String str1, String str2){
         return strip(str1).equalsIgnoreCase(strip(str2));
+    }
+
+    public static String computeAddress(byte[] bytes){
+        return ByteUtil.toHexString(AddressSpecs.computeA0Address(bytes));
     }
 }

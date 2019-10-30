@@ -4,6 +4,7 @@ import aion.dashboard.blockchain.type.APIBlock;
 import aion.dashboard.blockchain.type.APIBlockDetails;
 import aion.dashboard.util.Utils;
 import org.aion.api.type.BlockDetails;
+import org.aion.util.bytes.ByteUtil;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,7 +18,7 @@ public class Block {
 
     private long blockNumber;
     private String blockHash;
-    private String minerAddress;
+    private String coinBase;
     private String parentHash;
     private String receiptTxRoot;
     private String stateRoot;
@@ -46,6 +47,7 @@ public class Block {
     private String signature;
     private String publicKey;
     private String sealType;
+    private String validatorAddress;
 
     public int getBlockYear() {
         return blockYear;
@@ -76,7 +78,7 @@ public class Block {
                 numTransactions == block.numTransactions &&
                 blockTime == block.blockTime &&
                 Objects.equals(blockHash, block.blockHash) &&
-                Objects.equals(minerAddress, block.minerAddress) &&
+                Objects.equals(coinBase, block.coinBase) &&
                 Objects.equals(parentHash, block.parentHash) &&
                 Objects.equals(receiptTxRoot, block.receiptTxRoot) &&
                 Objects.equals(stateRoot, block.stateRoot) &&
@@ -98,7 +100,7 @@ public class Block {
 
     @Override
     public int hashCode() {
-        return Objects.hash(blockNumber, blockHash, minerAddress, parentHash, receiptTxRoot, stateRoot, txTrieRoot, extraData, nonce, bloom, solution, difficulty, totalDifficulty, nrgConsumed, nrgLimit, blockSize, blockTimestamp, numTransactions, blockTime, lastTransactionHash, transactionHashes, nrgReward);
+        return Objects.hash(blockNumber, blockHash, coinBase, parentHash, receiptTxRoot, stateRoot, txTrieRoot, extraData, nonce, bloom, solution, difficulty, totalDifficulty, nrgConsumed, nrgLimit, blockSize, blockTimestamp, numTransactions, blockTime, lastTransactionHash, transactionHashes, nrgReward);
     }
 
     public String getLastTransactionHash() {
@@ -139,12 +141,12 @@ public class Block {
         this.blockHash = blockHash;
     }
 
-    public String getMinerAddress() {
-        return minerAddress;
+    public String getCoinBase() {
+        return coinBase;
     }
 
-    public void setMinerAddress(String minerAddress) {
-        this.minerAddress = minerAddress;
+    public void setCoinBase(String coinBase) {
+        this.coinBase = coinBase;
     }
 
     public String getParentHash() {
@@ -293,7 +295,7 @@ public class Block {
         return "Block{" +
                 "blockNumber=" + blockNumber +
                 ", blockHash='" + blockHash + '\'' +
-                ", minerAddress='" + minerAddress + '\'' +
+                ", minerAddress='" + coinBase + '\'' +
                 ", parentHash='" + parentHash + '\'' +
                 ", receiptTxRoot='" + receiptTxRoot + '\'' +
                 ", stateRoot='" + stateRoot + '\'' +
@@ -326,7 +328,7 @@ public class Block {
                 .blockNumber(b.getNumber())
                 .blockTime(b.getBlockTime())
                 .blockHash(b.getHash().toString())
-                .minerAddress(b.getMinerAddress().toString())
+                .coinBase(b.getMinerAddress().toString())
                 .parentHash(b.getParentHash().toString())
                 .receiptTxRoot(b.getReceiptTxRoot().toString())
                 .stateRoot(b.getStateRoot().toString())
@@ -348,16 +350,19 @@ public class Block {
                 .txTrieRoot(b.getTxTrieRoot().toString())
                 .approxNrgReward(Utils.approximate(nrgReward,18))
                 .blockReward(new BigDecimal(blockReward))
+                .validatorAddress(b.getMinerAddress().toString())
                 .build();
     }
 
 
     public static Block from(APIBlockDetails b, String lastHash, String txList, BigDecimal nrgReward){
+        String validator = b.getSealType().equals(APIBlock.SealType.POS) ? Utils.computeAddress(ByteUtil.hexStringToBytes(b.getPublicKey())) : b.getMiner();
         return threadLocalBuilder.get()
                 .blockNumber(b.getNumber())
                 .blockTime(b.getBlockTime())
                 .blockHash(Utils.sanitizeHex(b.getHash()))
-                .minerAddress(Utils.sanitizeHex(b.getMiner()))
+                .validatorAddress(Utils.sanitizeHex(validator))
+                .coinBase(Utils.sanitizeHex(b.getMiner()))
                 .parentHash(Utils.sanitizeHex(b.getParentHash()))
                 .receiptTxRoot(Utils.sanitizeHex(b.getReceiptsRoot()))
                 .stateRoot(Utils.sanitizeHex(b.getStateRoot()))
@@ -411,10 +416,14 @@ public class Block {
         return sealType;
     }
 
+    public String getValidatorAddress() {
+        return validatorAddress;
+    }
+
     public static class BlockBuilder {
         long blockNumber;
         String blockHash;
-        String minerAddress;
+        String coinBase;
         String parentHash;
         String receiptTxRoot;
         String stateRoot;
@@ -440,6 +449,7 @@ public class Block {
         String signature;
         String publicKey;
         String sealType;
+        private String validatorAddress;
 
         BlockBuilder sealType(APIBlock.SealType sealType){
             this.sealType = sealType.name();
@@ -487,8 +497,8 @@ public class Block {
             return this;
         }
 
-        public BlockBuilder minerAddress(String minerAddress) {
-            this.minerAddress = minerAddress;
+        public BlockBuilder coinBase(String coinBase) {
+            this.coinBase = coinBase;
             return this;
         }
 
@@ -592,7 +602,7 @@ public class Block {
 
             block.blockNumber = blockNumber;
             block.blockHash = blockHash;
-            block.minerAddress = minerAddress;
+            block.coinBase = coinBase;
             block.parentHash = parentHash;
             block.receiptTxRoot = receiptTxRoot;
             block.stateRoot = stateRoot;
@@ -618,6 +628,7 @@ public class Block {
             block.publicKey = publicKey;
             block.signature = signature;
             block.sealType = sealType;
+            block.validatorAddress = validatorAddress;
             return block;
         }
 
@@ -628,6 +639,11 @@ public class Block {
 
         public BlockBuilder totalDifficulty(BigDecimal totalDifficulty) {
             this.totalDifficulty = totalDifficulty;
+            return this;
+        }
+
+        public BlockBuilder validatorAddress(String validatorAddress) {
+            this.validatorAddress = validatorAddress;
             return this;
         }
     }

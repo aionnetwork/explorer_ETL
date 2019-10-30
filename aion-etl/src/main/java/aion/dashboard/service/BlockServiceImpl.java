@@ -309,7 +309,7 @@ public class BlockServiceImpl implements BlockService {
     private void serializeBlock(PreparedStatement ps, Block block) throws SQLException {
         ps.setLong(1, block.getBlockNumber());
         ps.setString(2, block.getBlockHash());
-        ps.setString(3, block.getMinerAddress());
+        ps.setString(3, block.getValidatorAddress());
         ps.setString(4, block.getParentHash());
         ps.setString(5, block.getReceiptTxRoot());
         ps.setString(6, block.getStateRoot());
@@ -338,6 +338,7 @@ public class BlockServiceImpl implements BlockService {
         ps.setString(29, block.getSignature());
         ps.setString(30, block.getPublicKey());
         ps.setString(31, block.getSealType());
+        ps.setString(32, block.getCoinBase());
     }
 
     @Override
@@ -398,7 +399,8 @@ public class BlockServiceImpl implements BlockService {
         Block.BlockBuilder blockBuilder = Block.getBuilder();
         return blockBuilder.blockNumber(rs.getLong("block_number"))
                 .blockHash(rs.getString("block_hash"))
-                .minerAddress(rs.getString("miner_address"))
+                .validatorAddress(rs.getString("miner_address"))
+                .coinBase(rs.getString("coinbase_address"))
                 .parentHash(rs.getString("parent_hash"))
                 .receiptTxRoot(rs.getString("receipt_tx_root"))
                 .stateRoot(rs.getString("state_root"))

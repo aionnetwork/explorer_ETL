@@ -251,7 +251,7 @@ public class APIBlock {
                 return Utils.compareStrings(this.parentHash, block.getParentHash()) && Utils.compareStrings(this.logsBloom, block.getBloom())
                         && this.totalDifficulty.compareTo( block.getTotalDifficulty().toBigIntegerExact()) == 0 && Utils.compareStrings(this.receiptsRoot, block.getReceiptTxRoot())
                         && Utils.compareStrings(this.extraData, (block.getExtraData())) && this.nrgUsed == block.getNrgConsumed()
-                        && Utils.compareStrings(this.nonce, block.getNonce()) && Utils.compareStrings(this.miner, (block.getMinerAddress()))
+                        && Utils.compareStrings(this.nonce, block.getNonce()) && Utils.compareStrings(this.miner, (block.getCoinBase()))
                         && this.difficulty.compareTo(block.getDifficulty().toBigIntegerExact()) ==0 && this.number == block.getBlockNumber()
                         && this.nrgLimit == (block.getNrgLimit()) && Utils.compareStrings(this.solution, (block.getSolution()))
                         && this.size == block.getBlockSize() && Utils.compareStrings(this.transactionsRoot, (block.getTxTrieRoot()))

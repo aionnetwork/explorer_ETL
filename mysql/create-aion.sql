@@ -6,6 +6,7 @@ CREATE TABLE `block` (
 	`block_number` BIGINT,
 	`block_hash` VARCHAR(64),
 	`miner_address` VARCHAR(64),
+	`coinbase_address` varchar(64),
 	`parent_hash` VARCHAR(64),
 	`receipt_tx_root` VARCHAR(64),
 	`state_root` VARCHAR(64),

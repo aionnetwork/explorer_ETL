@@ -163,14 +163,14 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
         for (var blockDetail : blocks) {
 
 
-            if (minerCount.containsKey(blockDetail.getMinerAddress())) {//find all the Miners for this hour
+            if (minerCount.containsKey(blockDetail.getValidatorAddress())) {//find all the Miners for this hour
 
-                int count = minerCount.get(blockDetail.getMinerAddress());
-                minerCount.replace(blockDetail.getMinerAddress(), count + 1);
+                int count = minerCount.get(blockDetail.getValidatorAddress());
+                minerCount.replace(blockDetail.getValidatorAddress(), count + 1);
 
 
             } else {
-                minerCount.put(blockDetail.getMinerAddress(), 1);
+                minerCount.put(blockDetail.getValidatorAddress(), 1);
             }
 
 
