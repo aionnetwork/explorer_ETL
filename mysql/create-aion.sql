@@ -91,6 +91,7 @@ INSERT INTO `parser_state` VALUES(4,0); 		# to track the current state of the gr
 INSERT INTO `parser_state` VALUES(5,1); 		# to track the start of the rolling window
 INSERT INTO `parser_state` VALUES(6,1); 		# to tract the start of the rolling transaction window
 INSERT INTO `parser_state` VALUE (10,0);
+INSERT INTO `parser_state` VALUE (11,0);
 
 CREATE TABLE `account` (
 `address` VARCHAR(64) NOT NULL,
@@ -337,3 +338,31 @@ create table validator_stats(
 							primary key (block_number, miner_address, seal_type)
 );
 create index validator_stats_block_number_seal_type_index on validator_stats(seal_type, block_number);
+
+create table transaction_stats(
+	number_of_transaction      bigint not null,
+	block_number               bigint not null
+		primary key,
+	block_timestamp            bigint not null,
+	number_of_active_addresses bigint not null,
+	total_transferred  		   decimal(33,1) not null
+);
+
+create unique index transaction_stats_block_timestamp_index
+	on transaction_stats (block_timestamp);
+
+create table account_stats
+(
+	block_number    bigint      not null,
+	address         varchar(64) not null,
+	aion_in         decimal(33,1) not null,
+	aion_out        decimal(33,1) not null,
+	block_timestamp bigint      not null,
+	primary key (block_number, address)
+);
+
+create index account_stats_address_index
+	on account_stats (address);
+
+create index account_stats_block_number_index
+	on account_stats (block_number);

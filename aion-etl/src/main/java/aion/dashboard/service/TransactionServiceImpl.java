@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -103,7 +104,7 @@ public class TransactionServiceImpl implements TransactionService {
         PreparedStatement ps = null;
 
         try{
-            con=DbConnectionPool.getConnection ();
+            con= DbConnectionPool.getConnection ();
             ps = con.prepareStatement(DbQuery.TransactionInsert);
 
             for(Transaction transaction:transactions) {
@@ -222,6 +223,22 @@ public class TransactionServiceImpl implements TransactionService {
         return result;
     }
 
+    public List<Transaction> getTransactionsInRange(long start, long end) throws SQLException {
+        List<Transaction> result = new ArrayList<>();
+
+        try(Connection con= DbConnectionPool.getConnection()){
+            try(PreparedStatement ps = con.prepareStatement("Select * from transaction where block_number between ? and ?")){
+                ps.setLong(1, start);
+                ps.setLong(2, end);
+
+                try(ResultSet rs = ps.executeQuery()){
+                    while (rs.next()) result.add(deserializeTransaction(rs));
+                }
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
     @Override
     public List<Transaction> getTransactionByBlockNumber(long blockNumber) throws SQLException {
 
@@ -234,27 +251,7 @@ public class TransactionServiceImpl implements TransactionService {
                 try (var res = ps.executeQuery()) {
 
                     while (res.next()) {
-                        result.add(new Transaction.TransactionBuilder()
-                                .setTransactionHash(res.getString("transaction_hash"))
-                                .setBlockHash(res.getString("block_hash"))
-                                .setBlockNumber(res.getLong("block_number"))
-                                .setBlockTimestamp(res.getLong("block_timestamp"))
-                                .setTransactionIndex(res.getLong("transaction_index"))
-                                .setFromAddr(res.getString("from_addr"))
-                                .setToAddr(res.getString("to_addr"))
-                                .setNrgConsumed(res.getLong("nrg_consumed"))
-                                .setNrgPrice(res.getLong("nrg_price"))
-                                .setApproxValue(res.getDouble("approx_value"))
-                                .setTransactionTimestamp(res.getBigDecimal("transaction_timestamp").longValue())
-                                .setValue(res.getBigDecimal("value"))
-                                .setTransactionLog(res.getString("transaction_log"))
-                                .setData(res.getString("data"))
-                                .setNonce(res.getString("nonce"))
-                                .setTxError(res.getString("tx_error"))
-                                .setContractAddr(res.getString("contract_addr"))
-                                .setType(res.getString("type"))
-                                .build());
-
+                        result.add(deserializeTransaction(res));
                     }
                 }
 
@@ -262,6 +259,29 @@ public class TransactionServiceImpl implements TransactionService {
             }
         }
         return result;
+    }
+
+    private Transaction deserializeTransaction(ResultSet res) throws SQLException {
+        return new Transaction.TransactionBuilder()
+                .setTransactionHash(res.getString("transaction_hash"))
+                .setBlockHash(res.getString("block_hash"))
+                .setBlockNumber(res.getLong("block_number"))
+                .setBlockTimestamp(res.getLong("block_timestamp"))
+                .setTransactionIndex(res.getLong("transaction_index"))
+                .setFromAddr(res.getString("from_addr"))
+                .setToAddr(res.getString("to_addr"))
+                .setNrgConsumed(res.getLong("nrg_consumed"))
+                .setNrgPrice(res.getLong("nrg_price"))
+                .setApproxValue(res.getDouble("approx_value"))
+                .setTransactionTimestamp(res.getBigDecimal("transaction_timestamp").longValue())
+                .setValue(res.getBigDecimal("value"))
+                .setTransactionLog(res.getString("transaction_log"))
+                .setData(res.getString("data"))
+                .setNonce(res.getString("nonce"))
+                .setTxError(res.getString("tx_error"))
+                .setContractAddr(res.getString("contract_addr"))
+                .setType(res.getString("type"))
+                .build();
     }
 
 

@@ -3,11 +3,15 @@ package aion.dashboard.service;
 import aion.dashboard.db.DbConnectionPool;
 import aion.dashboard.db.DbQuery;
 import aion.dashboard.domainobject.*;
+import aion.dashboard.stats.TransactionStatsTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigInteger;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -174,6 +178,10 @@ public class BlockServiceImpl implements BlockService {
                 statesToUpdate.add(builder
                         .blockNumber(BigInteger.valueOf(blockNumber - blockNumber % 360 ))
                         .id(ParserStateServiceImpl.MINING_INFO_STATE).build());
+                statesToUpdate.add(builder
+                    .blockNumber(BigInteger.valueOf((blockNumber - blockNumber % TransactionStatsTask.FREQUENCY) -
+                            TransactionStatsTask.NUM_BLOCKS_IN_DAY))
+                    .id(ParserStateServiceImpl.ACCOUNT_STATS_INFO).build());
                 statesToUpdate.add(builder
                         .blockNumber(BigInteger.valueOf(blockNumber).subtract(BigInteger.valueOf(2000)))
                         .id(ParserStateServiceImpl.BLOCK_MEAN_ID).build()

@@ -24,4 +24,5 @@ public interface TransactionService {
     PreparedStatement prepare(Connection con, List<Transaction> transactions) throws SQLException;
 
     PreparedStatement prepareInternalTransactionUpdate(Connection con, String transactionHash, int count) throws SQLException;
+    List<Transaction> getTransactionsInRange(long start, long end) throws SQLException;
 }

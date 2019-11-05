@@ -20,6 +20,10 @@ public class SharedDBLocks {
         dbLock.readLock().lock();
     }
 
+    public boolean tryLockDbWrite(){
+        return dbLock.readLock().tryLock();
+    }
+
     public void unlockReorg() {
         dbLock.writeLock().unlock();
     }

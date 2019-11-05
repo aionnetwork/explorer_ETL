@@ -221,7 +221,7 @@ public class Config {
 		    GENERAL.warn("Failed to correctly set up the environment.", e);
         }
 		catch (Exception e) {
-            GENERAL.debug("Config ERR: Please check that config.json exists and required fields are populated.");
+            GENERAL.debug("Config ERR: Please check that config.json exists and required fields are populated.",e);
             System.exit(-1);
         }
     }

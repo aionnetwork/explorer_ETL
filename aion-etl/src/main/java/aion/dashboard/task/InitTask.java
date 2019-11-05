@@ -13,12 +13,12 @@ import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
 import aion.dashboard.stats.AbstractGraphingTask;
 import aion.dashboard.stats.RollingBlockMean;
+import aion.dashboard.stats.TransactionStatsTask;
 import aion.dashboard.stats.ValidatorStatsTask;
 import aion.dashboard.update.UpdateManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.validation.Validator;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -142,7 +142,10 @@ public final class InitTask {
         task.scheduleNow();
         ValidatorStatsTask validatorStatsTask = new ValidatorStatsTask();
         validatorStatsTask.start();
+        TransactionStatsTask transactionStatsTask = new TransactionStatsTask();
+        transactionStatsTask.start();
         //Create the shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(transactionStatsTask::stop));
         Runtime.getRuntime().addShutdownHook(new Thread(validatorStatsTask::stop));
         Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task));
     }

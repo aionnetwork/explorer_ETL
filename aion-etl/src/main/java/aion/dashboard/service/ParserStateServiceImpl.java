@@ -11,7 +11,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,6 +29,7 @@ public class ParserStateServiceImpl implements ParserStateService {
     public static final int TOKEN_ID=8;
     public static final int INTERNAL_TX_ID=9;
     public static final int MINING_INFO_STATE=10;
+    public static final int ACCOUNT_STATS_INFO=11;
 
     public static ParserStateServiceImpl getInstance() {
         return PARSER_STATE_SERVICE;
@@ -217,6 +217,11 @@ public class ParserStateServiceImpl implements ParserStateService {
     @Override
     public ParserState readMinerInfoState() {
         return readState().stream().filter(parserState -> parserState.getId() == MINING_INFO_STATE).findFirst().orElseThrow();
+    }
+
+    @Override
+    public ParserState readAccountInfoState() {
+        return readState().stream().filter(parserState -> parserState.getId() == ACCOUNT_STATS_INFO).findFirst().orElseThrow();
     }
 
     @Override

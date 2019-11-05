@@ -27,6 +27,7 @@ public interface ParserStateService {
     ParserState readBlockMeanState();
     ParserState readTransactionMeanState();
     ParserState readMinerInfoState();
+    ParserState readAccountInfoState();
 
     PreparedStatement prepare(Connection con, List<ParserState> parser_stateList) throws SQLException;
 
