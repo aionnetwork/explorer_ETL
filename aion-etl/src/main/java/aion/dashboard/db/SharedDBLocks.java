@@ -10,7 +10,7 @@ public class SharedDBLocks {
         return instance;
     }
 
-    private final ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock dbLock = new ReentrantReadWriteLock(true);
 
     public void lockReorg() {
         dbLock.writeLock().lock();

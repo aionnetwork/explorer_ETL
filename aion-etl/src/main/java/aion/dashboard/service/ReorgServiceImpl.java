@@ -9,6 +9,7 @@ import aion.dashboard.cache.CacheManager;
 import aion.dashboard.config.Config;
 import aion.dashboard.db.DbConnectionPool;
 import aion.dashboard.db.DbQuery;
+import aion.dashboard.db.SharedDBLocks;
 import aion.dashboard.domainobject.*;
 import aion.dashboard.exception.AionApiException;
 import aion.dashboard.exception.Web3ApiException;
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
 public class ReorgServiceImpl implements ReorgService {
 
     private static final TimeLogger TIME_LOGGER = new TimeLogger(ReorgService.class.getName());
-
+    private static final SharedDBLocks sharedLock = SharedDBLocks.getInstance();
     private static final Logger GENERAL = LoggerFactory.getLogger("logger_general");
     private final Web3Service web3Service;
     private final CacheManager<String, ATSToken> atsTokenCacheManager = CacheManager.getManager(CacheManager.Cache.ATS_TOKEN);
@@ -85,9 +86,16 @@ public class ReorgServiceImpl implements ReorgService {
                     GENERAL.debug("Reorg: Negative re-org range requested: {}", requestedReorgSize);
                     throw new IllegalStateException();
                 } else {
-                    boolean bool = performReorg(consistentBlockPointer);
-                    storeDetails(consistentBlockPointer, (int)Math.min(requestedReorgSize, Integer.MAX_VALUE));
-                    return bool;
+                    sharedLock.lockReorg();// This is the only critical section. Previously we were blocking writes during
+                    //the entire reorg process. This caused a failure in the consumer thread if any other db write was occurring
+                    //Therefore we will enforce the reorg lock only in the case that a reorg needs to occur
+                    try {
+                        boolean bool = performReorg(consistentBlockPointer);
+                        storeDetails(consistentBlockPointer, (int) Math.min(requestedReorgSize, Integer.MAX_VALUE));
+                        return bool;
+                    }finally {
+                        sharedLock.unlockReorg();
+                    }
                 }
             }
         }finally {

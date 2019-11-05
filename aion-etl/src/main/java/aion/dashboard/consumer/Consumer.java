@@ -138,32 +138,15 @@ public class Consumer {
 
 
     private void reorg() throws Exception {
-        lockReorg();
-
-        try {
-            Thread.currentThread().setName("Reorg");
-            while (service.reorg()) {// if a reorg occurred ensure that the blocks below
-                //the max depth are also valid
-                reset();
-            }
-
-        } finally {
-            unlockReorg();
+        Thread.currentThread().setName("Reorg");
+        while (service.reorg()) {// if a reorg occurred ensure that the blocks below
+            //the max depth are also valid
+            reset();
         }
-    }
-
-
-    private void lockReorg() {
-        sharedDbLocks.lockReorg();
     }
 
     private void lockDBWrite() {
         sharedDbLocks.lockDBWrite();
-    }
-
-
-    private void unlockReorg() {
-        sharedDbLocks.unlockReorg();
     }
 
     private void unlockDBWrite() {
