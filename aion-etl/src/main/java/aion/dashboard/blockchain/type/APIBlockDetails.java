@@ -225,6 +225,44 @@ public class APIBlockDetails {
         return blockReward;
     }
 
+    @Override
+    public String toString() {
+        return "APIBlockDetails{" +
+                "numTransactions=" + numTransactions +
+                ", logsBloom='" + logsBloom + '\'' +
+                ", totalDifficulty=" + totalDifficulty +
+                ", receiptsRoot='" + receiptsRoot + '\'' +
+                ", extraData='" + extraData + '\'' +
+                ", nrgUsed=" + nrgUsed +
+                ", miner='" + miner + '\'' +
+                ", difficulty=" + difficulty +
+                ", number=" + number +
+                ", gasLimit='" + gasLimit + '\'' +
+                ", gasUsed='" + gasUsed + '\'' +
+                ", nrgLimit=" + nrgLimit +
+                ", size=" + size +
+                ", transactionsRoot='" + transactionsRoot + '\'' +
+                ", stateRoot='" + stateRoot + '\'' +
+                ", parentHash='" + parentHash + '\'' +
+                ", hash='" + hash + '\'' +
+                ", timestamp=" + timestamp +
+                ", txDetails=" + txDetails +
+                ", isMainChain=" + isMainChain +
+                ", antiParentHash='" + antiParentHash + '\'' +
+                ", blockTime=" + blockTime +
+                ", txTrieRoot='" + txTrieRoot + '\'' +
+                ", bloom='" + bloom + '\'' +
+                ", blockReward=" + blockReward +
+                ", sealType=" + sealType +
+                ", seed='" + seed + '\'' +
+                ", miningDifficulty=" + miningDifficulty +
+                ", signature='" + signature + '\'' +
+                ", publicKey='" + publicKey + '\'' +
+                ", solution='" + solution + '\'' +
+                ", nonce='" + nonce + '\'' +
+                ", stakingDifficulty=" + stakingDifficulty +
+                '}';
+    }
 
     @JsonPOJOBuilder(withPrefix = "set", buildMethodName = "create")
     public static class Builder{

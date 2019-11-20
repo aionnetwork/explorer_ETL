@@ -132,6 +132,31 @@ public class APITxDetails {
         return nrgLimit;
     }
 
+    @Override
+    public String toString() {
+        return "APITxDetails{" +
+                "blockHash='" + blockHash + '\'' +
+                ", nrgPrice=" + nrgPrice +
+                ", nrgUsed=" + nrgUsed +
+                ", contractAddress='" + contractAddress + '\'' +
+                ", transactionIndex=" + transactionIndex +
+                ", transactionHash='" + transactionHash + '\'' +
+                ", blockNumber=" + blockNumber +
+                ", from='" + from + '\'' +
+                ", to='" + to + '\'' +
+                ", logs=" + logs +
+                ", status='" + status + '\'' +
+                ", input='" + input + '\'' +
+                ", timestamp=" + timestamp +
+                ", error='" + error + '\'' +
+                ", nonce=" + nonce +
+                ", type=" + type +
+                ", value=" + value +
+                ", hasInternalTransactions=" + hasInternalTransactions +
+                ", nrgLimit=" + nrgLimit +
+                '}';
+    }
+
     @JsonPOJOBuilder(buildMethodName = "create", withPrefix = "set")
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     public static class Builder {

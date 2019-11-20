@@ -111,6 +111,21 @@
         <appender-ref ref="appender_integrity" />
     </appender>
     <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+    <appender name="appender_parser" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_BASE}/parser.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${LOG_ARCHIVE}/integrity/parser.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>15</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>100MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%date{"yyyy-MM-dd'T'HH:mm:ss.SSS"}| %-5level | [%thread]: %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
     <logger name="logger_analytics" level="debug" additivity="false">
         <appender-ref ref="appenderasync_analytics"/>
     </logger>
@@ -119,6 +134,9 @@
         <appender-ref ref="appenderasync_console"/>
         <!--all error-level logs trigger email-->
         <!--appender-ref ref="appender_email"/-->
+    </logger>
+    <logger name="logger_parser" level="trace" additivity="false">
+        <appender-ref ref="appender_parser"/>
     </logger>
     <logger name="logger_integrity" level="trace" additivity="false">
         <appender-ref ref="appenderasync_integrity"/>

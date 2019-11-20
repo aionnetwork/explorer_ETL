@@ -14,6 +14,8 @@ import aion.dashboard.parser.events.ContractEvent;
 import aion.dashboard.util.Utils;
 import org.aion.util.bytes.ByteUtil;
 import org.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -33,6 +35,7 @@ public class Parser extends Producer<ParserBatch> {
     private final InternalTransactionParser internalTransactionProducer;
     private final ExecutorService rollingMeanExecutor = Executors.newFixedThreadPool(
             Math.max(Runtime.getRuntime().availableProcessors()/2, 1));
+    private static final Logger parserLogger = LoggerFactory.getLogger("logger_parser");
 
     Parser(Web3Extractor extractor, BlockingQueue<List<ParserBatch>> queue, RollingBlockMean rollingBlockMean, IdleProducer<?, String> accountProd, TokenParser tokenProd, Web3Service apiService, InternalTransactionParser internalTransactionProducer) {
         super(queue);
@@ -77,53 +80,59 @@ public class Parser extends Producer<ParserBatch> {
         GENERAL.debug("Starting parser.");
         while (blockDetails.hasNext()) {
             block = blockDetails.next();
+            try {
+                Set<String> addressesFromBlock = new HashSet<>();
+                //loop through blocks
 
-            Set<String> addressesFromBlock=new HashSet<>();
-            //loop through blocks
-
-            if (GENERAL.isTraceEnabled()) {
-                GENERAL.trace("Parsing block: {}. With hash: {}", block.getNumber(), block.getHash());
-            }
-
-            //Add miner
-            addressesFromBlock.add(block.getMiner());
-            // add block to rolling mean
-            futures.addAll(computeMetricsAsync(batchObject, block));
-
-            BigDecimal nrgReward = new BigDecimal(0);
-            JSONArray array = new JSONArray();
-            final List<APITxDetails> txDetails = block.getTxDetails();
-            var canRead = Parsers.containsReadableEvent(ByteUtil.hexStringToBytes(block.getBloom()));
-            //loop through the transactions
-            for (var tx : txDetails) {
-                array.put(Utils.sanitizeHex(tx.getTransactionHash()));
-
-                final Optional<Contract> contract = Parsers.readContract(tx, block);
-                contract.ifPresent(contract1 -> {
-                    registerContracts(contract1);
-                    batchObject.addContract(contract1);
-                });//Attempt to read the contract information
-                addressesFromBlock.addAll(Parsers.accFromTransaction(tx));
-
-
-                if (!isMinerTx(block, tx)) {
-                    nrgReward = nrgReward.add(new BigDecimal(tx.getNrgPrice()).multiply(new BigDecimal(tx.getNrgUsed())));
+                if (GENERAL.isTraceEnabled()) {
+                    GENERAL.trace("Parsing block: {}. With hash: {}", block.getNumber(), block.getHash());
                 }
 
-                batchObject.addTx(Transaction.from(tx, block));
-                batchObject.addTxLogs(TxLog.logsFrom(block, tx));
-                Parsers.parseEvents(batchObject, block, tokenMessages, canRead, tx);
+                //Add miner
+                addressesFromBlock.add(block.getMiner());
+                // add block to rolling mean
+                futures.addAll(computeMetricsAsync(batchObject, block));
+
+                BigDecimal nrgReward = new BigDecimal(0);
+                JSONArray array = new JSONArray();
+                final List<APITxDetails> txDetails = block.getTxDetails();
+                var canRead = Parsers.containsReadableEvent(ByteUtil.hexStringToBytes(block.getBloom()));
+                //loop through the transactions
+                for (var tx : txDetails) {
+                    array.put(Utils.sanitizeHex(tx.getTransactionHash()));
+
+                    final Optional<Contract> contract = Parsers.readContract(tx, block);
+                    contract.ifPresent(contract1 -> {
+                        registerContracts(contract1);
+                        batchObject.addContract(contract1);
+                    });//Attempt to read the contract information
+                    addressesFromBlock.addAll(Parsers.accFromTransaction(tx));
+
+
+                    if (!isMinerTx(block, tx)) {
+                        nrgReward = nrgReward.add(new BigDecimal(tx.getNrgPrice()).multiply(new BigDecimal(tx.getNrgUsed())));
+                    }
+
+                    batchObject.addTx(Transaction.from(tx, block));
+                    batchObject.addTxLogs(TxLog.logsFrom(block, tx));
+                    Parsers.parseEvents(batchObject, block, tokenMessages, canRead, tx);
+                }
+
+
+                var firstTxHash = Parsers.getFirstTxHash(txDetails);
+
+
+                batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward));
+
+                accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty() ? null : txDetails.get(0)));
+                internalTxMessages.add(new Message<>(null, block, null));
+            }catch (Exception e){
+                parserLogger.error("Failed to parse block: {}", block );
+                parserLogger.error("Attempting to reset extractor");
+                extractor.reset();
+                awaitExtractorReset();
+                throw e;
             }
-
-
-            var firstTxHash = Parsers.getFirstTxHash(txDetails);
-
-
-            batchObject.addBlock(Block.from(block, firstTxHash, array.toString(), nrgReward ));
-
-            accountsMessages.add(new Message<>(new ArrayList<>(addressesFromBlock), block, txDetails.isEmpty()? null: txDetails.get(0)));
-            internalTxMessages.add(new Message<>(null, block, null));
-
         }
 
         final var lastBlockNumber = block == null ? -1 : block.getNumber();
@@ -177,6 +186,12 @@ public class Parser extends Producer<ParserBatch> {
     protected void doReset() {
         queue.clear();
 
+        awaitExtractorReset();
+        shouldReset.compareAndSet(true, false);
+
+    }
+
+    private void awaitExtractorReset() {
         while (extractor.shouldReset()) {
             try {
                 Thread.sleep(10);
@@ -184,8 +199,6 @@ public class Parser extends Producer<ParserBatch> {
                 Thread.currentThread().interrupt();
             }
         }
-        shouldReset.compareAndSet(true, false);
-
     }
 
 

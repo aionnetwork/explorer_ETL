@@ -70,4 +70,11 @@ public class Web3Extractor extends Producer<APIBlockDetails> {
         long end = Math.min(start + num - 1, apiService.getBlockNumber());
         return apiService.getBlockDetailsInRange(start, end);
     }
+
+    @Override
+    public void reset() {
+        super.reset();// interrupt any current attempt to write to the queue
+        GENERAL.error("Reset web3-extractor.");
+        queue.clear();// clear the queue
+    }
 }
