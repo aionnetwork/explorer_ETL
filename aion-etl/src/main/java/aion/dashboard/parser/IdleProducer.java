@@ -29,7 +29,10 @@ public abstract class IdleProducer<S,T> extends Producer<S> {
     }
 
     public void submitAll(List<Message<T>> messages) throws InterruptedException {
-        workQueue.put(messages);
+        while (!Thread.currentThread().isInterrupted()){
+            if (!shouldReset.get() && workQueue.offer(messages)) break;
+            else Thread.sleep(10);
+        }
     }
 
     protected final List<S> task() throws Exception {

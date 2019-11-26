@@ -78,7 +78,13 @@ public abstract class Producer<T> implements Runnable {
                 }
 
                 List<T> res = task();// run the task and store the result only if it is valid
-                if (res != null && !res.isEmpty()) queue.put(res);
+                if (res != null && !res.isEmpty()) {
+                    while (!Thread.currentThread().isInterrupted()){
+                        if (shouldReset.get()) throw new ResetException();// check if we should reset before breaking
+                        else if(queue.offer(res)) break; //use offer so that we will catch any request to reset
+                        else Thread.sleep(100);// if we cannot store the elment sleep and try again
+                    }
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 GENERAL.debug("Thread interrupted. Ending execution.");
