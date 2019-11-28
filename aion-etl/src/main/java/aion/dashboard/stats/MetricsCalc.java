@@ -84,40 +84,26 @@ public class MetricsCalc {
 
     public static BigDecimal avgBlockTime(List<APIBlockDetails> blockDetails) {
         validateBlocks(blockDetails);
-        long res = 0L;
-        long currentBlockTimestamp = -1;
-
-        for (APIBlockDetails blockDetail : blockDetails) {
-            long previousTimestamp = currentBlockTimestamp;// set the previous block timestamp
-            currentBlockTimestamp = blockDetail.getTimestamp();// set the current block timestamp to this block
-            if (previousTimestamp != -1) {
-                //find the block time and sum
-                res += (currentBlockTimestamp - previousTimestamp);
-            }
-        }
-        if (blockDetails.size()<=1) {
+        if (blockDetails.isEmpty()) {
             return BigDecimal.valueOf(-999);
         } else {
-            return BigDecimal.valueOf(res).divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL32);
+            return blockDetails.stream()
+                    .mapToInt(APIBlockDetails::getBlockTime)// get the deltas between child and parent blocks
+                    .mapToObj(BigDecimal::valueOf)// map to big decimal to maintain precision
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)// find the sum of the block deltas
+                    .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL32); // divide by the number of blocks
         }
     }
 
     public static BigDecimal avgBlockTimeDO(List<Block> blockDetails) {
-        long res = 0L;
-        long currentBlockTimestamp = -1;
-
-        for (Block blockDetail : blockDetails) {
-            long previousTimestamp = currentBlockTimestamp;// set the previous block timestamp
-            currentBlockTimestamp = blockDetail.getBlockTimestamp();// set the current block timestamp to this block
-            if (previousTimestamp != -1) {
-                //find the block time and sum
-                res += (currentBlockTimestamp - previousTimestamp);
-            }
-        }
-        if (blockDetails.size()<=1) {
+        if (blockDetails.isEmpty()) {
             return BigDecimal.valueOf(-999);
         } else {
-            return BigDecimal.valueOf(res).divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL32);
+            return blockDetails.stream()
+                    .mapToLong(Block::getBlockTime)// get the deltas between child and parent blocks
+                    .mapToObj(BigDecimal::valueOf)// map to big decimal to maintain precision
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)// find the sum of the block deltas
+                    .divide(BigDecimal.valueOf(blockDetails.size()), MathContext.DECIMAL32); // divide by the number of blocks
         }
     }
 
