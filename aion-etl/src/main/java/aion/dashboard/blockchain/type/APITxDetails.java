@@ -33,6 +33,7 @@ public class APITxDetails {
     private BigInteger value;
     private boolean hasInternalTransactions;
     private long nrgLimit;
+    private String beaconHash;
 
     public APITxDetails(Builder builder) {
         blockHash = Objects.requireNonNull(builder.blockHash);
@@ -43,7 +44,7 @@ public class APITxDetails {
         transactionHash = Objects.requireNonNull( builder.transactionHash);
         blockNumber = builder.blockNumber;
         from = Objects.requireNonNull(builder.from);
-        to = Objects.requireNonNull(builder.to);
+        to = Objects.requireNonNullElse(builder.to,"");
         logs = Objects.requireNonNull(builder.logs);
         input = Objects.requireNonNull(builder.input);
         timestamp = builder.timestamp;
@@ -53,6 +54,7 @@ public class APITxDetails {
         value = Objects.requireNonNull(builder.value);
         hasInternalTransactions = builder.hasInternalTransactions;
         nrgLimit = builder.nrg;
+        beaconHash = builder.beaconHash;
     }
 
     public boolean hasInternalTransactions(){
@@ -132,6 +134,10 @@ public class APITxDetails {
         return nrgLimit;
     }
 
+    public String getBeaconHash() {
+        return beaconHash;
+    }
+
     @Override
     public String toString() {
         return "APITxDetails{" +
@@ -187,6 +193,7 @@ public class APITxDetails {
         private boolean hasInternalTransactions;
         private long nrg;
         private long gas;
+        private String beaconHash;
 
         private Builder() {
         }
@@ -323,6 +330,11 @@ public class APITxDetails {
 
         public Builder setType(String type) {
             this.type = (byte)intFromHexString(type);
+            return this;
+        }
+
+        public Builder setBeaconHash(String beaconHash) {
+            this.beaconHash = beaconHash;
             return this;
         }
 
