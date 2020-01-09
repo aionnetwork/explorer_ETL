@@ -154,8 +154,11 @@ public final class DBGraphingTask extends AbstractGraphingTask<Block> {
 
         final BigDecimal powAverageBlockTime = MetricsCalc.avgBlockTimeDO(powBlocks);// find the average over the period
 
-        final BigDecimal averageHashPower = (powBlocks.get(powBlocks.size() -1).getDifficulty())
-                .divide(powAverageBlockTime, MathContext.DECIMAL64);// find the hash power by dividing the difficulty and the time for each block
+        final BigDecimal averageHashPower = powBlocks.stream()
+                .max(Comparator.comparingLong(Block::getBlockNumber))
+                .map(Block::getDifficulty)
+                .map(difficulty -> difficulty.divide(powAverageBlockTime, MathContext.DECIMAL64))
+                .orElse(BigDecimal.valueOf(-999L));
 
         Map<String, Integer> minerCount = new HashMap<>();
 
