@@ -308,8 +308,8 @@ public class APITxDetails {
             return this;
         }
 
-        public Builder setTimestamp(String timestamp) {
-            this.timestamp = longFromHexString(timestamp);
+        public Builder setTimestamp(Long timestamp) {
+            this.timestamp = timestamp;
             return this;
         }
 
