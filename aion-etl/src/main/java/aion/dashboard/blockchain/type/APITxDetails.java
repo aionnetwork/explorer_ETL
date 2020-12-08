@@ -43,7 +43,7 @@ public class APITxDetails {
         transactionHash = Objects.requireNonNull( builder.transactionHash);
         blockNumber = builder.blockNumber;
         from = Objects.requireNonNull(builder.from);
-        to = Objects.requireNonNull(builder.to);
+        to = Objects.requireNonNullElse(builder.to,"");
         logs = Objects.requireNonNull(builder.logs);
         input = Objects.requireNonNull(builder.input);
         timestamp = builder.timestamp;

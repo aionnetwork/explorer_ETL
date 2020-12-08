@@ -7,6 +7,7 @@ import aion.dashboard.exception.HttpStatusException;
 import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.service.SchedulerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.aion.util.bytes.ByteUtil;
 import org.json.JSONException;
@@ -87,6 +88,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
 
 
         try {
+            mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
             return mapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
             return "";
@@ -286,6 +288,7 @@ public class Web3ServiceImpl implements Closeable, Web3Service {
                 } else  if (res instanceof String || res instanceof Integer || res instanceof Long) {
                     return tClass.cast(res);
                 } else {
+                    mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
                     return mapper.convertValue(res, tClass);
                 }
 
