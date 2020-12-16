@@ -1,0 +1,2 @@
+#After kernel version 1.6
+ALTER TABLE block MODIFY COLUMN seed VARCHAR(250);

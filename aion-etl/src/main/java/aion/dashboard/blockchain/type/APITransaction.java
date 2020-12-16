@@ -29,8 +29,12 @@ public class APITransaction {
     private long timestamp;
     private final String contractAddress;
     private String beaconHash;
+    private String proof;
 
-    private APITransaction(String nrgPrice, String blockHash, long nrg, int transactionIndex, String nonce, String input, long blockNumber, long gas, String from, String to, String value, String hash, String gasPrice, long timestamp, String contractAddress, String beaconHash) {
+    private APITransaction(String nrgPrice, String blockHash, long nrg, int transactionIndex, String nonce, String input,
+                           long blockNumber, long gas, String from, String to, String value, String hash,
+                           String gasPrice, long timestamp, String contractAddress,String beaconHash,String proof) {
+
         this.nrgPrice = convertHex(nrgPrice);
         this.blockHash = Utils.sanitizeHex(blockHash);
         this.nrg = nrg;
@@ -46,7 +50,9 @@ public class APITransaction {
         this.gasPrice = convertHex(gasPrice);
         this.timestamp = timestamp;
         this.contractAddress = contractAddress;
-        this.beaconHash = beaconHash;
+
+        this.beaconHash=beaconHash;
+        this.proof=proof;
     }
 
     @Override
@@ -105,6 +111,11 @@ public class APITransaction {
         return beaconHash;
     }
 
+    public String getProof() {
+        return proof;
+    }
+
+
     @JsonPOJOBuilder(buildMethodName = "create", withPrefix = "set")
     public static class APITransactionBuilder {
         private String nrgPrice;
@@ -123,6 +134,7 @@ public class APITransaction {
         private long timestamp;
         private String contractAddress;
         private String beaconHash;
+        private String proof;
 
         public APITransactionBuilder setNrgPrice(String nrgPrice) {
             this.nrgPrice = nrgPrice;
@@ -206,7 +218,7 @@ public class APITransaction {
         }
 
         public APITransaction create() {
-            return new APITransaction(nrgPrice, blockHash, nrg, transactionIndex, nonce, input, blockNumber, gas, from, to, value, hash, gasPrice, timestamp, contractAddress, beaconHash);
+            return new APITransaction(nrgPrice, blockHash, nrg, transactionIndex, nonce, input, blockNumber, gas, from, to, value, hash, gasPrice, timestamp, contractAddress,beaconHash, proof);
         }
 
         public APITransactionBuilder setContractAddress(String contractAddress) {
@@ -216,6 +228,10 @@ public class APITransaction {
 
         public APITransactionBuilder setBeaconHash(String beaconHash) {
             this.beaconHash = beaconHash;
+            return this;
+        }
+        public APITransactionBuilder setProof(String proof) {
+            this.proof = proof;
             return this;
         }
     }

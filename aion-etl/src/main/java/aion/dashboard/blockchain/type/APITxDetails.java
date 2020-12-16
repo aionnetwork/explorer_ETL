@@ -34,6 +34,7 @@ public class APITxDetails {
     private boolean hasInternalTransactions;
     private long nrgLimit;
     private String beaconHash;
+    private String proof;
 
     public APITxDetails(Builder builder) {
         blockHash = Objects.requireNonNull(builder.blockHash);
@@ -55,6 +56,7 @@ public class APITxDetails {
         hasInternalTransactions = builder.hasInternalTransactions;
         nrgLimit = builder.nrg;
         beaconHash = builder.beaconHash;
+        proof=builder.proof;
     }
 
     public boolean hasInternalTransactions(){
@@ -138,6 +140,10 @@ public class APITxDetails {
         return beaconHash;
     }
 
+    public String getProof() {
+        return proof;
+    }
+
     @Override
     public String toString() {
         return "APITxDetails{" +
@@ -194,6 +200,7 @@ public class APITxDetails {
         private long nrg;
         private long gas;
         private String beaconHash;
+        private String proof;
 
         private Builder() {
         }
@@ -335,6 +342,11 @@ public class APITxDetails {
 
         public Builder setBeaconHash(String beaconHash) {
             this.beaconHash = beaconHash;
+            return this;
+        }
+
+        public Builder setProof(String proof) {
+            this.proof = proof;
             return this;
         }
 

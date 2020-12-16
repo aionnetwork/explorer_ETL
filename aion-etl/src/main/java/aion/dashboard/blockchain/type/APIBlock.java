@@ -54,7 +54,14 @@ public class APIBlock {
     private BigInteger stakingDifficulty;
     private BigInteger miningDifficulty;
 
-    private APIBlock(String logsBloom, String totalDifficulty, String receiptsRoot, String extraData, String nrgUsed, List<String> transactions, String nonce, String miner, String difficulty, String number, String gasLimit, String gasUsed, String nrgLimit, String solution, String size, String transactionsRoot, String stateRoot, String parentHash, String hash, String timestamp, boolean isMainChain, String antiParentHash, byte sealType, String seed, String signature, String publicKey, BigInteger stakingDifficulty, BigInteger miningDifficulty) {
+    private String beaconHash;
+    private String proof;
+
+    private APIBlock(String logsBloom, String totalDifficulty, String receiptsRoot, String extraData, String nrgUsed,
+                     List<String> transactions, String nonce, String miner, String difficulty, String number, String gasLimit,
+                     String gasUsed, String nrgLimit, String solution, String size, String transactionsRoot, String stateRoot,
+                     String parentHash, String hash, String timestamp, boolean isMainChain, String antiParentHash, byte sealType,
+                     String seed, String signature, String publicKey, BigInteger stakingDifficulty, BigInteger miningDifficulty,String beaconHash, String proof) {
         this.logsBloom = Utils.sanitizeHex(logsBloom);
         this.totalDifficulty = Utils.bigIntegerFromHex(totalDifficulty);
         this.receiptsRoot = Utils.sanitizeHex(receiptsRoot);
@@ -83,6 +90,8 @@ public class APIBlock {
         this.publicKey = publicKey;
         this.stakingDifficulty = stakingDifficulty;
         this.miningDifficulty = miningDifficulty;
+        this.beaconHash=beaconHash;
+        this.proof=proof;
     }
 
 
@@ -215,6 +224,14 @@ public class APIBlock {
         return publicKey;
     }
 
+    public String getBeaconHash() {
+        return beaconHash;
+    }
+
+    public String getProof() {
+        return proof;
+    }
+
     @Override
     public String toString() {
         return "APIBlock{" +
@@ -329,6 +346,9 @@ public class APIBlock {
         private String antiParentHash;
         private BigInteger stakingDifficulty;
         private BigInteger miningDifficulty;
+
+        private String beaconHash;
+        private String proof;
 
         public APIBlockBuilder setStakingDifficulty(String stakingDifficulty) {
             this.stakingDifficulty = Utils.bigIntegerFromHex(stakingDifficulty);
@@ -490,8 +510,16 @@ public class APIBlock {
             return this;
         }
 
+        APIBlockBuilder setBeaconHash(String beaconHash) {
+            this.beaconHash = beaconHash;
+            return this;
+        }
+        APIBlockBuilder setProof(String proof) {
+            this.proof = proof;
+            return this;
+        }
         APIBlock create() {
-            return new APIBlock(logsBloom, totalDifficulty, receiptsRoot, extraData, nrgUsed, transactions, nonce, miner, difficulty, number, gasLimit, gasUsed, nrgLimit, solution, size, transactionsRoot, stateRoot, parentHash, hash, timestamp, isMainChain, antiParentHash, sealType, seed, signature, publicKey, stakingDifficulty, miningDifficulty);
+            return new APIBlock(logsBloom, totalDifficulty, receiptsRoot, extraData, nrgUsed, transactions, nonce, miner, difficulty, number, gasLimit, gasUsed, nrgLimit, solution, size, transactionsRoot, stateRoot, parentHash, hash, timestamp, isMainChain, antiParentHash, sealType, seed, signature, publicKey, stakingDifficulty, miningDifficulty,beaconHash,proof);
         }
 
         public APIBlockBuilder setTimestamp(String timestamp) {

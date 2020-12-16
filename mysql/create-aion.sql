@@ -1,6 +1,3 @@
-CREATE DATABASE `aion`;
-
-USE `aion`;
 
 CREATE TABLE `block` (
 	`block_number` BIGINT,
@@ -16,7 +13,7 @@ CREATE TABLE `block` (
 	`bloom` VARCHAR(512),
 	`solution` TEXT,
 	`signature` VARCHAR(64),
-	`seed` varchar(128),
+	`seed` varchar(250),
 	`public_key` varchar(128),
 	`seal_type` varchar(4),
 	`difficulty` decimal(32,1),

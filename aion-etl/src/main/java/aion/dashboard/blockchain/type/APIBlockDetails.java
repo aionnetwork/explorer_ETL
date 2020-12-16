@@ -57,6 +57,9 @@ public class APIBlockDetails {
     private long stakingDifficulty;
     //--------------------------
 
+    private String beaconHash;
+    private String proof;
+
     private APIBlockDetails(Builder builder){
         logsBloom = requireNonNull(builder.logsBloom);
         totalDifficulty = requireNonNull(builder.totalDifficulty);
@@ -225,6 +228,14 @@ public class APIBlockDetails {
         return blockReward;
     }
 
+    public String getBeaconHash() {
+        return beaconHash;
+    }
+
+    public String getProof() {
+        return proof;
+    }
+
     @Override
     public String toString() {
         return "APIBlockDetails{" +
@@ -298,6 +309,9 @@ public class APIBlockDetails {
         private int numTransactions;
         private long stakingDifficulty;
         private long miningDifficulty;
+
+        private String beaconHash;
+        private String proof;
 
         public Builder setMiningDifficulty(String miningDifficulty) {
             this.miningDifficulty = Utils.longFromHexString(miningDifficulty);
@@ -458,6 +472,16 @@ public class APIBlockDetails {
 
         public Builder setBlockReward(String blockReward) {
             this.blockReward = bigIntegerFromHex(blockReward);
+            return this;
+        }
+
+        public Builder setBeaconHash(String beaconHash) {
+            this.beaconHash = beaconHash;
+            return this;
+        }
+
+        public Builder setProof(String proof) {
+            this.proof = proof;
             return this;
         }
 
