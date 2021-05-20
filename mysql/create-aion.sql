@@ -325,14 +325,14 @@ create index reorg_details_block_number_index on reorg_details(block_number);
 create unique index reorg_details_server_timestamp_index on reorg_details(server_timestamp);
 
 create table validator_stats(
-							block_number bigint not null,
-							miner_address varchar(64) not null,
-							seal_type varchar(4) not null,
-							block_count int not null,
-							block_timestamp bigint not null,
-							percentage_of_blocks_validated decimal(10,7) not null,
-							average_transactions_per_block decimal(16,10) not null,
-							primary key (block_number, miner_address, seal_type)
+ block_number bigint not null,
+ miner_address varchar(64) not null,
+ seal_type varchar(4) not null,
+ block_count int not null,
+ block_timestamp bigint not null,
+ percentage_of_blocks_validated decimal(10,7) not null,
+ average_transactions_per_block decimal(16,10) not null,
+ primary key (block_number, miner_address, seal_type)
 );
 create index validator_stats_block_number_seal_type_index on validator_stats(seal_type, block_number);
 
@@ -358,6 +358,14 @@ create table account_stats
 	primary key (block_number, address)
 );
 
+CREATE TABLE `circulating_supply` (
+  `timestamp` datetime NOT NULL,
+  `supply` decimal(32,18) NOT NULL,
+  `total_block_reward` varchar(256) DEFAULT '0',
+  `block_number` bigint(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`block_number`),
+  KEY `circulating_supply_timestamp_index` (`timestamp`)
+) ENGINE=InnoDB;
 create index account_stats_address_index
 	on account_stats (address);
 

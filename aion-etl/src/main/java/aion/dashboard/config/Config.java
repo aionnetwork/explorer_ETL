@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -81,8 +82,8 @@ public class Config {
     private boolean enableVerifier;
     private boolean integrityChecks;
     private String stakingContractAddress;
-
-
+    private BigDecimal networkBalanceAlloc;
+    private String burnAddress;
 	// no configuration for logging. control it directly from logback
 	private Config() {
 		try {
@@ -91,8 +92,10 @@ public class Config {
 			JSONObject json = new JSONObject(content);
 
 			JSONObject sql = json.getJSONObject("sql");
+            networkBalanceAlloc=new BigDecimal(getFromEnv("BALANCE_ALLOC", null));
+            burnAddress=getFromEnv("BURN_ADDRESS", "0x0000000000000000000000000000000000000000000000000000000000000000");
 
-			taskType = AbstractGraphingTask.TaskType.valueOf(getFromEnv("TASK_TYPE", "DB"));
+            taskType = AbstractGraphingTask.TaskType.valueOf(getFromEnv("TASK_TYPE", "DB"));
             stakingContractAddress = getFromEnv("STAKING", null);
             if (Objects.isNull(stakingContractAddress)) {
                 throw new IllegalStateException("Failed to initialize STAKING in the .env");
@@ -408,6 +411,14 @@ public class Config {
     public Config setStakingContractAddress(String stakingContractAddress) {
         this.stakingContractAddress = stakingContractAddress;
         return this;
+    }
+
+    public BigDecimal getNetworkBalanceAlloc() {
+        return networkBalanceAlloc;
+    }
+
+    public String getBurnAddress() {
+        return burnAddress;
     }
 
     public int getMinerWindowSize() {

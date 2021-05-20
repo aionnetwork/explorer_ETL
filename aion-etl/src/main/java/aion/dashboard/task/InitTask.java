@@ -11,10 +11,7 @@ import aion.dashboard.exception.Web3ApiException;
 import aion.dashboard.integritychecks.IntegrityCheckManager;
 import aion.dashboard.parser.*;
 import aion.dashboard.service.*;
-import aion.dashboard.stats.AbstractGraphingTask;
-import aion.dashboard.stats.RollingBlockMean;
-import aion.dashboard.stats.TransactionStatsTask;
-import aion.dashboard.stats.ValidatorStatsTask;
+import aion.dashboard.stats.*;
 import aion.dashboard.update.UpdateManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,16 +141,21 @@ public final class InitTask {
         validatorStatsTask.start();
         TransactionStatsTask transactionStatsTask = new TransactionStatsTask();
         transactionStatsTask.start();
+
+        //Circulating Supply process
+        CirculatingSupplyTask circulatingSupplyTask=new CirculatingSupplyTask();
+        circulatingSupplyTask.start();
+
         //Create the shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(transactionStatsTask::stop));
         Runtime.getRuntime().addShutdownHook(new Thread(validatorStatsTask::stop));
-        Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task));
+        Runtime.getRuntime().addShutdownHook(buildShutdownHook(extractor, parser, consumer, producers, task,circulatingSupplyTask));
     }
 
     /*
 
      */
-    private static Thread buildShutdownHook(Producer extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task) {
+    private static Thread buildShutdownHook(Producer extractor, Parser parser, Consumer consumer, List<Producer> producers, AbstractGraphingTask task, CirculatingSupplyTask circulatingSupplyTask) {
         return new Thread(()->{
             Thread.currentThread().setName("shutdown-hook");
             GENERAL.info("Shutting down the ETL.");
@@ -167,6 +169,7 @@ public final class InitTask {
 
             consumer.stop();
             task.stop();
+            circulatingSupplyTask.stop();
             IntegrityCheckManager.getInstance().shutdown();
             Web3Service.getInstance().close();
             AionService.getInstance().close();

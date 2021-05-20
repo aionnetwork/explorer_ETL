@@ -351,6 +351,14 @@ public class DbQuery {
     public static final String InsertReorgDetails = "Insert into reorg_details (block_number, server_timestamp, block_depth, affected_addresses, number_of_affected_transactions) value (?,?,?,?,?)";
     //------------------------CirculatingSupply---------------------------
     public static final String SelectCirculatingSupply = "Select * from circulating_supply";
+    public static final String SelectCirculatingSupplyOne = "Select total_block_reward,block_number from circulating_supply order by timestamp desc limit 1";
+    public static final String SelectSumBlockReward = "select sum(block_reward)  from block where block_number>= ? and block_number < ?  ";
+    public static final String UpdateCirculatingSupply = "update circulating_supply set block_number = ?," +
+            "total_block_reward=?,supply=?,timestamp=now() " +
+            "where block_number = ?";
+    public static final String InsertCirculatingSupply = "insert into circulating_supply (block_number,total_block_reward,supply,timestamp)values" +
+            " (?,?,?,now()) ";
+
     //
     public static final String INSERT_MINER_STATS = "insert into validator_stats (block_number," +
             " miner_address, " +
