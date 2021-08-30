@@ -26,19 +26,10 @@ public class MetricsCalc {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * @param instant     the time for the circulating supply
-     * @return
-     */
-    public static Optional<BigDecimal> networkStakingPercentage(Instant instant, BigDecimal networkStake) {
-        Config config = Config.getInstance();
-        try {
-            BigDecimal circulatingSupply;
-            if (config.getNetwork().equalsIgnoreCase("mainnet")) {
-                circulatingSupply = DBService.getInstance().getCirculatingSupply(instant);
-            } else {
-                circulatingSupply = AccountServiceImpl.getInstance().sumBalance(instant);
-            }
+
+    public static Optional<BigDecimal> networkStakingPercentage( BigDecimal networkStake) {
+         try {
+            BigDecimal circulatingSupply = DBService.getInstance().getCirculatingSupply();
             return Optional.of(networkStake.divide(circulatingSupply, MathContext.DECIMAL128).multiply(BigDecimal.valueOf(100)));
 
         } catch (Exception e) {

@@ -284,7 +284,7 @@ public class RollingBlockMeanImpl implements RollingBlockMean {
                         .setPowBlockTime(avgBlockTime(powBlocks))
                         .setAveragePOSIssuance(avgIssuance(posBlocks))
                         .setTotalStake(networkStake)
-                        .setPercentageOfNetworkStaking(networkStakingPercentage(Instant.ofEpochSecond(EndTimeStamp), networkStake).orElse(BigDecimal.ZERO))
+                        .setPercentageOfNetworkStaking(networkStakingPercentage( networkStake).orElse(BigDecimal.ZERO))
                         .build()
         );
     }
