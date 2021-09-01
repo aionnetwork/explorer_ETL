@@ -48,7 +48,7 @@ public class DBService {
                  PreparedStatement ps = con.prepareStatement(DbQuery.SelectCirculatingSupply);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    circulatingSupply.put(rs.getTimestamp("start_date").toInstant(), rs.getBigDecimal("supply"));
+                    circulatingSupply.put(rs.getTimestamp("datetime").toInstant(), rs.getBigDecimal("supply"));
                 }
             }
         }
