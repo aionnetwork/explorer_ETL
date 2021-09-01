@@ -41,7 +41,7 @@ public class DBService {
     * TODO to deprecate
     *  */
     @Nullable
-    public BigDecimal getCirculatingSupply(Instant timestamp) throws SQLException {
+    public BigDecimal getCirculatingSupply() throws SQLException {
 
         if (circulatingSupply.isEmpty()) {
             try (Connection con = DbConnectionPool.getConnection();
@@ -52,7 +52,7 @@ public class DBService {
                 }
             }
         }
-        return circulatingSupply.floorEntry(timestamp).getValue();
+        return circulatingSupply.firstEntry().getValue();
     }
 /*
 * This method will calculate the Total circulation Supply by the sum of all the blocks reward plus the networkBalanceAlloc.
