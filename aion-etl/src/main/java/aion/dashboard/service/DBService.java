@@ -15,6 +15,10 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.sql.*;
 import java.time.Instant;
+import java.time.Period;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAmount;
+import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -43,12 +47,13 @@ public class DBService {
     @Nullable
     public BigDecimal getCirculatingSupply() throws SQLException {
 
-        if (circulatingSupply.isEmpty()) {
+        if (circulatingSupply.isEmpty()
+                || circulatingSupply.firstEntry().getKey().isBefore(Instant.now().minus(5, ChronoUnit.HOURS))) {
             try (Connection con = DbConnectionPool.getConnection();
                  PreparedStatement ps = con.prepareStatement(DbQuery.SelectCirculatingSupply);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    circulatingSupply.put(rs.getTimestamp("start_date").toInstant(), rs.getBigDecimal("supply"));
+                    circulatingSupply.put(rs.getTimestamp("timestamp").toInstant(), rs.getBigDecimal("supply"));
                 }
             }
         }
